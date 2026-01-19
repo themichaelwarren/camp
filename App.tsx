@@ -75,10 +75,15 @@ const App: React.FC = () => {
   const handleAddPrompt = async (newPrompt: Prompt) => {
     setPrompts(prev => [newPrompt, ...prev]);
     if (spreadsheetId) {
-      await googleService.appendSheetRow(spreadsheetId, 'Prompts!A1', [[
-        newPrompt.id, newPrompt.title, newPrompt.description, newPrompt.tags.join(','),
-        newPrompt.upvotes, newPrompt.status, newPrompt.createdAt, newPrompt.createdBy
-      ]]);
+      try {
+        await googleService.appendSheetRow(spreadsheetId, 'Prompts!A1', [[
+          newPrompt.id, newPrompt.title, newPrompt.description, newPrompt.tags.join(','),
+          newPrompt.upvotes, newPrompt.status, newPrompt.createdAt, newPrompt.createdBy
+        ]]);
+      } catch (error) {
+        console.error('Failed to save prompt to sheet', error);
+        alert('Prompt saved locally, but failed to sync to the sheet. Please try again.');
+      }
     }
   };
 
@@ -89,21 +94,31 @@ const App: React.FC = () => {
   const handleAddAssignment = async (newAssignment: Assignment) => {
     setAssignments(prev => [newAssignment, ...prev]);
     if (spreadsheetId) {
-      await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
-        newAssignment.id, newAssignment.promptId, newAssignment.title, newAssignment.dueDate,
-        newAssignment.assignedTo.join(','), newAssignment.instructions, newAssignment.status
-      ]]);
+      try {
+        await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
+          newAssignment.id, newAssignment.promptId, newAssignment.title, newAssignment.dueDate,
+          newAssignment.assignedTo.join(','), newAssignment.instructions, newAssignment.status
+        ]]);
+      } catch (error) {
+        console.error('Failed to save assignment to sheet', error);
+        alert('Assignment saved locally, but failed to sync to the sheet. Please try again.');
+      }
     }
   };
 
   const handleAddSubmission = async (newSubmission: Submission) => {
     setSubmissions(prev => [newSubmission, ...prev]);
     if (spreadsheetId) {
-      await googleService.appendSheetRow(spreadsheetId, 'Submissions!A1', [[
-        newSubmission.id, newSubmission.assignmentId, newSubmission.camperId, newSubmission.camperName,
-        newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
-        newSubmission.details, newSubmission.updatedAt
-      ]]);
+      try {
+        await googleService.appendSheetRow(spreadsheetId, 'Submissions!A1', [[
+          newSubmission.id, newSubmission.assignmentId, newSubmission.camperId, newSubmission.camperName,
+          newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
+          newSubmission.details, newSubmission.updatedAt
+        ]]);
+      } catch (error) {
+        console.error('Failed to save submission to sheet', error);
+        alert('Submission saved locally, but failed to sync to the sheet. Please try again.');
+      }
     }
   };
 

@@ -75,7 +75,44 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
 
 export const findOrCreateDatabase = async () => {
   const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
-  await callGoogleApi(metadataUrl);
+  const metadata = await callGoogleApi(metadataUrl);
+
+  const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions'];
+  const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
+
+  if (missingSheets.length > 0) {
+    const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`;
+    await callGoogleApi(batchUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: missingSheets.map((title) => ({
+          addSheet: { properties: { title } }
+        }))
+      })
+    });
+  }
+
+  const headerRanges = [
+    'Prompts!A1:H1',
+    'Assignments!A1:G1',
+    'Submissions!A1:I1'
+  ];
+  const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
+  const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
+  const headersResult = await callGoogleApi(headersCheckUrl);
+  const headerValues = headersResult.valueRanges || [];
+
+  if (!headerValues[0]?.values?.length) {
+    await updateSheetRows(SPREADSHEET_ID, 'Prompts!A1', [['id', 'title', 'description', 'tags', 'upvotes', 'status', 'createdAt', 'createdBy']]);
+  }
+  if (!headerValues[1]?.values?.length) {
+    await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [['id', 'promptId', 'title', 'dueDate', 'assignedTo', 'instructions', 'status']]);
+  }
+  if (!headerValues[2]?.values?.length) {
+    await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [['id', 'assignmentId', 'camperId', 'camperName', 'title', 'lyrics', 'versionsJson', 'details', 'updatedAt']]);
+  }
+
   return SPREADSHEET_ID;
 };
 
