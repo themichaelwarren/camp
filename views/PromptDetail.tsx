@@ -1,15 +1,46 @@
 
-import React from 'react';
-import { Prompt, Assignment, Submission, ViewState } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus } from '../types';
 
 interface PromptDetailProps {
   prompt: Prompt;
   assignments: Assignment[];
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
+  onUpdate: (prompt: Prompt) => void;
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editPrompt, setEditPrompt] = useState({
+    title: prompt.title,
+    description: prompt.description,
+    tags: prompt.tags.join(', '),
+    status: prompt.status
+  });
+
+  useEffect(() => {
+    setEditPrompt({
+      title: prompt.title,
+      description: prompt.description,
+      tags: prompt.tags.join(', '),
+      status: prompt.status
+    });
+  }, [prompt]);
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedPrompt: Prompt = {
+      ...prompt,
+      title: editPrompt.title.trim(),
+      description: editPrompt.description.trim(),
+      tags: editPrompt.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      status: editPrompt.status
+    };
+    onUpdate(updatedPrompt);
+    setShowEditModal(false);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center gap-4">
@@ -134,12 +165,73 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           <section className="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100">
             <h4 className="font-bold mb-2">Need a refresh?</h4>
             <p className="text-indigo-100 text-sm mb-4 leading-relaxed">You can modify this prompt's details or archive it if it's no longer serving the camp.</p>
-            <button className="w-full bg-white text-indigo-600 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="w-full bg-white text-indigo-600 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors"
+            >
               Edit Prompt Details
             </button>
           </section>
         </div>
       </div>
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-xl text-slate-800">Edit Prompt</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={editPrompt.title}
+                  onChange={e => setEditPrompt({ ...editPrompt, title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                <textarea
+                  required
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24"
+                  value={editPrompt.description}
+                  onChange={e => setEditPrompt({ ...editPrompt, description: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags (comma separated)</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={editPrompt.tags}
+                  onChange={e => setEditPrompt({ ...editPrompt, tags: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+                <select
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={editPrompt.status}
+                  onChange={e => setEditPrompt({ ...editPrompt, status: e.target.value as PromptStatus })}
+                >
+                  <option value={PromptStatus.DRAFT}>Draft</option>
+                  <option value={PromptStatus.ACTIVE}>Active</option>
+                  <option value={PromptStatus.ARCHIVED}>Archived</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
+                Save Changes
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

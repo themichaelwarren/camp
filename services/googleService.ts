@@ -132,6 +132,31 @@ export const appendSheetRow = async (spreadsheetId: string, range: string, value
   });
 };
 
+export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Prompts!A2:H1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === prompt.id);
+  const rowValues = [[
+    prompt.id,
+    prompt.title,
+    prompt.description,
+    prompt.tags.join(','),
+    prompt.upvotes,
+    prompt.status,
+    prompt.createdAt,
+    prompt.createdBy
+  ]];
+
+  if (rowIndex === -1) {
+    return appendSheetRow(spreadsheetId, 'Prompts!A1', rowValues);
+  }
+
+  const sheetRow = rowIndex + 2;
+  const range = `Prompts!A${sheetRow}:H${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
 export const fetchAllData = async (spreadsheetId: string) => {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:G1000&ranges=Submissions!A2:I1000`;
   const result = await callGoogleApi(url);

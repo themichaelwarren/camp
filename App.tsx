@@ -89,6 +89,14 @@ const App: React.FC = () => {
 
   const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
     setPrompts(prompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p));
+    if (spreadsheetId) {
+      try {
+        await googleService.updatePromptRow(spreadsheetId, updatedPrompt);
+      } catch (error) {
+        console.error('Failed to update prompt in sheet', error);
+        alert('Prompt updated locally, but failed to sync to the sheet. Please try again.');
+      }
+    }
   };
 
   const handleAddAssignment = async (newAssignment: Assignment) => {
@@ -195,7 +203,15 @@ const App: React.FC = () => {
         return <SubmissionsPage submissions={submissions} assignments={assignments} onAdd={handleAddSubmission} onViewDetail={(id) => navigateTo('song-detail', id)} />;
       case 'prompt-detail':
         const p = prompts.find(pr => pr.id === selectedId);
-        return p ? <PromptDetail prompt={p} assignments={assignments.filter(a => a.promptId === p.id)} submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id)} onNavigate={navigateTo} /> : null;
+        return p ? (
+          <PromptDetail
+            prompt={p}
+            assignments={assignments.filter(a => a.promptId === p.id)}
+            submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id)}
+            onNavigate={navigateTo}
+            onUpdate={handleUpdatePrompt}
+          />
+        ) : null;
       case 'assignment-detail':
         const a = assignments.find(as => as.id === selectedId);
         return a ? <AssignmentDetail assignment={a} prompt={prompts.find(pr => pr.id === a.promptId)} submissions={submissions.filter(s => s.assignmentId === a.id)} onNavigate={navigateTo} /> : null;
