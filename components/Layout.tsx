@@ -8,14 +8,17 @@ interface LayoutProps {
   onViewChange: (view: ViewState) => void;
   isSyncing?: boolean;
   isLoggedIn?: boolean;
+  userProfile?: { name?: string; email?: string; picture?: string } | null;
+  onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, userProfile, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
     { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
     { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { id: 'submissions', label: 'Song Submissions', icon: 'fa-music' },
+    { id: 'profile', label: 'Profile', icon: 'fa-user' },
   ];
 
   return (
@@ -50,11 +53,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         <div className="p-4 bg-indigo-950/50 mt-auto">
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
-                KC
-              </div>
+              {userProfile?.picture ? (
+                <img
+                  src={userProfile.picture}
+                  alt={userProfile.name || 'User profile'}
+                  className="w-10 h-10 rounded-full object-cover border border-white/30"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+                  KC
+                </div>
+              )}
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate">Camp Admin</p>
+                <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
                 <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
                   {isSyncing ? 'Syncing...' : 'Connected'}
@@ -91,9 +102,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 {isSyncing ? 'Cloud Sync in Progress' : 'Changes Saved to Sheets'}
               </span>
             )}
-            <button className="text-slate-500 hover:text-indigo-600 transition-colors w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center">
-              <i className="fa-solid fa-gear"></i>
-            </button>
+            {isLoggedIn && (
+              <button
+                onClick={onLogout}
+                className="text-slate-500 hover:text-red-600 transition-colors px-3 h-9 rounded-full hover:bg-red-50 flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              >
+                <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                Log out
+              </button>
+            )}
           </div>
         </header>
 

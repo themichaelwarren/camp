@@ -51,6 +51,7 @@ export type ViewState =
   | 'prompts' 
   | 'assignments' 
   | 'submissions'
+  | 'profile'
   | 'prompt-detail'
   | 'assignment-detail'
   | 'song-detail';

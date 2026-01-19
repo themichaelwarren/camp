@@ -4,7 +4,8 @@ import { Prompt, Assignment, Submission, PromptStatus } from '../types';
 declare var google: any;
 
 const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com'; 
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const SPREADSHEET_ID = '1ihYCXKBQKTS7Jz4XgybQONAnDfbmkBiCwnAam3td2Vg';
 
 let accessToken: string | null = null;
 let tokenClient: any = null;
@@ -73,32 +74,9 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
 };
 
 export const findOrCreateDatabase = async () => {
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='KoiCamp_Database' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
-  const results = await callGoogleApi(searchUrl);
-  
-  if (results.files && results.files.length > 0) {
-    return results.files[0].id;
-  }
-
-  const createUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
-  const spreadsheet = await callGoogleApi(createUrl, {
-    method: 'POST',
-    body: JSON.stringify({
-      properties: { title: 'KoiCamp_Database' },
-      sheets: [
-        { properties: { title: 'Prompts' } },
-        { properties: { title: 'Assignments' } },
-        { properties: { title: 'Submissions' } }
-      ]
-    })
-  });
-  
-  const sId = spreadsheet.spreadsheetId;
-  await updateSheetRows(sId, 'Prompts!A1', [['id', 'title', 'description', 'tags', 'upvotes', 'status', 'createdAt', 'createdBy']]);
-  await updateSheetRows(sId, 'Assignments!A1', [['id', 'promptId', 'title', 'dueDate', 'assignedTo', 'instructions', 'status']]);
-  await updateSheetRows(sId, 'Submissions!A1', [['id', 'assignmentId', 'camperId', 'camperName', 'title', 'lyrics', 'versionsJson', 'details', 'updatedAt']]);
-
-  return sId;
+  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
+  await callGoogleApi(metadataUrl);
+  return SPREADSHEET_ID;
 };
 
 export const updateSheetRows = async (spreadsheetId: string, range: string, values: any[][]) => {
@@ -159,6 +137,11 @@ export const fetchAllData = async (spreadsheetId: string) => {
   }));
 
   return { prompts, assignments, submissions };
+};
+
+export const fetchUserProfile = async () => {
+  const url = 'https://www.googleapis.com/oauth2/v3/userinfo';
+  return callGoogleApi(url);
 };
 
 export const uploadAudioToDrive = async (file: File) => {

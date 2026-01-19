@@ -8,6 +8,7 @@ import SubmissionsPage from './views/SubmissionsPage';
 import PromptDetail from './views/PromptDetail';
 import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
+import ProfilePage from './views/ProfilePage';
 import * as googleService from './services/googleService';
 
 const App: React.FC = () => {
@@ -20,11 +21,15 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; picture?: string } | null>(null);
 
   useEffect(() => {
     const init = () => {
       googleService.initGoogleAuth((token) => {
         setIsLoggedIn(true);
+        googleService.fetchUserProfile()
+          .then((profile) => setUserProfile(profile))
+          .catch((err) => console.error('Failed to fetch user profile', err));
         handleInitialSync();
       });
     };
@@ -182,6 +187,8 @@ const App: React.FC = () => {
       case 'song-detail':
         const s = submissions.find(su => su.id === selectedId);
         return s ? <SongDetail submission={s} assignment={assignments.find(as => as.id === s.assignmentId)} prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)} onNavigate={navigateTo} /> : null;
+      case 'profile':
+        return <ProfilePage userProfile={userProfile} spreadsheetId={spreadsheetId} />;
       default:
         return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} onNavigate={navigateTo} />;
     }
@@ -193,6 +200,8 @@ const App: React.FC = () => {
       onViewChange={(v) => navigateTo(v)}
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}
+      userProfile={userProfile}
+      onLogout={googleService.logout}
     >
       {renderView()}
     </Layout>
