@@ -1,0 +1,134 @@
+
+import React from 'react';
+import { Assignment, Prompt, Submission, ViewState } from '../types';
+
+interface AssignmentDetailProps {
+  assignment: Assignment;
+  prompt?: Prompt;
+  submissions: Submission[];
+  onNavigate: (view: ViewState, id?: string) => void;
+}
+
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, onNavigate }) => {
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => onNavigate('assignments')}
+          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+        >
+          <i className="fa-solid fa-arrow-left"></i>
+        </button>
+        <div>
+          <h2 className="text-3xl font-bold text-slate-800">{assignment.title}</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+              assignment.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {assignment.status}
+            </span>
+            <span className="text-slate-400 text-xs font-medium">Due {assignment.dueDate}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-8 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Instructions</h3>
+              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                {assignment.instructions}
+              </p>
+            </div>
+            {prompt && (
+              <div 
+                onClick={() => onNavigate('prompt-detail', prompt.id)}
+                className="bg-slate-50 p-8 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition-colors group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-indigo-600">
+                    <i className="fa-solid fa-lightbulb"></i>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Linked Prompt</p>
+                    <p className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{prompt.title}</p>
+                  </div>
+                </div>
+                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
+              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {submissions.map(s => (
+                <div 
+                  key={s.id} 
+                  onClick={() => onNavigate('song-detail', s.id)}
+                  className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                      <i className="fa-solid fa-music"></i>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate max-w-[150px]">{s.title}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 h-16 overflow-hidden">
+                    <p className="text-[10px] font-serif italic text-slate-500 line-clamp-2">
+                      {s.lyrics}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                    <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
+                    <span>UPDATED {new Date(s.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+              {submissions.length === 0 && (
+                <div className="col-span-2 p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
+                  <i className="fa-solid fa-music text-3xl mb-4 opacity-20"></i>
+                  <p className="font-medium">No submissions for this project yet.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="space-y-6">
+          <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Project Progress</h3>
+            <div className="flex flex-col items-center">
+               <div className="w-32 h-32 rounded-full border-8 border-slate-50 flex items-center justify-center relative mb-4">
+                 <div className="absolute inset-0 border-8 border-indigo-500 rounded-full" style={{ clipPath: `inset(0 0 ${100 - (submissions.length/24 * 100)}% 0)` }}></div>
+                 <span className="text-2xl font-black text-slate-800">{Math.round((submissions.length / 24) * 100)}%</span>
+               </div>
+               <p className="text-sm font-bold text-slate-600 mb-1">{submissions.length} / 24 Campers</p>
+               <p className="text-xs text-slate-400">Submission Rate</p>
+            </div>
+          </section>
+
+          <section className="bg-amber-400 p-6 rounded-3xl text-amber-950 shadow-lg shadow-amber-100">
+            <h4 className="font-bold mb-2 flex items-center gap-2">
+              <i className="fa-solid fa-triangle-exclamation"></i>
+              Deadline Management
+            </h4>
+            <p className="text-amber-900 text-sm mb-4 leading-relaxed">Closing an assignment prevents new submissions and marks the project as archived.</p>
+            <button className="w-full bg-amber-950 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
+              Close Assignment
+            </button>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AssignmentDetail;
