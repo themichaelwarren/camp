@@ -9,6 +9,7 @@ import PromptDetail from './views/PromptDetail';
 import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import ProfilePage from './views/ProfilePage';
+import SettingsPage from './views/SettingsPage';
 import * as googleService from './services/googleService';
 
 const App: React.FC = () => {
@@ -22,6 +23,13 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; picture?: string } | null>(null);
+  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
+    const stored = window.localStorage.getItem('camp-theme');
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored;
+    }
+    return 'system';
+  });
 
   useEffect(() => {
     const init = () => {
@@ -49,6 +57,26 @@ const App: React.FC = () => {
 
     return () => clearInterval(checkGoogle);
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      const resolved = themePreference === 'system' ? (media.matches ? 'dark' : 'light') : themePreference;
+      root.dataset.theme = resolved;
+    };
+
+    applyTheme();
+    if (themePreference === 'system') {
+      const handler = () => applyTheme();
+      media.addEventListener('change', handler);
+      return () => media.removeEventListener('change', handler);
+    }
+  }, [themePreference]);
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-theme', themePreference);
+  }, [themePreference]);
 
   const handleInitialSync = async () => {
     setIsSyncing(true);
@@ -214,6 +242,8 @@ const App: React.FC = () => {
         return s ? <SongDetail submission={s} assignment={assignments.find(as => as.id === s.assignmentId)} prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)} onNavigate={navigateTo} /> : null;
       case 'profile':
         return <ProfilePage userProfile={userProfile} spreadsheetId={spreadsheetId} />;
+      case 'settings':
+        return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} />;
       default:
         return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} onNavigate={navigateTo} />;
     }
