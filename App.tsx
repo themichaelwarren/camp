@@ -88,7 +88,7 @@ const App: React.FC = () => {
   };
 
   const handleUpdatePrompt = async (updatedPrompt: Prompt) => {
-    setPrompts(prompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p));
+    setPrompts(prev => prev.map(p => p.id === updatedPrompt.id ? updatedPrompt : p));
     if (spreadsheetId) {
       try {
         await googleService.updatePromptRow(spreadsheetId, updatedPrompt);
@@ -153,40 +153,6 @@ const App: React.FC = () => {
               Connect with Google
             </button>
 
-            <div className="mt-16 p-8 bg-amber-50 rounded-[2rem] border border-amber-100 text-left">
-              <div className="flex items-center gap-3 mb-6">
-                 <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 animate-pulse">
-                   <i className="fa-solid fa-screwdriver-wrench text-sm"></i>
-                 </div>
-                 <h4 className="text-sm font-black text-amber-800 uppercase tracking-widest">
-                   Fixing Error 400 (Policy/storagerelay)
-                 </h4>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="bg-white/50 p-4 rounded-xl border border-amber-200/50">
-                  <p className="text-[10px] font-black text-amber-700 uppercase mb-2">1. Verify Origin</p>
-                  <p className="text-xs text-slate-600 leading-normal">
-                    In Google Console, "Authorized JavaScript origins" MUST be exactly:
-                    <br/><code className="bg-amber-100 px-2 py-0.5 rounded font-bold text-slate-800 mt-1 inline-block select-all">{currentOrigin}</code>
-                  </p>
-                </div>
-
-                <div className="bg-white/50 p-4 rounded-xl border border-amber-200/50">
-                  <p className="text-[10px] font-black text-amber-700 uppercase mb-2">2. Clear Redirect URIs</p>
-                  <p className="text-xs text-slate-600 leading-normal">
-                    The "Authorized redirect URIs" section must be <b className="text-amber-800 underline">COMPLETELY EMPTY</b>. Delete any localhost entries there.
-                  </p>
-                </div>
-
-                <div className="bg-white/50 p-4 rounded-xl border border-amber-200/50">
-                  <p className="text-[10px] font-black text-amber-700 uppercase mb-2">3. Cookies / Incognito</p>
-                  <p className="text-xs text-slate-600 leading-normal">
-                    If you are in Incognito, Google blocks the login. Ensure "Third-party cookies" are enabled for <code className="bg-slate-100 px-1">accounts.google.com</code>.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       );
@@ -196,7 +162,15 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} onNavigate={navigateTo} />;
       case 'prompts':
-        return <PromptsPage prompts={prompts} onAdd={handleAddPrompt} onUpdate={handleUpdatePrompt} onViewDetail={(id) => navigateTo('prompt-detail', id)} />;
+        return (
+          <PromptsPage
+            prompts={prompts}
+            onAdd={handleAddPrompt}
+            onUpdate={handleUpdatePrompt}
+            onViewDetail={(id) => navigateTo('prompt-detail', id)}
+            userProfile={userProfile}
+          />
+        );
       case 'assignments':
         return <AssignmentsPage assignments={assignments} prompts={prompts} onAdd={handleAddAssignment} onViewDetail={(id) => navigateTo('assignment-detail', id)} />;
       case 'submissions':

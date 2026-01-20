@@ -7,9 +7,10 @@ interface PromptsPageProps {
   onAdd: (prompt: Prompt) => void;
   onUpdate: (prompt: Prompt) => void;
   onViewDetail: (id: string) => void;
+  userProfile?: { name?: string; email?: string } | null;
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onViewDetail }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onViewDetail, userProfile }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: '' });
 
@@ -31,7 +32,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
       upvotes: 0,
       status: PromptStatus.DRAFT,
       createdAt: new Date().toISOString().split('T')[0],
-      createdBy: 'Admin'
+      createdBy: userProfile?.email || userProfile?.name || 'Admin'
     };
     onAdd(prompt);
     setShowAddModal(false);
