@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { ViewState } from '../types';
-import hatsukoiHanko from '../images/hatsukoi-hanko.png';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,7 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       <aside className="w-64 bg-indigo-900 text-white flex flex-col hidden md:flex shrink-0 h-screen sticky top-0">
         <div className="p-6">
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <img src={hatsukoiHanko} alt="Koi Camp mark" className="w-7 h-7 object-contain" />
+            <span aria-hidden="true" className="text-2xl leading-none">🤘</span>
+            <span className="sr-only">Koi Camp</span>
             <span>Koi Camp</span>
           </h1>
           <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">Toolkit v2.0</p>

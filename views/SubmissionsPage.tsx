@@ -8,9 +8,10 @@ interface SubmissionsPageProps {
   assignments: Assignment[];
   onAdd: (submission: Submission) => void;
   onViewDetail: (id: string) => void;
+  userProfile?: { name?: string; email?: string } | null;
 }
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, onAdd, onViewDetail }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, onAdd, onViewDetail, userProfile }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -34,7 +35,10 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
     
     setIsUploading(true);
     try {
-      const driveFile = await googleService.uploadAudioToDrive(selectedFile);
+      const assignmentFolderId = assignments.find(a => a.id === form.assignmentId)?.driveFolderId;
+      const driveFile = await googleService.uploadAudioToDriveInFolder(selectedFile, assignmentFolderId);
+      const userLabel = userProfile?.email || userProfile?.name || 'Anonymous';
+      const lyricsDoc = await googleService.createLyricsDoc(form.title, userLabel, form.lyrics, assignmentFolderId);
       
       const newVersion: SongVersion = {
         id: driveFile.id,
@@ -47,13 +51,14 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       const submission: Submission = {
         id: Math.random().toString(36).substr(2, 9),
         assignmentId: form.assignmentId,
-        camperId: 'me',
-        camperName: 'Jane Doe',
+        camperId: userProfile?.email || userProfile?.name || 'anonymous',
+        camperName: userProfile?.email || userProfile?.name || 'Anonymous',
         title: form.title,
         lyrics: form.lyrics,
         versions: [newVersion],
         details: form.details,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        lyricsDocUrl: lyricsDoc.webViewLink
       };
 
       onAdd(submission);

@@ -10,7 +10,6 @@ import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import ProfilePage from './views/ProfilePage';
 import * as googleService from './services/googleService';
-import hatsukoiHanko from './images/hatsukoi-hanko.png';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
@@ -101,12 +100,23 @@ const App: React.FC = () => {
   };
 
   const handleAddAssignment = async (newAssignment: Assignment) => {
-    setAssignments(prev => [newAssignment, ...prev]);
+    let assignmentWithFolder = newAssignment;
+    if (spreadsheetId) {
+      try {
+        const folderId = await googleService.createAssignmentFolder(newAssignment.title);
+        assignmentWithFolder = { ...newAssignment, driveFolderId: folderId };
+      } catch (error) {
+        console.error('Failed to create Drive folder for assignment', error);
+        alert('Assignment saved, but Drive folder could not be created.');
+      }
+    }
+    setAssignments(prev => [assignmentWithFolder, ...prev]);
     if (spreadsheetId) {
       try {
         await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
-          newAssignment.id, newAssignment.promptId, newAssignment.title, newAssignment.dueDate,
-          newAssignment.assignedTo.join(','), newAssignment.instructions, newAssignment.status
+          assignmentWithFolder.id, assignmentWithFolder.promptId, assignmentWithFolder.title, assignmentWithFolder.dueDate,
+          assignmentWithFolder.assignedTo.join(','), assignmentWithFolder.instructions, assignmentWithFolder.status,
+          assignmentWithFolder.driveFolderId || ''
         ]]);
       } catch (error) {
         console.error('Failed to save assignment to sheet', error);
@@ -122,7 +132,7 @@ const App: React.FC = () => {
         await googleService.appendSheetRow(spreadsheetId, 'Submissions!A1', [[
           newSubmission.id, newSubmission.assignmentId, newSubmission.camperId, newSubmission.camperName,
           newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
-          newSubmission.details, newSubmission.updatedAt
+          newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);
@@ -138,7 +148,8 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 text-center animate-in fade-in duration-1000">
           <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
             <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-5xl mb-10 mx-auto shadow-xl shadow-indigo-100 rotate-2 hover:rotate-0 transition-transform duration-500">
-              <img src={hatsukoiHanko} alt="Koi Camp mark" className="w-16 h-16 object-contain" />
+              <span aria-hidden="true">🤘</span>
+              <span className="sr-only">Koi Camp</span>
             </div>
             <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Koi Camp Portal</h2>
             <p className="text-slate-500 text-lg mb-12 leading-relaxed font-medium">
@@ -175,7 +186,15 @@ const App: React.FC = () => {
       case 'assignments':
         return <AssignmentsPage assignments={assignments} prompts={prompts} onAdd={handleAddAssignment} onViewDetail={(id) => navigateTo('assignment-detail', id)} />;
       case 'submissions':
-        return <SubmissionsPage submissions={submissions} assignments={assignments} onAdd={handleAddSubmission} onViewDetail={(id) => navigateTo('song-detail', id)} />;
+        return (
+          <SubmissionsPage
+            submissions={submissions}
+            assignments={assignments}
+            onAdd={handleAddSubmission}
+            onViewDetail={(id) => navigateTo('song-detail', id)}
+            userProfile={userProfile}
+          />
+        );
       case 'prompt-detail':
         const p = prompts.find(pr => pr.id === selectedId);
         return p ? (

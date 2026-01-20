@@ -24,6 +24,7 @@ export interface Assignment {
   assignedTo: string[];
   instructions: string;
   status: 'Open' | 'Closed';
+  driveFolderId?: string;
 }
 
 export interface SongVersion {
@@ -44,6 +45,7 @@ export interface Submission {
   versions: SongVersion[];
   details: string;
   updatedAt: string;
+  lyricsDocUrl?: string;
 }
 
 export type ViewState = 

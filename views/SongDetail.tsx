@@ -124,10 +124,22 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                Google Drive Export
             </h4>
             <p className="text-slate-400 text-xs mb-6 leading-relaxed">This song is synced to your camp folder in Google Drive. All audio versions are stored securely in your account.</p>
-            <button className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-              <i className="fa-solid fa-external-link text-xs"></i>
-              Open in Drive
-            </button>
+            {submission.lyricsDocUrl ? (
+              <a
+                href={submission.lyricsDocUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-file-lines text-xs"></i>
+                Open Lyrics Doc
+              </a>
+            ) : (
+              <button className="w-full bg-white/10 text-white/70 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+                <i className="fa-solid fa-file-lines text-xs"></i>
+                Lyrics Doc Pending
+              </button>
+            )}
           </section>
         </div>
       </div>
