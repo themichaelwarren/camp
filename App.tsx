@@ -10,6 +10,7 @@ import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import ProfilePage from './views/ProfilePage';
 import * as googleService from './services/googleService';
+import hatsukoiHanko from './images/hatsukoi-hanko.png';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
@@ -137,7 +138,7 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 text-center animate-in fade-in duration-1000">
           <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
             <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-5xl mb-10 mx-auto shadow-xl shadow-indigo-100 rotate-2 hover:rotate-0 transition-transform duration-500">
-              <i className="fa-solid fa-fish-fins"></i>
+              <img src={hatsukoiHanko} alt="Koi Camp mark" className="w-16 h-16 object-contain" />
             </div>
             <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Koi Camp Portal</h2>
             <p className="text-slate-500 text-lg mb-12 leading-relaxed font-medium">
