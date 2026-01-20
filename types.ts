@@ -46,6 +46,8 @@ export interface Submission {
   details: string;
   updatedAt: string;
   lyricsDocUrl?: string;
+  artworkFileId?: string;
+  artworkUrl?: string;
 }
 
 export type ViewState = 

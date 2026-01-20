@@ -15,6 +15,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
   const [showUpload, setShowUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [artworkFile, setArtworkFile] = useState<File | null>(null);
   
   const [form, setForm] = useState({
     title: '',
@@ -29,6 +30,17 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
     }
   };
 
+  const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Artwork image must be 5MB or smaller.');
+        return;
+      }
+      setArtworkFile(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) return alert('Please select an audio file');
@@ -39,6 +51,9 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       const driveFile = await googleService.uploadAudioToDriveInFolder(selectedFile, assignmentFolderId);
       const userLabel = userProfile?.email || userProfile?.name || 'Anonymous';
       const lyricsDoc = await googleService.createLyricsDoc(form.title, userLabel, form.lyrics, assignmentFolderId);
+      const artworkUpload = artworkFile
+        ? await googleService.uploadArtworkToDriveInFolder(artworkFile, assignmentFolderId)
+        : null;
       
       const newVersion: SongVersion = {
         id: driveFile.id,
@@ -58,13 +73,16 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         versions: [newVersion],
         details: form.details,
         updatedAt: new Date().toISOString(),
-        lyricsDocUrl: lyricsDoc.webViewLink
+        lyricsDocUrl: lyricsDoc.webViewLink,
+        artworkFileId: artworkUpload?.id || '',
+        artworkUrl: artworkUpload?.webViewLink || ''
       };
 
       onAdd(submission);
       setShowUpload(false);
       setForm({ title: '', assignmentId: '', lyrics: '', details: '' });
       setSelectedFile(null);
+      setArtworkFile(null);
     } catch (e) {
       console.error(e);
       alert('Upload failed. Check console for details.');
@@ -112,8 +130,12 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col md:flex-row hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
             >
               <div className="md:w-64 bg-slate-50 p-6 border-r border-slate-200 shrink-0">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 text-xl mb-4 group-hover:scale-110 transition-transform">
-                  <i className="fa-solid fa-compact-disc"></i>
+                <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4 overflow-hidden border border-indigo-100">
+                  {sub.artworkUrl ? (
+                    <img src={sub.artworkUrl} alt={`${sub.title} artwork`} className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fa-solid fa-compact-disc"></i>
+                  )}
                 </div>
                 <h4 className="font-bold text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{sub.title}</h4>
                 <p className="text-xs text-slate-500 mb-4">By {sub.camperName}</p>
@@ -199,6 +221,16 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                       className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                       onChange={handleFileChange}
                     />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                      onChange={handleArtworkChange}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-2">Max size 5MB. JPG, PNG, or GIF.</p>
                   </div>
                 </div>
                 

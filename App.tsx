@@ -160,7 +160,8 @@ const App: React.FC = () => {
         await googleService.appendSheetRow(spreadsheetId, 'Submissions!A1', [[
           newSubmission.id, newSubmission.assignmentId, newSubmission.camperId, newSubmission.camperName,
           newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
-          newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || ''
+          newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || '',
+          newSubmission.artworkFileId || '', newSubmission.artworkUrl || ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);

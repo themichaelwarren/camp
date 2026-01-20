@@ -97,7 +97,7 @@ export const findOrCreateDatabase = async () => {
   const headerRanges = [
     'Prompts!A1:H1',
     'Assignments!A1:H1',
-    'Submissions!A1:J1'
+    'Submissions!A1:L1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -112,8 +112,21 @@ export const findOrCreateDatabase = async () => {
     await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [['id', 'promptId', 'title', 'dueDate', 'assignedTo', 'instructions', 'status', 'driveFolderId']]);
   }
   const submissionsHeader = headerValues[2]?.values?.[0] || [];
-  if (submissionsHeader.length < 10) {
-    await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [['id', 'assignmentId', 'camperId', 'camperName', 'title', 'lyrics', 'versionsJson', 'details', 'updatedAt', 'lyricsDocUrl']]);
+  if (submissionsHeader.length < 12) {
+    await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [[
+      'id',
+      'assignmentId',
+      'camperId',
+      'camperName',
+      'title',
+      'lyrics',
+      'versionsJson',
+      'details',
+      'updatedAt',
+      'lyricsDocUrl',
+      'artworkFileId',
+      'artworkUrl'
+    ]]);
   }
 
   return SPREADSHEET_ID;
@@ -161,7 +174,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:J1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:L1000`;
   const result = await callGoogleApi(url);
   
   const promptsRaw = result.valueRanges[0].values || [];
@@ -200,7 +213,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
     versions: JSON.parse(row[6] || '[]'),
     details: row[7] || '',
     updatedAt: row[8] || new Date().toISOString(),
-    lyricsDocUrl: row[9] || ''
+    lyricsDocUrl: row[9] || '',
+    artworkFileId: row[10] || '',
+    artworkUrl: row[11] || ''
   }));
 
   return { prompts, assignments, submissions };
@@ -247,6 +262,14 @@ export const createAssignmentFolder = async (assignmentTitle: string) => {
 };
 
 export const uploadAudioToDriveInFolder = async (file: File, folderId?: string) => {
+  return uploadFileToDriveInFolder(file, folderId);
+};
+
+export const uploadArtworkToDriveInFolder = async (file: File, folderId?: string) => {
+  return uploadFileToDriveInFolder(file, folderId);
+};
+
+const uploadFileToDriveInFolder = async (file: File, folderId?: string) => {
   const metadata = {
     name: file.name,
     mimeType: file.type,
@@ -300,4 +323,14 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
     id: docId,
     webViewLink: `https://docs.google.com/document/d/${docId}/edit`
   };
+};
+
+export const fetchDriveFile = async (fileId: string) => {
+  if (!accessToken) throw new Error('Not authenticated');
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!response.ok) throw new Error('Failed to fetch Drive file');
+  return response.blob();
 };

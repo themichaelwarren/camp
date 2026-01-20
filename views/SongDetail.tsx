@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Submission, Assignment, Prompt, ViewState } from '../types';
+import * as googleService from '../services/googleService';
 
 interface SongDetailProps {
   submission: Submission;
@@ -10,6 +11,36 @@ interface SongDetailProps {
 }
 
 const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate }) => {
+  const [activeAudioUrl, setActiveAudioUrl] = useState<string | null>(null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activeAudioUrl) {
+        URL.revokeObjectURL(activeAudioUrl);
+      }
+    };
+  }, [activeAudioUrl]);
+
+  const loadAudio = async (versionId: string) => {
+    if (activeVersionId === versionId) return;
+    setLoadingVersionId(versionId);
+    try {
+      const blob = await googleService.fetchDriveFile(versionId);
+      const url = URL.createObjectURL(blob);
+      if (activeAudioUrl) {
+        URL.revokeObjectURL(activeAudioUrl);
+      }
+      setActiveVersionId(versionId);
+      setActiveAudioUrl(url);
+    } catch (error) {
+      console.error('Failed to load audio', error);
+      alert('Failed to load audio from Drive. Please try again.');
+    } finally {
+      setLoadingVersionId(null);
+    }
+  };
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
@@ -20,6 +51,13 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           >
             <i className="fa-solid fa-arrow-left"></i>
           </button>
+          <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
+            {submission.artworkUrl ? (
+              <img src={submission.artworkUrl} alt={`${submission.title} artwork`} className="w-full h-full object-cover" />
+            ) : (
+              <i className="fa-solid fa-compact-disc"></i>
+            )}
+          </div>
           <div>
             <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
             <div className="flex items-center gap-3 mt-1">
@@ -102,20 +140,25 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                     </div>
                     <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
                     <p className="text-[10px] text-slate-500 italic mb-3">"{v.notes}"</p>
-                    <a 
-                      href={v.audioUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => loadAudio(v.id)}
                       className="w-full flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                     >
-                      <i className="fa-solid fa-play"></i> Listen
-                    </a>
+                      <i className={`fa-solid ${loadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
+                      {activeVersionId === v.id ? 'Loaded' : 'Play in App'}
+                    </button>
                   </div>
                 ))
               ) : (
                 <p className="text-slate-400 text-sm italic text-center py-4">No audio versions yet.</p>
               )}
             </div>
+            {activeAudioUrl && (
+              <div className="mt-6 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Player</p>
+                <audio controls src={activeAudioUrl} className="w-full"></audio>
+              </div>
+            )}
           </section>
 
           <section className="bg-slate-900 p-8 rounded-3xl text-white">
