@@ -8,7 +8,6 @@ import SubmissionsPage from './views/SubmissionsPage';
 import PromptDetail from './views/PromptDetail';
 import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
-import ProfilePage from './views/ProfilePage';
 import SettingsPage from './views/SettingsPage';
 import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
@@ -24,7 +23,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
@@ -112,6 +111,17 @@ const App: React.FC = () => {
       setSubmissions(data.submissions);
       const campersData = await googleService.fetchCampers(sId);
       setCampers(campersData);
+      if (profile?.email) {
+        const match = campersData.find((camper) => camper.email === profile.email);
+        if (match) {
+          setUserProfile((prev) => ({
+            ...prev,
+            location: match.location,
+            status: match.status,
+            pictureOverrideUrl: match.pictureOverrideUrl
+          }));
+        }
+      }
       if (profile?.email) {
         const upvoted = await googleService.fetchUserUpvotes(sId, profile.email);
         setUpvotedPromptIds(upvoted);
@@ -228,6 +238,53 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateSubmission = async (updatedSubmission: Submission) => {
+    setSubmissions(prev => prev.map(s => s.id === updatedSubmission.id ? updatedSubmission : s));
+    if (spreadsheetId) {
+      try {
+        await googleService.updateSubmissionRow(spreadsheetId, updatedSubmission);
+      } catch (error) {
+        console.error('Failed to update submission in sheet', error);
+        alert('Song updated locally, but failed to sync to the sheet. Please try again.');
+      }
+    }
+  };
+
+  const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => {
+    if (!spreadsheetId || !userProfile?.email) return;
+    try {
+      await googleService.updateUserProfileDetails(spreadsheetId, {
+        id: userProfile.id,
+        email: userProfile.email,
+        name: userProfile.name,
+        location: updates.location,
+        status: updates.status,
+        pictureOverrideUrl: updates.pictureOverrideUrl
+      });
+      setUserProfile((prev) => ({
+        ...prev,
+        location: updates.location ?? prev?.location,
+        status: updates.status ?? prev?.status,
+        pictureOverrideUrl: updates.pictureOverrideUrl ?? prev?.pictureOverrideUrl
+      }));
+      setCampers((prev) =>
+        prev.map((camper) =>
+          camper.email === userProfile.email
+            ? {
+                ...camper,
+                location: updates.location ?? camper.location,
+                status: updates.status ?? camper.status,
+                pictureOverrideUrl: updates.pictureOverrideUrl ?? camper.pictureOverrideUrl
+              }
+            : camper
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update profile', error);
+      alert('Profile update failed. Please try again.');
+    }
+  };
+
   const renderView = () => {
     if (!isLoggedIn) {
       const currentOrigin = window.location.origin;
@@ -259,7 +316,16 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} campersCount={campers.length} onNavigate={navigateTo} />;
+        return (
+          <Dashboard
+            prompts={prompts}
+            assignments={assignments}
+            submissions={submissions}
+            campersCount={campers.length}
+            isSyncing={isSyncing}
+            onNavigate={navigateTo}
+          />
+        );
       case 'prompts':
         return (
           <PromptsPage
@@ -300,11 +366,17 @@ const App: React.FC = () => {
         return a ? <AssignmentDetail assignment={a} prompt={prompts.find(pr => pr.id === a.promptId)} submissions={submissions.filter(s => s.assignmentId === a.id)} onNavigate={navigateTo} /> : null;
       case 'song-detail':
         const s = submissions.find(su => su.id === selectedId);
-        return s ? <SongDetail submission={s} assignment={assignments.find(as => as.id === s.assignmentId)} prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)} onNavigate={navigateTo} /> : null;
-      case 'profile':
-        return <ProfilePage userProfile={userProfile} spreadsheetId={spreadsheetId} />;
+        return s ? (
+          <SongDetail
+            submission={s}
+            assignment={assignments.find(as => as.id === s.assignmentId)}
+            prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)}
+            onNavigate={navigateTo}
+            onUpdate={handleUpdateSubmission}
+          />
+        ) : null;
       case 'settings':
-        return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} />;
+        return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} userProfile={userProfile} onProfileUpdate={handleProfileUpdate} />;
       case 'campers':
         return <CampersPage campers={campers} onNavigate={navigateTo} />;
       case 'camper-detail':
@@ -318,7 +390,16 @@ const App: React.FC = () => {
           />
         ) : null;
       default:
-        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} campersCount={campers.length} onNavigate={navigateTo} />;
+        return (
+          <Dashboard
+            prompts={prompts}
+            assignments={assignments}
+            submissions={submissions}
+            campersCount={campers.length}
+            isSyncing={isSyncing}
+            onNavigate={navigateTo}
+          />
+        );
     }
   };
 

@@ -7,16 +7,30 @@ interface DashboardProps {
   assignments: Assignment[];
   submissions: Submission[];
   campersCount: number;
+  isSyncing: boolean;
   onNavigate: (view: ViewState, id?: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, campersCount, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, campersCount, isSyncing, onNavigate }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => p.status === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
     { label: 'Total Songs', value: submissions.length, icon: 'fa-music', color: 'bg-green-100 text-green-600', view: 'submissions' },
     { label: 'Campers Active', value: campersCount, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'campers' },
   ];
+
+  if (isSyncing) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-20 h-20 rounded-full bg-indigo-600 text-white text-3xl flex items-center justify-center animate-spin">
+            🤘
+          </div>
+          <p className="text-sm font-semibold text-slate-500">Syncing camp data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

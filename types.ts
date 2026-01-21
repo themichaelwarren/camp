@@ -58,6 +58,7 @@ export interface CamperProfile {
   lastSignedInAt: string;
   location?: string;
   status?: string;
+  pictureOverrideUrl?: string;
 }
 
 export type ViewState = 
@@ -66,7 +67,6 @@ export type ViewState =
   | 'assignments' 
   | 'submissions'
   | 'campers'
-  | 'profile'
   | 'settings'
   | 'prompt-detail'
   | 'assignment-detail'

@@ -98,7 +98,7 @@ export const findOrCreateDatabase = async () => {
     'Prompts!A1:H1',
     'Assignments!A1:H1',
     'Submissions!A1:L1',
-    'Users!A1:G1',
+    'Users!A1:H1',
     'PromptUpvotes!A1:E1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
@@ -132,7 +132,7 @@ export const findOrCreateDatabase = async () => {
   }
 
   const usersHeader = headerValues[3]?.values?.[0] || [];
-  if (usersHeader.length < 7) {
+  if (usersHeader.length < 8) {
     await updateSheetRows(SPREADSHEET_ID, 'Users!A1', [[
       'id',
       'name',
@@ -140,7 +140,8 @@ export const findOrCreateDatabase = async () => {
       'picture',
       'lastSignedInAt',
       'location',
-      'status'
+      'status',
+      'pictureOverrideUrl'
     ]]);
   }
 
@@ -199,6 +200,35 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
+export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:L1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
+  const rowValues = [[
+    submission.id,
+    submission.assignmentId,
+    submission.camperId,
+    submission.camperName,
+    submission.title,
+    submission.lyrics,
+    JSON.stringify(submission.versions),
+    submission.details,
+    submission.updatedAt,
+    submission.lyricsDocUrl || '',
+    submission.artworkFileId || '',
+    submission.artworkUrl || ''
+  ]];
+
+  if (rowIndex === -1) {
+    return appendSheetRow(spreadsheetId, 'Submissions!A1', rowValues);
+  }
+
+  const sheetRow = rowIndex + 2;
+  const range = `Submissions!A${sheetRow}:L${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
 export const fetchAllData = async (spreadsheetId: string) => {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:L1000`;
   const result = await callGoogleApi(url);
@@ -248,7 +278,7 @@ export const fetchAllData = async (spreadsheetId: string) => {
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:G1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
@@ -261,7 +291,8 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
     profile.picture || '',
     now,
     existingRow[5] || '',
-    existingRow[6] || ''
+    existingRow[6] || '',
+    existingRow[7] || ''
   ]];
 
   if (rowIndex === -1) {
@@ -269,12 +300,12 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:G${sheetRow}`;
+  const range = `Users!A${sheetRow}:H${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:G1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
@@ -284,8 +315,37 @@ export const fetchCampers = async (spreadsheetId: string) => {
     picture: row[3] || '',
     lastSignedInAt: row[4] || '',
     location: row[5] || '',
-    status: row[6] || ''
+    status: row[6] || '',
+    pictureOverrideUrl: row[7] || ''
   }));
+};
+
+export const updateUserProfileDetails = async (
+  spreadsheetId: string,
+  data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string }
+) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === data.id || row[2] === data.email);
+  if (rowIndex === -1) {
+    throw new Error('User profile not found');
+  }
+  const existingRow = rows[rowIndex];
+  const rowValues = [[
+    existingRow[0],
+    data.name || existingRow[1] || '',
+    existingRow[2],
+    existingRow[3] || '',
+    existingRow[4] || '',
+    data.location || existingRow[5] || '',
+    data.status || existingRow[6] || '',
+    data.pictureOverrideUrl || existingRow[7] || ''
+  ]];
+
+  const sheetRow = rowIndex + 2;
+  const range = `Users!A${sheetRow}:H${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchUserUpvotes = async (spreadsheetId: string, userEmail: string) => {
@@ -359,6 +419,10 @@ export const uploadAudioToDriveInFolder = async (file: File, folderId?: string) 
 
 export const uploadArtworkToDriveInFolder = async (file: File, folderId?: string) => {
   return uploadFileToDriveInFolder(file, folderId);
+};
+
+export const uploadProfilePhoto = async (file: File) => {
+  return uploadFileToDriveInFolder(file, ASSIGNMENTS_PARENT_FOLDER_ID);
 };
 
 const uploadFileToDriveInFolder = async (file: File, folderId?: string) => {

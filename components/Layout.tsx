@@ -8,7 +8,7 @@ interface LayoutProps {
   onViewChange: (view: ViewState) => void;
   isSyncing?: boolean;
   isLoggedIn?: boolean;
-  userProfile?: { name?: string; email?: string; picture?: string } | null;
+  userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
   onLogout?: () => void;
 }
 
@@ -21,7 +21,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { id: 'submissions', label: 'Song Submissions', icon: 'fa-music' },
     { id: 'campers', label: 'Campers', icon: 'fa-users' },
-    { id: 'profile', label: 'Profile', icon: 'fa-user' },
   ];
 
   const handleNavigate = (view: ViewState) => {
@@ -77,13 +76,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               aria-expanded={isUserMenuOpen}
               aria-haspopup="menu"
             >
-              {userProfile?.picture ? (
-                <img
-                  src={userProfile.picture}
-                  alt={userProfile.name || 'User profile'}
-                  className="w-10 h-10 rounded-full object-cover border border-white/30"
-                />
-              ) : (
+            {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
+              <img
+                src={userProfile.pictureOverrideUrl || userProfile.picture}
+                alt={userProfile.name || 'User profile'}
+                className="w-10 h-10 rounded-full object-cover border border-white/30"
+              />
+            ) : (
                 <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
                   KC
                 </div>

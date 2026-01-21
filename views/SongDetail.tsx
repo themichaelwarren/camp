@@ -8,12 +8,21 @@ interface SongDetailProps {
   assignment?: Assignment;
   prompt?: Prompt;
   onNavigate: (view: ViewState, id?: string) => void;
+  onUpdate: (submission: Submission) => void;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate }) => {
   const [activeAudioUrl, setActiveAudioUrl] = useState<string | null>(null);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: submission.title,
+    lyrics: submission.lyrics,
+    details: submission.details
+  });
+  const [newArtwork, setNewArtwork] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -41,6 +50,49 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       setLoadingVersionId(null);
     }
   };
+
+  const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Artwork image must be 5MB or smaller.');
+        return;
+      }
+      setNewArtwork(file);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      let artworkFileId = submission.artworkFileId || '';
+      let artworkUrl = submission.artworkUrl || '';
+      if (newArtwork) {
+        const uploaded = await googleService.uploadArtworkToDriveInFolder(newArtwork, assignment?.driveFolderId);
+        artworkFileId = uploaded.id;
+        artworkUrl = uploaded.webViewLink;
+      }
+
+      const updated: Submission = {
+        ...submission,
+        title: editForm.title.trim(),
+        lyrics: editForm.lyrics.trim(),
+        details: editForm.details.trim(),
+        artworkFileId,
+        artworkUrl,
+        updatedAt: new Date().toISOString()
+      };
+      onUpdate(updated);
+      setShowEdit(false);
+      setNewArtwork(null);
+    } catch (error) {
+      console.error('Failed to update submission', error);
+      alert('Failed to update song. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
@@ -65,8 +117,36 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
               <p className="text-slate-400 text-xs font-medium">Song ID: {submission.id}</p>
             </div>
+            <button
+              onClick={() => {
+                setEditForm({
+                  title: submission.title,
+                  lyrics: submission.lyrics,
+                  details: submission.details
+                });
+                setShowEdit(true);
+              }}
+              className="mt-3 inline-flex md:hidden items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
+            >
+              <i className="fa-solid fa-pen"></i>
+              Edit Song
+            </button>
           </div>
         </div>
+        <button
+          onClick={() => {
+            setEditForm({
+              title: submission.title,
+              lyrics: submission.lyrics,
+              details: submission.details
+            });
+            setShowEdit(true);
+          }}
+          className="hidden md:inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors"
+        >
+          <i className="fa-solid fa-pen"></i>
+          Edit Song
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -187,6 +267,74 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
       </div>
     </div>
+
+    {showEdit && (
+      <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
+            <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+              <input
+                required
+                type="text"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
+              <textarea
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-sm"
+                value={editForm.lyrics}
+                onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
+              <textarea
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
+                value={editForm.details}
+                onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                onChange={handleArtworkChange}
+              />
+              <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
+            </div>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-check"></i>
+                  Save Changes
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    )}
   );
 };
 

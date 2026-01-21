@@ -56,8 +56,8 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate }) => {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      {camper.picture ? (
-                        <img src={camper.picture} alt={camper.name} className="w-10 h-10 rounded-full object-cover" />
+                      {camper.pictureOverrideUrl || camper.picture ? (
+                        <img src={camper.pictureOverrideUrl || camper.picture} alt={camper.name} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
                           {camper.name?.[0] || 'C'}
@@ -95,8 +95,8 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate }) => {
               onClick={() => onNavigate('camper-detail', camper.id || camper.email)}
             >
               <div className="flex items-center gap-4 mb-4">
-                {camper.picture ? (
-                  <img src={camper.picture} alt={camper.name} className="w-14 h-14 rounded-2xl object-cover" />
+                {camper.pictureOverrideUrl || camper.picture ? (
+                  <img src={camper.pictureOverrideUrl || camper.picture} alt={camper.name} className="w-14 h-14 rounded-2xl object-cover" />
                 ) : (
                   <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold">
                     {camper.name?.[0] || 'C'}

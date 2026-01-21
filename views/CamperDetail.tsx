@@ -21,8 +21,8 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
           <i className="fa-solid fa-arrow-left"></i>
         </button>
         <div className="flex items-center gap-4">
-          {camper.picture ? (
-            <img src={camper.picture} alt={camper.name} className="w-16 h-16 rounded-2xl object-cover" />
+          {camper.pictureOverrideUrl || camper.picture ? (
+            <img src={camper.pictureOverrideUrl || camper.picture} alt={camper.name} className="w-16 h-16 rounded-2xl object-cover" />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
               {camper.name?.[0] || 'C'}
