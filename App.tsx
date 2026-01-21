@@ -26,6 +26,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
+  const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -48,6 +49,9 @@ const App: React.FC = () => {
             };
             setUserProfile(normalized);
             window.localStorage.setItem('camp-auth', '1');
+            if (normalized.email) {
+              window.localStorage.setItem('camp-last-email', normalized.email);
+            }
             handleInitialSync(normalized);
           })
           .catch((err) => {
@@ -55,8 +59,9 @@ const App: React.FC = () => {
             handleInitialSync(null);
           });
       });
-      if (window.localStorage.getItem('camp-auth') === '1') {
-        googleService.trySilentSignIn();
+      if (window.localStorage.getItem('camp-auth') === '1' && rememberMe) {
+        const hint = window.localStorage.getItem('camp-last-email') || undefined;
+        googleService.trySilentSignIn(hint);
       }
     };
 
@@ -95,6 +100,13 @@ const App: React.FC = () => {
   useEffect(() => {
     window.localStorage.setItem('camp-theme', themePreference);
   }, [themePreference]);
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-remember', rememberMe ? '1' : '0');
+    if (!rememberMe) {
+      window.localStorage.removeItem('camp-last-email');
+    }
+  }, [rememberMe]);
 
   const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
@@ -382,7 +394,16 @@ const App: React.FC = () => {
           />
         ) : null;
       case 'settings':
-        return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} userProfile={userProfile} onProfileUpdate={handleProfileUpdate} />;
+        return (
+          <SettingsPage
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
+            userProfile={userProfile}
+            onProfileUpdate={handleProfileUpdate}
+            rememberMe={rememberMe}
+            onRememberMeChange={setRememberMe}
+          />
+        );
       case 'campers':
         return <CampersPage campers={campers} onNavigate={navigateTo} />;
       case 'camper-detail':
@@ -416,7 +437,13 @@ const App: React.FC = () => {
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}
       userProfile={userProfile}
-      onLogout={googleService.logout}
+      onLogout={() => {
+        window.localStorage.removeItem('camp-auth');
+        if (!rememberMe) {
+          window.localStorage.removeItem('camp-last-email');
+        }
+        googleService.logout();
+      }}
     >
       {renderView()}
     </Layout>

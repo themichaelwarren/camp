@@ -53,11 +53,11 @@ export const signIn = () => {
   }
 };
 
-export const trySilentSignIn = () => {
+export const trySilentSignIn = (hint?: string) => {
   if (tokenClient) {
-    tokenClient.requestAccessToken({ prompt: '' });
+    tokenClient.requestAccessToken(hint ? { prompt: '', hint } : { prompt: '' });
   } else {
-    authReadyCallback = () => tokenClient?.requestAccessToken({ prompt: '' });
+    authReadyCallback = () => tokenClient?.requestAccessToken(hint ? { prompt: '', hint } : { prompt: '' });
   }
 };
 

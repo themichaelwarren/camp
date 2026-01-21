@@ -6,9 +6,11 @@ interface SettingsPageProps {
   onThemeChange: (value: 'light' | 'dark' | 'system') => void;
   userProfile?: { name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null;
   onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => void;
+  rememberMe: boolean;
+  onRememberMeChange: (value: boolean) => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -138,6 +140,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
             )}
           </button>
         </form>
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-8">
+        <h3 className="text-lg font-bold text-slate-800">Login</h3>
+        <p className="text-slate-500 text-sm mt-1">Control how this device remembers your session.</p>
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Remember this device</p>
+            <p className="text-xs text-slate-500">Attempts a silent sign-in on reload and uses your last email as a hint.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onRememberMeChange(!rememberMe)}
+            className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors ${
+              rememberMe ? 'bg-indigo-600' : 'bg-slate-200'
+            }`}
+            aria-pressed={rememberMe}
+          >
+            <span
+              className={`w-6 h-6 rounded-full bg-white shadow-sm transform transition-transform ${
+                rememberMe ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       <section className="bg-white border border-slate-200 rounded-3xl p-8">
