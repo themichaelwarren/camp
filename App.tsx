@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
@@ -26,7 +26,15 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
+  const [player, setPlayer] = useState<{
+    src: string;
+    title: string;
+    artist: string;
+    artworkFileId?: string;
+    artworkUrl?: string;
+  } | null>(null);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
+  const previousAudioUrl = useRef<string | null>(null);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -107,6 +115,14 @@ const App: React.FC = () => {
       window.localStorage.removeItem('camp-last-email');
     }
   }, [rememberMe]);
+
+  useEffect(() => {
+    return () => {
+      if (previousAudioUrl.current) {
+        URL.revokeObjectURL(previousAudioUrl.current);
+      }
+    };
+  }, []);
 
   const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
@@ -269,6 +285,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePlayTrack = async (track: {
+    versionId: string;
+    title: string;
+    artist: string;
+    artworkFileId?: string;
+    artworkUrl?: string;
+  }) => {
+    try {
+      const blob = await googleService.fetchDriveFile(track.versionId);
+      const url = URL.createObjectURL(blob);
+      if (previousAudioUrl.current) {
+        URL.revokeObjectURL(previousAudioUrl.current);
+      }
+      previousAudioUrl.current = url;
+      setPlayer({
+        src: url,
+        title: track.title,
+        artist: track.artist,
+        artworkFileId: track.artworkFileId,
+        artworkUrl: track.artworkUrl
+      });
+    } catch (error) {
+      console.error('Failed to load audio', error);
+      alert('Failed to load audio from Drive. Please try again.');
+    }
+  };
+
   const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => {
     if (!spreadsheetId || !userProfile?.email) return;
     try {
@@ -392,6 +435,7 @@ const App: React.FC = () => {
             prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)}
             onNavigate={navigateTo}
             onUpdate={handleUpdateSubmission}
+            onPlayTrack={handlePlayTrack}
           />
         ) : null;
       case 'settings':
@@ -438,6 +482,7 @@ const App: React.FC = () => {
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}
       userProfile={userProfile}
+      player={player}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

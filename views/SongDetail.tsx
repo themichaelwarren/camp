@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Submission, Assignment, Prompt, ViewState } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
@@ -10,10 +10,10 @@ interface SongDetailProps {
   prompt?: Prompt;
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (submission: Submission) => void;
+  onPlayTrack: (track: { versionId: string; title: string; artist: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate }) => {
-  const [activeAudioUrl, setActiveAudioUrl] = useState<string | null>(null);
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -25,25 +25,18 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [newArtwork, setNewArtwork] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      if (activeAudioUrl) {
-        URL.revokeObjectURL(activeAudioUrl);
-      }
-    };
-  }, [activeAudioUrl]);
-
   const loadAudio = async (versionId: string) => {
     if (activeVersionId === versionId) return;
     setLoadingVersionId(versionId);
     try {
-      const blob = await googleService.fetchDriveFile(versionId);
-      const url = URL.createObjectURL(blob);
-      if (activeAudioUrl) {
-        URL.revokeObjectURL(activeAudioUrl);
-      }
+      await onPlayTrack({
+        versionId,
+        title: submission.title,
+        artist: submission.camperName,
+        artworkFileId: submission.artworkFileId,
+        artworkUrl: submission.artworkUrl
+      });
       setActiveVersionId(versionId);
-      setActiveAudioUrl(url);
     } catch (error) {
       console.error('Failed to load audio', error);
       alert('Failed to load audio from Drive. Please try again.');
@@ -260,12 +253,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 <p className="text-slate-400 text-sm italic text-center py-4">No audio versions yet.</p>
               )}
             </div>
-            {activeAudioUrl && (
-              <div className="mt-6 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Player</p>
-                <audio controls src={activeAudioUrl} className="w-full"></audio>
-              </div>
-            )}
           </section>
 
           <section className="bg-slate-900 p-8 rounded-3xl text-white">
