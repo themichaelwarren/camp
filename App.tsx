@@ -247,6 +247,7 @@ const App: React.FC = () => {
           newSubmission.id, newSubmission.assignmentId, newSubmission.camperId, newSubmission.camperName,
           newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
           newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || '',
+          newSubmission.lyricsRevisionCount ?? 0,
           newSubmission.artworkFileId || '', newSubmission.artworkUrl || ''
         ]]);
       } catch (error) {

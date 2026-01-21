@@ -69,10 +69,31 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     try {
       let artworkFileId = submission.artworkFileId || '';
       let artworkUrl = submission.artworkUrl || '';
+      let lyricsDocUrl = submission.lyricsDocUrl || '';
+      let lyricsRevisionCount = submission.lyricsRevisionCount ?? 0;
       if (newArtwork) {
         const uploaded = await googleService.uploadArtworkToDriveInFolder(newArtwork, assignment?.driveFolderId);
         artworkFileId = uploaded.id;
         artworkUrl = uploaded.webViewLink;
+      }
+
+      const lyricsChanged = editForm.lyrics.trim() !== submission.lyrics;
+      if (lyricsChanged) {
+        if (!lyricsDocUrl) {
+          const userLabel = submission.camperName || 'Anonymous';
+          const created = await googleService.createLyricsDoc(editForm.title, userLabel, editForm.lyrics, assignment?.driveFolderId);
+          lyricsDocUrl = created.webViewLink;
+          lyricsRevisionCount = 1;
+        } else {
+          const match = lyricsDocUrl.match(/document\/d\/([^/]+)/);
+          const docId = match ? match[1] : '';
+          if (docId) {
+            const nextCount = Math.max(1, lyricsRevisionCount) + 1;
+            const dateLabel = new Date().toISOString().slice(0, 10);
+            await googleService.appendLyricsRevision(docId, `v${nextCount} ${dateLabel}`, editForm.lyrics);
+            lyricsRevisionCount = nextCount;
+          }
+        }
       }
 
       const updated: Submission = {
@@ -82,6 +103,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         details: editForm.details.trim(),
         artworkFileId,
         artworkUrl,
+        lyricsDocUrl,
+        lyricsRevisionCount,
         updatedAt: new Date().toISOString()
       };
       onUpdate(updated);

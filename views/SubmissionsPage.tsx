@@ -75,6 +75,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         details: form.details,
         updatedAt: new Date().toISOString(),
         lyricsDocUrl: lyricsDoc.webViewLink,
+        lyricsRevisionCount: 1,
         artworkFileId: artworkUpload?.id || '',
         artworkUrl: artworkUpload?.webViewLink || ''
       };

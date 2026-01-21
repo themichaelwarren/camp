@@ -46,6 +46,7 @@ export interface Submission {
   details: string;
   updatedAt: string;
   lyricsDocUrl?: string;
+  lyricsRevisionCount?: number;
   artworkFileId?: string;
   artworkUrl?: string;
 }

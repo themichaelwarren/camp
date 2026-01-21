@@ -110,7 +110,7 @@ export const findOrCreateDatabase = async () => {
   const headerRanges = [
     'Prompts!A1:H1',
     'Assignments!A1:H1',
-    'Submissions!A1:L1',
+    'Submissions!A1:M1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1'
   ];
@@ -127,7 +127,7 @@ export const findOrCreateDatabase = async () => {
     await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [['id', 'promptId', 'title', 'dueDate', 'assignedTo', 'instructions', 'status', 'driveFolderId']]);
   }
   const submissionsHeader = headerValues[2]?.values?.[0] || [];
-  if (submissionsHeader.length < 12) {
+  if (submissionsHeader.length < 13) {
     await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [[
       'id',
       'assignmentId',
@@ -139,6 +139,7 @@ export const findOrCreateDatabase = async () => {
       'details',
       'updatedAt',
       'lyricsDocUrl',
+      'lyricsRevisionCount',
       'artworkFileId',
       'artworkUrl'
     ]]);
@@ -214,7 +215,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:L1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:M1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
@@ -229,6 +230,7 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
     submission.details,
     submission.updatedAt,
     submission.lyricsDocUrl || '',
+    submission.lyricsRevisionCount ?? 0,
     submission.artworkFileId || '',
     submission.artworkUrl || ''
   ]];
@@ -238,12 +240,12 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Submissions!A${sheetRow}:L${sheetRow}`;
+  const range = `Submissions!A${sheetRow}:M${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:L1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:M1000`;
   const result = await callGoogleApi(url);
   
   const promptsRaw = result.valueRanges[0].values || [];
@@ -283,8 +285,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
     details: row[7] || '',
     updatedAt: row[8] || new Date().toISOString(),
     lyricsDocUrl: row[9] || '',
-    artworkFileId: row[10] || '',
-    artworkUrl: row[11] || ''
+    lyricsRevisionCount: row[10] ? parseInt(row[10], 10) : 0,
+    artworkFileId: row[11] || '',
+    artworkUrl: row[12] || ''
   }));
 
   return { prompts, assignments, submissions };
@@ -485,13 +488,14 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
 
   const docId = docFile.id as string;
   const docsUrl = `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`;
+  const nowLabel = `v1 ${new Date().toISOString().slice(0, 10)}`;
   await callGoogleApi(docsUrl, {
     method: 'POST',
     body: JSON.stringify({
       requests: [{
         insertText: {
           location: { index: 1 },
-          text: lyrics || ''
+          text: `${nowLabel}\n${lyrics || ''}`
         }
       }]
     })
@@ -501,6 +505,31 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
     id: docId,
     webViewLink: `https://docs.google.com/document/d/${docId}/edit`
   };
+};
+
+export const appendLyricsRevision = async (
+  docId: string,
+  revisionLabel: string,
+  lyrics: string
+) => {
+  const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
+  const content = doc.body?.content || [];
+  const last = content[content.length - 1];
+  const endIndex = last?.endIndex ? last.endIndex - 1 : 1;
+  const text = `\n\n${revisionLabel}\n${lyrics || ''}`;
+
+  const docsUrl = `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`;
+  await callGoogleApi(docsUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [{
+        insertText: {
+          location: { index: endIndex },
+          text
+        }
+      }]
+    })
+  });
 };
 
 export const fetchDriveFile = async (fileId: string) => {
