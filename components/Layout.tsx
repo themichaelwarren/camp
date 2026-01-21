@@ -240,8 +240,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           </div>
         </header>
 
-        {player && isPlayerOpen && (
-          <div className="fixed inset-0 z-50 md:hidden">
+        {player && (
+          <div
+            className={`fixed inset-0 z-50 md:hidden transition-opacity ${
+              isPlayerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            aria-hidden={!isPlayerOpen}
+          >
             <button
               className="absolute inset-0 bg-slate-900/70"
               onClick={() => setIsPlayerOpen(false)}
