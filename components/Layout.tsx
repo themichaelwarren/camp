@@ -14,6 +14,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, userProfile, onLogout }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
     { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
@@ -25,6 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const handleNavigate = (view: ViewState) => {
     onViewChange(view);
     setIsMobileNavOpen(false);
+    setIsUserMenuOpen(false);
   };
 
   const sidebarContent = (
@@ -65,28 +67,56 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         ))}
       </nav>
 
-      <div className="p-4 bg-indigo-950/50 mt-auto">
+      <div className="p-4 bg-indigo-950/50 mt-auto relative">
         {isLoggedIn ? (
-          <div className="flex items-center gap-3">
-            {userProfile?.picture ? (
-              <img
-                src={userProfile.picture}
-                alt={userProfile.name || 'User profile'}
-                className="w-10 h-10 rounded-full object-cover border border-white/30"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
-                KC
+          <>
+            <button
+              onClick={() => setIsUserMenuOpen((open) => !open)}
+              className="w-full flex items-center gap-3 text-left"
+              aria-expanded={isUserMenuOpen}
+              aria-haspopup="menu"
+            >
+              {userProfile?.picture ? (
+                <img
+                  src={userProfile.picture}
+                  alt={userProfile.name || 'User profile'}
+                  className="w-10 h-10 rounded-full object-cover border border-white/30"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+                  KC
+                </div>
+              )}
+              <div className="overflow-hidden flex-1">
+                <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
+                <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                  {isSyncing ? 'Syncing...' : 'Connected'}
+                </p>
+              </div>
+              <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
+            </button>
+            {isUserMenuOpen && (
+              <div className="absolute bottom-full mb-3 left-4 right-4 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden">
+                <button
+                  onClick={() => handleNavigate('settings')}
+                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                >
+                  <i className="fa-solid fa-gear"></i>
+                  Settings
+                </button>
+                {isLoggedIn && (
+                  <button
+                    onClick={onLogout}
+                    className="w-full px-4 py-3 text-left text-sm font-semibold text-rose-200 hover:bg-rose-500/10 flex items-center gap-3"
+                  >
+                    <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                    Log out
+                  </button>
+                )}
               </div>
             )}
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
-              <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
-                {isSyncing ? 'Syncing...' : 'Connected'}
-              </p>
-            </div>
-          </div>
+          </>
         ) : (
           <div className="text-center p-2">
             <p className="text-[10px] text-indigo-400 font-bold uppercase mb-2">Offline Mode</p>
@@ -140,22 +170,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <i className={`fa-solid ${isSyncing ? 'fa-arrows-rotate animate-spin' : 'fa-cloud-check'}`}></i>
                 {isSyncing ? 'Cloud Sync in Progress' : 'Changes Saved to Sheets'}
               </span>
-            )}
-            <button
-              className="text-slate-500 hover:text-indigo-600 transition-colors w-8 h-8 rounded-full hover:bg-slate-50 flex items-center justify-center"
-              onClick={() => handleNavigate('settings')}
-              aria-label="Open settings"
-            >
-              <i className="fa-solid fa-gear"></i>
-            </button>
-            {isLoggedIn && (
-              <button
-                onClick={onLogout}
-                className="text-slate-500 hover:text-red-600 transition-colors px-3 h-9 rounded-full hover:bg-red-50 flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
-              >
-                <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                Log out
-              </button>
             )}
           </div>
         </header>
