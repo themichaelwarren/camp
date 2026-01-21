@@ -6,15 +6,16 @@ interface DashboardProps {
   prompts: Prompt[];
   assignments: Assignment[];
   submissions: Submission[];
+  campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, campersCount, onNavigate }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => p.status === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
     { label: 'Total Songs', value: submissions.length, icon: 'fa-music', color: 'bg-green-100 text-green-600', view: 'submissions' },
-    { label: 'Campers Active', value: 24, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'dashboard' },
+    { label: 'Campers Active', value: campersCount, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'dashboard' },
   ];
 
   return (

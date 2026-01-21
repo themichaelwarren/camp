@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -22,7 +22,8 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; picture?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string } | null>(null);
+  const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -33,12 +34,23 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = () => {
-      googleService.initGoogleAuth((token) => {
+      googleService.initGoogleAuth(() => {
         setIsLoggedIn(true);
         googleService.fetchUserProfile()
-          .then((profile) => setUserProfile(profile))
-          .catch((err) => console.error('Failed to fetch user profile', err));
-        handleInitialSync();
+          .then((profile) => {
+            const normalized = {
+              id: profile.sub || profile.id,
+              name: profile.name,
+              email: profile.email,
+              picture: profile.picture
+            };
+            setUserProfile(normalized);
+            handleInitialSync(normalized);
+          })
+          .catch((err) => {
+            console.error('Failed to fetch user profile', err);
+            handleInitialSync(null);
+          });
       });
     };
 
@@ -78,15 +90,25 @@ const App: React.FC = () => {
     window.localStorage.setItem('camp-theme', themePreference);
   }, [themePreference]);
 
-  const handleInitialSync = async () => {
+  const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
     try {
       const sId = await googleService.findOrCreateDatabase();
       setSpreadsheetId(sId);
+      if (profile?.email) {
+        await googleService.upsertUserProfile(sId, {
+          id: profile.id || profile.email,
+          name: profile.name || profile.email,
+          email: profile.email,
+          picture: profile.picture
+        });
+      }
       const data = await googleService.fetchAllData(sId);
       setPrompts(data.prompts);
       setAssignments(data.assignments);
       setSubmissions(data.submissions);
+      const campersData = await googleService.fetchCampers(sId);
+      setCampers(campersData);
     } catch (e) {
       console.error('Initial sync failed', e);
     } finally {
@@ -201,7 +223,7 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} onNavigate={navigateTo} />;
+        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} campersCount={campers.length} onNavigate={navigateTo} />;
       case 'prompts':
         return (
           <PromptsPage
@@ -246,7 +268,7 @@ const App: React.FC = () => {
       case 'settings':
         return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} />;
       default:
-        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} onNavigate={navigateTo} />;
+        return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} campersCount={campers.length} onNavigate={navigateTo} />;
     }
   };
 

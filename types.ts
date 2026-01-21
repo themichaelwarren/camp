@@ -50,6 +50,14 @@ export interface Submission {
   artworkUrl?: string;
 }
 
+export interface CamperProfile {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+  lastSignedInAt: string;
+}
+
 export type ViewState = 
   | 'dashboard' 
   | 'prompts' 

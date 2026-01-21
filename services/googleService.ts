@@ -79,7 +79,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -97,7 +97,8 @@ export const findOrCreateDatabase = async () => {
   const headerRanges = [
     'Prompts!A1:H1',
     'Assignments!A1:H1',
-    'Submissions!A1:L1'
+    'Submissions!A1:L1',
+    'Users!A1:E1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -126,6 +127,17 @@ export const findOrCreateDatabase = async () => {
       'lyricsDocUrl',
       'artworkFileId',
       'artworkUrl'
+    ]]);
+  }
+
+  const usersHeader = headerValues[3]?.values?.[0] || [];
+  if (usersHeader.length < 5) {
+    await updateSheetRows(SPREADSHEET_ID, 'Users!A1', [[
+      'id',
+      'name',
+      'email',
+      'picture',
+      'lastSignedInAt'
     ]]);
   }
 
@@ -219,6 +231,36 @@ export const fetchAllData = async (spreadsheetId: string) => {
   }));
 
   return { prompts, assignments, submissions };
+};
+
+export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:E1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
+  const now = new Date().toISOString();
+  const rowValues = [[profile.id, profile.name, profile.email, profile.picture || '', now]];
+
+  if (rowIndex === -1) {
+    return appendSheetRow(spreadsheetId, 'Users!A1', rowValues);
+  }
+
+  const sheetRow = rowIndex + 2;
+  const range = `Users!A${sheetRow}:E${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
+export const fetchCampers = async (spreadsheetId: string) => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:E1000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows.map((row: any[]) => ({
+    id: row[0] || '',
+    name: row[1] || '',
+    email: row[2] || '',
+    picture: row[3] || '',
+    lastSignedInAt: row[4] || ''
+  }));
 };
 
 export const fetchUserProfile = async () => {
