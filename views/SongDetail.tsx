@@ -267,6 +267,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           </section>
         </div>
       </div>
+      </div>
       {showEdit && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden">
