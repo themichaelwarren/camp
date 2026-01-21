@@ -108,9 +108,9 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {submissions.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center col-span-full">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 text-3xl">
               <i className="fa-solid fa-music"></i>
             </div>
@@ -128,49 +128,34 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             <div 
               key={sub.id} 
               onClick={() => onViewDetail(sub.id)}
-              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col md:flex-row hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
+              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group flex flex-col"
             >
-              <div className="md:w-64 bg-slate-50 p-6 border-r border-slate-200 shrink-0">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4 overflow-hidden border border-indigo-100">
-                  <ArtworkImage
-                    fileId={sub.artworkFileId}
-                    fallbackUrl={sub.artworkUrl}
-                    alt={`${sub.title} artwork`}
-                    className="w-full h-full object-cover"
-                    fallback={<i className="fa-solid fa-compact-disc"></i>}
-                  />
-                </div>
-                <h4 className="font-bold text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{sub.title}</h4>
-                <p className="text-xs text-slate-500 mb-4">By {sub.camperName}</p>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Latest Version</p>
-                  <div className="flex items-center gap-2 text-xs bg-white p-2 rounded-lg border border-slate-100 truncate text-slate-600">
-                    <i className="fa-solid fa-file-audio text-indigo-400"></i>
-                    {sub.versions[0]?.fileName || 'Untitled.mp3'}
-                  </div>
-                </div>
+              <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+                <ArtworkImage
+                  fileId={sub.artworkFileId}
+                  fallbackUrl={sub.artworkUrl}
+                  alt={`${sub.title} artwork`}
+                  className="w-full h-full object-contain bg-slate-100"
+                  fallback={<i className="fa-solid fa-compact-disc text-4xl text-indigo-400"></i>}
+                />
               </div>
-              <div className="flex-1 p-6 flex flex-col min-w-0">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                     <p className="text-[10px] font-bold text-indigo-500 uppercase">Assignment</p>
-                     <p className="text-sm font-semibold text-slate-700 truncate max-w-xs">
-                       {assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work'}
-                     </p>
-                  </div>
-                  <div className="flex gap-2">
-                     <button className="text-xs font-bold text-slate-400 hover:text-indigo-600 px-3 py-1 rounded-lg border border-slate-100">
-                        Details <i className="fa-solid fa-arrow-right ml-1"></i>
-                     </button>
-                  </div>
+              <div className="p-5 flex flex-col gap-3">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-indigo-600 transition-colors">{sub.title}</h4>
+                  <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
                 </div>
-                <div className="flex-1 bg-slate-50 rounded-xl p-4 font-serif text-sm text-slate-700 whitespace-pre-wrap max-h-40 overflow-hidden mb-4 border border-slate-100 italic opacity-80">
-                  {sub.lyrics}
+                <div className="space-y-1 text-xs text-slate-500">
+                  <p className="uppercase tracking-widest text-[10px] text-slate-400 font-bold">Assignment</p>
+                  <p className="font-semibold text-slate-700 truncate">
+                    {assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work'}
+                  </p>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-slate-400 mt-auto">
-                   <span className="flex items-center gap-1"><i className="fa-solid fa-code-merge"></i> v{sub.versions.length}</span>
-                   <span className="flex items-center gap-1"><i className="fa-solid fa-calendar"></i> Updated {new Date(sub.updatedAt).toLocaleDateString()}</span>
-                   <span className="ml-auto text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 font-bold uppercase tracking-tighter">Synced to Drive</span>
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
+                  <span className="flex items-center gap-1">
+                    <i className="fa-solid fa-calendar"></i>
+                    {new Date(sub.updatedAt).toLocaleDateString()}
+                  </span>
+                  <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 font-bold uppercase tracking-tighter">Synced</span>
                 </div>
               </div>
             </div>

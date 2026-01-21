@@ -105,12 +105,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           >
             <i className="fa-solid fa-arrow-left"></i>
           </button>
-          <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
+          <div className="w-14 h-14 bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100">
             <ArtworkImage
               fileId={submission.artworkFileId}
               fallbackUrl={submission.artworkUrl}
               alt={`${submission.title} artwork`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-indigo-100"
               fallback={<i className="fa-solid fa-compact-disc"></i>}
             />
           </div>
