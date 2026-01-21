@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Submission, Assignment, Prompt, ViewState } from '../types';
 import * as googleService from '../services/googleService';
+import ArtworkImage from '../components/ArtworkImage';
 
 interface SongDetailProps {
   submission: Submission;
@@ -105,11 +106,13 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             <i className="fa-solid fa-arrow-left"></i>
           </button>
           <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
-            {submission.artworkUrl ? (
-              <img src={submission.artworkUrl} alt={`${submission.title} artwork`} className="w-full h-full object-cover" />
-            ) : (
-              <i className="fa-solid fa-compact-disc"></i>
-            )}
+            <ArtworkImage
+              fileId={submission.artworkFileId}
+              fallbackUrl={submission.artworkUrl}
+              alt={`${submission.title} artwork`}
+              className="w-full h-full object-cover"
+              fallback={<i className="fa-solid fa-compact-disc"></i>}
+            />
           </div>
           <div>
             <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>

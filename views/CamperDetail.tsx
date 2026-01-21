@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CamperProfile, Prompt, Submission, ViewState } from '../types';
+import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
   camper: CamperProfile;
@@ -109,11 +110,13 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                 className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all"
               >
                 <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4">
-                  {submission.artworkUrl ? (
-                    <img src={submission.artworkUrl} alt={`${submission.title} artwork`} className="w-full h-full object-cover" />
-                  ) : (
-                    <i className="fa-solid fa-compact-disc"></i>
-                  )}
+                  <ArtworkImage
+                    fileId={submission.artworkFileId}
+                    fallbackUrl={submission.artworkUrl}
+                    alt={`${submission.title} artwork`}
+                    className="w-full h-full object-cover"
+                    fallback={<i className="fa-solid fa-compact-disc"></i>}
+                  />
                 </div>
                 <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
                 <p className="text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</p>
@@ -146,11 +149,13 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                     <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                        {submission.artworkUrl ? (
-                          <img src={submission.artworkUrl} alt={`${submission.title} artwork`} className="w-full h-full object-cover" />
-                        ) : (
-                          <i className="fa-solid fa-compact-disc text-sm"></i>
-                        )}
+                        <ArtworkImage
+                          fileId={submission.artworkFileId}
+                          fallbackUrl={submission.artworkUrl}
+                          alt={`${submission.title} artwork`}
+                          className="w-full h-full object-cover"
+                          fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                        />
                       </div>
                     </td>
                   </tr>

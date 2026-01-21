@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Submission, Assignment, SongVersion } from '../types';
 import * as googleService from '../services/googleService';
+import ArtworkImage from '../components/ArtworkImage';
 
 interface SubmissionsPageProps {
   submissions: Submission[];
@@ -131,11 +132,13 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             >
               <div className="md:w-64 bg-slate-50 p-6 border-r border-slate-200 shrink-0">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4 overflow-hidden border border-indigo-100">
-                  {sub.artworkUrl ? (
-                    <img src={sub.artworkUrl} alt={`${sub.title} artwork`} className="w-full h-full object-cover" />
-                  ) : (
-                    <i className="fa-solid fa-compact-disc"></i>
-                  )}
+                  <ArtworkImage
+                    fileId={sub.artworkFileId}
+                    fallbackUrl={sub.artworkUrl}
+                    alt={`${sub.title} artwork`}
+                    className="w-full h-full object-cover"
+                    fallback={<i className="fa-solid fa-compact-disc"></i>}
+                  />
                 </div>
                 <h4 className="font-bold text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{sub.title}</h4>
                 <p className="text-xs text-slate-500 mb-4">By {sub.camperName}</p>
