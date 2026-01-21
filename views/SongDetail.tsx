@@ -94,7 +94,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     }
   };
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <>
+      <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
@@ -266,75 +267,74 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           </section>
         </div>
       </div>
-    </div>
-
-    {showEdit && (
-      <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
-            <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
-              <i className="fa-solid fa-xmark"></i>
-            </button>
+      {showEdit && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
+              <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
+                <textarea
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-sm"
+                  value={editForm.lyrics}
+                  onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
+                <textarea
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
+                  value={editForm.details}
+                  onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                  onChange={handleArtworkChange}
+                />
+                <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
+              </div>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-check"></i>
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-          <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-              <input
-                required
-                type="text"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
-              <textarea
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-sm"
-                value={editForm.lyrics}
-                onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
-              <textarea
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
-                value={editForm.details}
-                onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
-              <input
-                type="file"
-                accept="image/*"
-                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
-                onChange={handleArtworkChange}
-              />
-              <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
-            </div>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-check"></i>
-                  Save Changes
-                </>
-              )}
-            </button>
-          </form>
         </div>
-      </div>
-    )}
+      )}
+    </>
   );
 };
 
