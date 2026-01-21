@@ -10,6 +10,7 @@ const ASSIGNMENTS_PARENT_FOLDER_ID = '1Lifl1lByscTeluVSfZWSXNuCTh7JSppQ';
 
 let accessToken: string | null = null;
 let tokenClient: any = null;
+let authReadyCallback: (() => void) | null = null;
 
 export const initGoogleAuth = (onAuthSuccess: (token: string) => void) => {
   if (typeof google === 'undefined') {
@@ -34,6 +35,10 @@ export const initGoogleAuth = (onAuthSuccess: (token: string) => void) => {
       },
     });
     console.log('Google Auth Client Initialized');
+    if (authReadyCallback) {
+      authReadyCallback();
+      authReadyCallback = null;
+    }
   } catch (err) {
     console.error('Failed to initialize Google Token Client', err);
   }
@@ -45,6 +50,14 @@ export const signIn = () => {
     tokenClient.requestAccessToken({ prompt: 'select_account' });
   } else {
     alert('Google Identity library is still loading. Please try again in 2 seconds.');
+  }
+};
+
+export const trySilentSignIn = () => {
+  if (tokenClient) {
+    tokenClient.requestAccessToken({ prompt: '' });
+  } else {
+    authReadyCallback = () => tokenClient?.requestAccessToken({ prompt: '' });
   }
 };
 

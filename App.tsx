@@ -47,6 +47,7 @@ const App: React.FC = () => {
               picture: profile.picture
             };
             setUserProfile(normalized);
+            window.localStorage.setItem('camp-auth', '1');
             handleInitialSync(normalized);
           })
           .catch((err) => {
@@ -54,6 +55,9 @@ const App: React.FC = () => {
             handleInitialSync(null);
           });
       });
+      if (window.localStorage.getItem('camp-auth') === '1') {
+        googleService.trySilentSignIn();
+      }
     };
 
     let retries = 0;
@@ -104,6 +108,8 @@ const App: React.FC = () => {
           email: profile.email,
           picture: profile.picture
         });
+      } else {
+        window.localStorage.removeItem('camp-auth');
       }
       const data = await googleService.fetchAllData(sId);
       setPrompts(data.prompts);
