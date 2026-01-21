@@ -426,8 +426,17 @@ export const createAssignmentFolder = async (assignmentTitle: string) => {
   return response.id as string;
 };
 
+const getAudioMimeType = (file: File) => {
+  if (file.type) return file.type;
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith('.m4a')) return 'audio/mp4';
+  if (lower.endsWith('.mp3')) return 'audio/mpeg';
+  if (lower.endsWith('.wav')) return 'audio/wav';
+  return 'application/octet-stream';
+};
+
 export const uploadAudioToDriveInFolder = async (file: File, folderId?: string) => {
-  return uploadFileToDriveInFolder(file, folderId);
+  return uploadFileToDriveInFolder(file, folderId, getAudioMimeType(file));
 };
 
 export const uploadArtworkToDriveInFolder = async (file: File, folderId?: string) => {
@@ -438,10 +447,10 @@ export const uploadProfilePhoto = async (file: File) => {
   return uploadFileToDriveInFolder(file, ASSIGNMENTS_PARENT_FOLDER_ID);
 };
 
-const uploadFileToDriveInFolder = async (file: File, folderId?: string) => {
+const uploadFileToDriveInFolder = async (file: File, folderId?: string, mimeTypeOverride?: string) => {
   const metadata = {
     name: file.name,
-    mimeType: file.type,
+    mimeType: mimeTypeOverride || file.type,
     parents: folderId ? [folderId] : []
   };
 
