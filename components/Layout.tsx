@@ -20,6 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
     { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { id: 'submissions', label: 'Song Submissions', icon: 'fa-music' },
+    { id: 'campers', label: 'Campers', icon: 'fa-users' },
     { id: 'profile', label: 'Profile', icon: 'fa-user' },
   ];
 

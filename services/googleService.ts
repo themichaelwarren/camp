@@ -79,7 +79,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -98,7 +98,8 @@ export const findOrCreateDatabase = async () => {
     'Prompts!A1:H1',
     'Assignments!A1:H1',
     'Submissions!A1:L1',
-    'Users!A1:E1'
+    'Users!A1:G1',
+    'PromptUpvotes!A1:E1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -131,13 +132,26 @@ export const findOrCreateDatabase = async () => {
   }
 
   const usersHeader = headerValues[3]?.values?.[0] || [];
-  if (usersHeader.length < 5) {
+  if (usersHeader.length < 7) {
     await updateSheetRows(SPREADSHEET_ID, 'Users!A1', [[
       'id',
       'name',
       'email',
       'picture',
-      'lastSignedInAt'
+      'lastSignedInAt',
+      'location',
+      'status'
+    ]]);
+  }
+
+  const upvotesHeader = headerValues[4]?.values?.[0] || [];
+  if (upvotesHeader.length < 5) {
+    await updateSheetRows(SPREADSHEET_ID, 'PromptUpvotes!A1', [[
+      'id',
+      'promptId',
+      'userEmail',
+      'userName',
+      'createdAt'
     ]]);
   }
 
@@ -234,24 +248,33 @@ export const fetchAllData = async (spreadsheetId: string) => {
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:E1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:G1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
   const now = new Date().toISOString();
-  const rowValues = [[profile.id, profile.name, profile.email, profile.picture || '', now]];
+  const existingRow = rowIndex === -1 ? [] : rows[rowIndex];
+  const rowValues = [[
+    profile.id,
+    profile.name,
+    profile.email,
+    profile.picture || '',
+    now,
+    existingRow[5] || '',
+    existingRow[6] || ''
+  ]];
 
   if (rowIndex === -1) {
     return appendSheetRow(spreadsheetId, 'Users!A1', rowValues);
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:E${sheetRow}`;
+  const range = `Users!A${sheetRow}:G${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:E1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:G1000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
@@ -259,8 +282,35 @@ export const fetchCampers = async (spreadsheetId: string) => {
     name: row[1] || '',
     email: row[2] || '',
     picture: row[3] || '',
-    lastSignedInAt: row[4] || ''
+    lastSignedInAt: row[4] || '',
+    location: row[5] || '',
+    status: row[6] || ''
   }));
+};
+
+export const fetchUserUpvotes = async (spreadsheetId: string, userEmail: string) => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PromptUpvotes!A2:E5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows
+    .filter((row: any[]) => row[2] === userEmail)
+    .map((row: any[]) => row[1])
+    .filter(Boolean);
+};
+
+export const appendPromptUpvote = async (
+  spreadsheetId: string,
+  data: { promptId: string; userEmail: string; userName: string }
+) => {
+  const now = new Date().toISOString();
+  const row = [[
+    Math.random().toString(36).substr(2, 9),
+    data.promptId,
+    data.userEmail,
+    data.userName,
+    now
+  ]];
+  return appendSheetRow(spreadsheetId, 'PromptUpvotes!A1', row);
 };
 
 export const fetchUserProfile = async () => {

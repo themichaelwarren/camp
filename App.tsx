@@ -10,6 +10,8 @@ import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import ProfilePage from './views/ProfilePage';
 import SettingsPage from './views/SettingsPage';
+import CampersPage from './views/CampersPage';
+import CamperDetail from './views/CamperDetail';
 import * as googleService from './services/googleService';
 
 const App: React.FC = () => {
@@ -24,6 +26,7 @@ const App: React.FC = () => {
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
+  const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -109,6 +112,12 @@ const App: React.FC = () => {
       setSubmissions(data.submissions);
       const campersData = await googleService.fetchCampers(sId);
       setCampers(campersData);
+      if (profile?.email) {
+        const upvoted = await googleService.fetchUserUpvotes(sId, profile.email);
+        setUpvotedPromptIds(upvoted);
+      } else {
+        setUpvotedPromptIds([]);
+      }
     } catch (e) {
       console.error('Initial sync failed', e);
     } finally {
@@ -146,6 +155,33 @@ const App: React.FC = () => {
         console.error('Failed to update prompt in sheet', error);
         alert('Prompt updated locally, but failed to sync to the sheet. Please try again.');
       }
+    }
+  };
+
+  const handlePromptUpvote = async (prompt: Prompt) => {
+    if (!userProfile?.email) {
+      alert('Please sign in to upvote prompts.');
+      return;
+    }
+    if (upvotedPromptIds.includes(prompt.id)) return;
+
+    const updatedPrompt = { ...prompt, upvotes: prompt.upvotes + 1 };
+    setPrompts(prev => prev.map(p => p.id === prompt.id ? updatedPrompt : p));
+    setUpvotedPromptIds(prev => [...prev, prompt.id]);
+
+    if (!spreadsheetId) return;
+    try {
+      await googleService.appendPromptUpvote(spreadsheetId, {
+        promptId: prompt.id,
+        userEmail: userProfile.email,
+        userName: userProfile.name || userProfile.email
+      });
+      await googleService.updatePromptRow(spreadsheetId, updatedPrompt);
+    } catch (error) {
+      console.error('Failed to upvote prompt', error);
+      setPrompts(prev => prev.map(p => p.id === prompt.id ? prompt : p));
+      setUpvotedPromptIds(prev => prev.filter(id => id !== prompt.id));
+      alert('Upvote failed to sync. Please try again.');
     }
   };
 
@@ -230,8 +266,10 @@ const App: React.FC = () => {
             prompts={prompts}
             onAdd={handleAddPrompt}
             onUpdate={handleUpdatePrompt}
+            onUpvote={handlePromptUpvote}
             onViewDetail={(id) => navigateTo('prompt-detail', id)}
             userProfile={userProfile}
+            upvotedPromptIds={upvotedPromptIds}
           />
         );
       case 'assignments':
@@ -267,6 +305,18 @@ const App: React.FC = () => {
         return <ProfilePage userProfile={userProfile} spreadsheetId={spreadsheetId} />;
       case 'settings':
         return <SettingsPage themePreference={themePreference} onThemeChange={setThemePreference} />;
+      case 'campers':
+        return <CampersPage campers={campers} onNavigate={navigateTo} />;
+      case 'camper-detail':
+        const camper = campers.find((item) => item.id === selectedId || item.email === selectedId);
+        return camper ? (
+          <CamperDetail
+            camper={camper}
+            prompts={prompts.filter((prompt) => prompt.createdBy === camper.email || prompt.createdBy === camper.name)}
+            submissions={submissions.filter((submission) => submission.camperId === camper.email || submission.camperName === camper.name)}
+            onNavigate={navigateTo}
+          />
+        ) : null;
       default:
         return <Dashboard prompts={prompts} assignments={assignments} submissions={submissions} campersCount={campers.length} onNavigate={navigateTo} />;
     }

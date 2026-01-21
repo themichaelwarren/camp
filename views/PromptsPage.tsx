@@ -6,16 +6,21 @@ interface PromptsPageProps {
   prompts: Prompt[];
   onAdd: (prompt: Prompt) => void;
   onUpdate: (prompt: Prompt) => void;
+  onUpvote: (prompt: Prompt) => void;
   onViewDetail: (id: string) => void;
   userProfile?: { name?: string; email?: string } | null;
+  upvotedPromptIds: string[];
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onViewDetail, userProfile }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | PromptStatus>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
 
   const handleUpvote = (prompt: Prompt) => {
-    onUpdate({ ...prompt, upvotes: prompt.upvotes + 1 });
+    onUpvote(prompt);
   };
 
   const handleStatusChange = (prompt: Prompt, status: PromptStatus) => {
@@ -39,9 +44,33 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
     setNewPrompt({ title: '', description: '', tags: '' });
   };
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPrompts = prompts
+    .filter((prompt) => {
+      if (statusFilter !== 'all' && prompt.status !== statusFilter) return false;
+      if (!normalizedSearch) return true;
+      const inTitle = prompt.title.toLowerCase().includes(normalizedSearch);
+      const inDescription = prompt.description.toLowerCase().includes(normalizedSearch);
+      const inTags = prompt.tags.join(' ').toLowerCase().includes(normalizedSearch);
+      return inTitle || inDescription || inTags;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'upvotes':
+          return b.upvotes - a.upvotes;
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'newest':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
@@ -53,6 +82,47 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
           <i className="fa-solid fa-plus"></i>
           New Prompt
         </button>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 md:items-center">
+        <div className="flex-1">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</label>
+          <input
+            type="text"
+            className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Search title, description, tags..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
+            <select
+              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | PromptStatus)}
+            >
+              <option value="all">All</option>
+              <option value={PromptStatus.DRAFT}>Draft</option>
+              <option value={PromptStatus.ACTIVE}>Active</option>
+              <option value={PromptStatus.ARCHIVED}>Archived</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort</label>
+            <select
+              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'upvotes' | 'title')}
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="upvotes">Most upvoted</option>
+              <option value="title">Title A-Z</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -67,7 +137,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {prompts.map(prompt => (
+            {filteredPrompts.map(prompt => (
               <tr 
                 key={prompt.id} 
                 className="hover:bg-slate-50 transition-colors group cursor-pointer"
@@ -104,9 +174,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
                 <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                   <button 
                     onClick={() => handleUpvote(prompt)}
-                    className="flex items-center gap-2 hover:text-indigo-600 font-bold text-slate-500 transition-colors"
+                    disabled={upvotedPromptIds.includes(prompt.id)}
+                    className={`flex items-center gap-2 font-bold transition-colors ${
+                      upvotedPromptIds.includes(prompt.id)
+                        ? 'text-rose-500 cursor-not-allowed'
+                        : 'text-slate-500 hover:text-indigo-600'
+                    }`}
                   >
-                    <i className="fa-solid fa-heart text-slate-300 group-hover:text-red-400"></i>
+                    <i className={`fa-solid fa-heart ${upvotedPromptIds.includes(prompt.id) ? 'text-rose-400' : 'text-slate-300 group-hover:text-red-400'}`}></i>
                     {prompt.upvotes}
                   </button>
                 </td>
@@ -117,6 +192,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onV
                 </td>
               </tr>
             ))}
+            {filteredPrompts.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                  No prompts match your filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
