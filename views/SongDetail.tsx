@@ -162,8 +162,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8">
+        <div className="space-y-8">
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-10 font-serif">
             <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-10">Lyrics</h3>
             <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">

@@ -274,21 +274,41 @@ export const fetchAllData = async (spreadsheetId: string) => {
     driveFolderId: row[7] || ''
   }));
 
-  const submissions: Submission[] = submissionsRaw.map((row: any[]) => ({
-    id: row[0] || Math.random().toString(36).substr(2, 9),
-    assignmentId: row[1] || '',
-    camperId: row[2] || '',
-    camperName: row[3] || 'Anonymous',
-    title: row[4] || 'Untitled Song',
-    lyrics: row[5] || '',
-    versions: JSON.parse(row[6] || '[]'),
-    details: row[7] || '',
-    updatedAt: row[8] || new Date().toISOString(),
-    lyricsDocUrl: row[9] || '',
-    lyricsRevisionCount: row[10] ? parseInt(row[10], 10) : 0,
-    artworkFileId: row[11] || '',
-    artworkUrl: row[12] || ''
-  }));
+  const submissions: Submission[] = submissionsRaw.map((row: any[]) => {
+    const rawRevision = row[10];
+    const rawArtworkId = row[11];
+    const rawArtworkUrl = row[12];
+    const legacyArtworkId = row[10];
+    const legacyArtworkUrl = row[11];
+    const revisionCount = Number.isFinite(parseInt(rawRevision, 10)) ? parseInt(rawRevision, 10) : 0;
+
+    let artworkFileId = rawArtworkId || '';
+    let artworkUrl = rawArtworkUrl || '';
+    if (!rawArtworkUrl && typeof rawArtworkId === 'string' && rawArtworkId.includes('http')) {
+      artworkFileId = '';
+      artworkUrl = rawArtworkId;
+    }
+    if (!artworkFileId && !artworkUrl && legacyArtworkId) {
+      artworkFileId = legacyArtworkId;
+      artworkUrl = legacyArtworkUrl || '';
+    }
+
+    return {
+      id: row[0] || Math.random().toString(36).substr(2, 9),
+      assignmentId: row[1] || '',
+      camperId: row[2] || '',
+      camperName: row[3] || 'Anonymous',
+      title: row[4] || 'Untitled Song',
+      lyrics: row[5] || '',
+      versions: JSON.parse(row[6] || '[]'),
+      details: row[7] || '',
+      updatedAt: row[8] || new Date().toISOString(),
+      lyricsDocUrl: row[9] || '',
+      lyricsRevisionCount: revisionCount,
+      artworkFileId,
+      artworkUrl
+    };
+  });
 
   return { prompts, assignments, submissions };
 };
