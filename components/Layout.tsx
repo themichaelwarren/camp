@@ -303,6 +303,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         <div className="p-8 overflow-auto flex-1">
           {children}
         </div>
+
+        <footer className="border-t border-slate-200 bg-white px-4 md:px-8 py-3 text-[10px] text-slate-400">
+          Build: {import.meta.env.VITE_BUILD_ID || 'dev'}
+        </footer>
       </main>
     </div>
   );
