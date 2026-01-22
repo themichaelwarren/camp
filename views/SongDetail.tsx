@@ -113,7 +113,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   return (
     <>
       <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => onNavigate('submissions')}
@@ -142,7 +142,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             By {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
           </p>
         </div>
-        <div className="relative aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group">
+        <div className="relative w-full aspect-[4/3] bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group">
           <ArtworkImage
             fileId={submission.artworkFileId}
             fallbackUrl={submission.artworkUrl}
@@ -248,24 +248,24 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             </div>
           </section>
 
-          <section className="bg-slate-900 p-8 rounded-3xl text-white">
+          <section className="bg-slate-50 p-8 rounded-3xl border border-slate-200 text-slate-800">
             <h4 className="font-bold mb-4 flex items-center gap-2">
-               <i className="fa-brands fa-google-drive text-blue-400"></i>
+               <i className="fa-brands fa-google-drive text-green-600"></i>
                Google Drive Export
             </h4>
-            <p className="text-slate-400 text-xs mb-6 leading-relaxed">This song is synced to your camp folder in Google Drive. All audio versions are stored securely in your account.</p>
+            <p className="text-slate-500 text-xs mb-6 leading-relaxed">This song is synced to your camp folder in Google Drive. All audio versions are stored securely in your account.</p>
             {submission.lyricsDocUrl ? (
               <a
                 href={submission.lyricsDocUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-200"
               >
                 <i className="fa-solid fa-file-lines text-xs"></i>
                 Open Lyrics Doc
               </a>
             ) : (
-              <button className="w-full bg-white/10 text-white/70 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+              <button className="w-full bg-white text-slate-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200">
                 <i className="fa-solid fa-file-lines text-xs"></i>
                 Lyrics Doc Pending
               </button>
