@@ -142,7 +142,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             By {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
           </p>
         </div>
-        <div className="relative w-full aspect-[4/3] bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group">
+        <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group max-w-2xl mx-auto">
           <ArtworkImage
             fileId={submission.artworkFileId}
             fallbackUrl={submission.artworkUrl}
