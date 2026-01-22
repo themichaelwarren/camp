@@ -125,13 +125,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             </button>
           </div>
         ) : (
-          submissions.map(sub => (
+          submissions.map(sub => {
+            const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
+            return (
             <div 
               key={sub.id} 
               onClick={() => onViewDetail(sub.id)}
-              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group flex flex-col"
+              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer"
             >
-              <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+              <div className="w-full aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
                 <ArtworkImage
                   fileId={sub.artworkFileId}
                   fallbackUrl={sub.artworkUrl}
@@ -140,18 +142,14 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                   fallback={<i className="fa-solid fa-compact-disc text-4xl text-indigo-400"></i>}
                 />
               </div>
-              <div className="p-5 flex flex-col gap-3">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-indigo-600 transition-colors">{sub.title}</h4>
-                  <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+              <div className="p-4">
+                <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
+                <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+                <div className="mt-4 text-xs text-slate-500 space-y-1">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
+                  <p className="font-semibold text-slate-700 truncate">{assignmentTitle}</p>
                 </div>
-                <div className="space-y-1 text-xs text-slate-500">
-                  <p className="uppercase tracking-widest text-[10px] text-slate-400 font-bold">Assignment</p>
-                  <p className="font-semibold text-slate-700 truncate">
-                    {assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work'}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
                   <span className="flex items-center gap-1">
                     <i className="fa-solid fa-calendar"></i>
                     {new Date(sub.updatedAt).toLocaleDateString()}
@@ -160,7 +158,8 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 </div>
               </div>
             </div>
-          ))
+          );
+          })
         )}
       </div>
 

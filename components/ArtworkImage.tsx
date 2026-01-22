@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as googleService from '../services/googleService';
 
 interface ArtworkImageProps {
@@ -12,26 +12,33 @@ interface ArtworkImageProps {
 
 const blobUrlCache = new Map<string, string>();
 
+const parseFileId = (url?: string) => {
+  if (!url) return undefined;
+  const match = url.match(/\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+  return match ? match[1] : undefined;
+};
+
 const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, className, fallback, lazy = true }) => {
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [isVisible, setIsVisible] = useState(!lazy);
+  const effectiveFileId = useMemo(() => fileId || parseFileId(fallbackUrl), [fileId, fallbackUrl]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      if (!fileId || !isVisible) return;
-      const cached = blobUrlCache.get(fileId);
+      if (!effectiveFileId || !isVisible) return;
+      const cached = blobUrlCache.get(effectiveFileId);
       if (cached) {
         setObjectUrl(cached);
         return;
       }
       try {
-        const blob = await googleService.fetchDriveFile(fileId);
+        const blob = await googleService.fetchDriveFile(effectiveFileId);
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
-        blobUrlCache.set(fileId, url);
+        blobUrlCache.set(effectiveFileId, url);
         setObjectUrl(url);
       } catch (error) {
         console.error('Failed to load artwork', error);
@@ -41,7 +48,7 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
     return () => {
       cancelled = true;
     };
-  }, [fileId, isVisible]);
+  }, [effectiveFileId, isVisible]);
 
   useEffect(() => {
     if (!lazy) return;

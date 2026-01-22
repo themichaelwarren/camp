@@ -39,6 +39,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     if (player?.src && audioRef.current) {
       audioRef.current.play().catch(() => undefined);
       setIsPlaying(true);
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        setIsPlayerOpen(true);
+      }
     }
   }, [player?.src]);
 
