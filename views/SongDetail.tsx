@@ -138,7 +138,9 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
         <div>
           <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
-          <p className="text-indigo-600 font-bold text-sm mt-2">By {submission.camperName}</p>
+          <p className="text-indigo-600 font-bold text-sm mt-2">
+            By {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
+          </p>
         </div>
         <div className="relative aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group">
           <ArtworkImage
@@ -162,43 +164,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="flex flex-col gap-4">
-            {assignment && (
-              <button 
-                onClick={() => onNavigate('assignment-detail', assignment.id)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600">
-                    <i className="fa-solid fa-tasks"></i>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Assignment</p>
-                    <p className="text-xs font-bold text-slate-800 truncate max-w-[120px]">{assignment.title}</p>
-                  </div>
-                </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
-              </button>
-            )}
-            {prompt && (
-              <button 
-                onClick={() => onNavigate('prompt-detail', prompt.id)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500">
-                    <i className="fa-solid fa-lightbulb"></i>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prompt</p>
-                    <p className="text-xs font-bold text-slate-800 truncate max-w-[120px]">{prompt.title}</p>
-                  </div>
-                </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
-              </button>
-            )}
-          </div>
-
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-10 font-serif">
             <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-10">Lyrics</h3>
             <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">
@@ -217,6 +182,43 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
 
         <div className="space-y-6">
+          <div className="space-y-4">
+            {assignment && (
+              <button 
+                onClick={() => onNavigate('assignment-detail', assignment.id)}
+                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600">
+                    <i className="fa-solid fa-tasks"></i>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Assignment</p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{assignment.title}</p>
+                  </div>
+                </div>
+                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
+              </button>
+            )}
+            {prompt && (
+              <button 
+                onClick={() => onNavigate('prompt-detail', prompt.id)}
+                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500">
+                    <i className="fa-solid fa-lightbulb"></i>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prompt</p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{prompt.title}</p>
+                  </div>
+                </div>
+                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
+              </button>
+            )}
+          </div>
+
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Version History</h3>
             <div className="space-y-4">
