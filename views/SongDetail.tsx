@@ -142,28 +142,28 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             By {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
           </p>
         </div>
-        <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group max-w-2xl mx-auto">
-          <ArtworkImage
-            fileId={submission.artworkFileId}
-            fallbackUrl={submission.artworkUrl}
-            alt={`${submission.title} artwork`}
-            className="w-full h-full object-contain bg-indigo-100"
-            fallback={<i className="fa-solid fa-compact-disc text-4xl"></i>}
-          />
-          {submission.versions[0] && (
-            <button
-              onClick={() => loadAudio(submission.versions[0].id)}
-              className="absolute bottom-4 right-4 w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xl hover:bg-black transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-              aria-label="Play song"
-            >
-              <i className="fa-solid fa-play text-lg"></i>
-            </button>
-          )}
-        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8">
         <div className="space-y-8">
+          <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group max-w-2xl mx-auto">
+            <ArtworkImage
+              fileId={submission.artworkFileId}
+              fallbackUrl={submission.artworkUrl}
+              alt={`${submission.title} artwork`}
+              className="w-full h-full object-contain bg-indigo-100"
+              fallback={<i className="fa-solid fa-compact-disc text-4xl"></i>}
+            />
+            {submission.versions[0] && (
+              <button
+                onClick={() => loadAudio(submission.versions[0].id)}
+                className="absolute bottom-4 right-4 w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xl hover:bg-black transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                aria-label="Play song"
+              >
+                <i className="fa-solid fa-play text-lg"></i>
+              </button>
+            )}
+          </div>
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-10 font-serif">
             <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-10">Lyrics</h3>
             <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">
