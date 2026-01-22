@@ -401,7 +401,15 @@ const App: React.FC = () => {
           />
         );
       case 'assignments':
-        return <AssignmentsPage assignments={assignments} prompts={prompts} onAdd={handleAddAssignment} onViewDetail={(id) => navigateTo('assignment-detail', id)} />;
+        return (
+          <AssignmentsPage
+            assignments={assignments}
+            prompts={prompts}
+            campersCount={campers.length}
+            onAdd={handleAddAssignment}
+            onViewDetail={(id) => navigateTo('assignment-detail', id)}
+          />
+        );
       case 'submissions':
         return (
           <SubmissionsPage
@@ -425,7 +433,15 @@ const App: React.FC = () => {
         ) : null;
       case 'assignment-detail':
         const a = assignments.find(as => as.id === selectedId);
-        return a ? <AssignmentDetail assignment={a} prompt={prompts.find(pr => pr.id === a.promptId)} submissions={submissions.filter(s => s.assignmentId === a.id)} onNavigate={navigateTo} /> : null;
+        return a ? (
+          <AssignmentDetail
+            assignment={a}
+            prompt={prompts.find(pr => pr.id === a.promptId)}
+            submissions={submissions.filter(s => s.assignmentId === a.id)}
+            campersCount={campers.length}
+            onNavigate={navigateTo}
+          />
+        ) : null;
       case 'song-detail':
         const s = submissions.find(su => su.id === selectedId);
         return s ? (

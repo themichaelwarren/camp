@@ -5,11 +5,12 @@ import { Assignment, Prompt } from '../types';
 interface AssignmentsPageProps {
   assignments: Assignment[];
   prompts: Prompt[];
+  campersCount: number;
   onAdd: (assignment: Assignment) => void;
   onViewDetail: (id: string) => void;
 }
 
-const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, onAdd, onViewDetail }) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onViewDetail }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', promptId: '', dueDate: '', instructions: '' });
 
@@ -75,9 +76,11 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                       <img src={`https://picsum.photos/seed/${i + 20}/32`} alt="avatar" />
                     </div>
                   ))}
-                  <div className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 text-[10px] font-bold text-indigo-600 flex items-center justify-center">+21</div>
+                  <div className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 text-[10px] font-bold text-indigo-600 flex items-center justify-center">
+                    {campersCount > 0 ? `+${campersCount}` : '0'}
+                  </div>
                 </div>
-                <span className="text-xs text-slate-400 font-medium">Assigned to Everyone</span>
+                <span className="text-xs text-slate-400 font-medium">Assigned to {campersCount || 0} campers</span>
               </div>
             </div>
           );

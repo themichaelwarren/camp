@@ -6,10 +6,15 @@ interface AssignmentDetailProps {
   assignment: Assignment;
   prompt?: Prompt;
   submissions: Submission[];
+  campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, onNavigate }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, campersCount, onNavigate }) => {
+  const totalCampers = campersCount || 0;
+  const submissionRate = totalCampers > 0 ? Math.round((submissions.length / totalCampers) * 100) : 0;
+  const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center gap-4">
@@ -107,10 +112,10 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Project Progress</h3>
             <div className="flex flex-col items-center">
                <div className="w-32 h-32 rounded-full border-8 border-slate-50 flex items-center justify-center relative mb-4">
-                 <div className="absolute inset-0 border-8 border-indigo-500 rounded-full" style={{ clipPath: `inset(0 0 ${100 - (submissions.length/24 * 100)}% 0)` }}></div>
-                 <span className="text-2xl font-black text-slate-800">{Math.round((submissions.length / 24) * 100)}%</span>
+                 <div className="absolute inset-0 border-8 border-indigo-500 rounded-full" style={{ clipPath: `inset(0 0 ${progressInset}% 0)` }}></div>
+                 <span className="text-2xl font-black text-slate-800">{submissionRate}%</span>
                </div>
-               <p className="text-sm font-bold text-slate-600 mb-1">{submissions.length} / 24 Campers</p>
+               <p className="text-sm font-bold text-slate-600 mb-1">{submissions.length} / {totalCampers} Campers</p>
                <p className="text-xs text-slate-400">Submission Rate</p>
             </div>
           </section>
