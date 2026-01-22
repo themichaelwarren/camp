@@ -146,7 +146,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8">
         <div className="space-y-8">
-          <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-indigo-100 overflow-hidden group max-w-2xl mx-auto">
+          <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-slate-200 overflow-hidden group max-w-lg mx-auto">
             <ArtworkImage
               fileId={submission.artworkFileId}
               fallbackUrl={submission.artworkUrl}
