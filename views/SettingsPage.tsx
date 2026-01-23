@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as googleService from '../services/googleService';
+import ArtworkImage from '../components/ArtworkImage';
 
 interface SettingsPageProps {
   themePreference: 'light' | 'dark' | 'system';
@@ -76,10 +77,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
               {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
-                <img
-                  src={userProfile?.pictureOverrideUrl || userProfile?.picture}
+                <ArtworkImage
+                  fileId={undefined}
+                  fallbackUrl={userProfile?.pictureOverrideUrl || userProfile?.picture}
                   alt={userProfile?.name || 'Profile'}
                   className="w-full h-full object-cover"
+                  fallback={<i className="fa-solid fa-user"></i>}
                 />
               ) : (
                 <i className="fa-solid fa-user"></i>

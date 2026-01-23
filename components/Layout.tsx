@@ -137,16 +137,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               aria-haspopup="menu"
             >
             {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
-              <img
-                src={userProfile.pictureOverrideUrl || userProfile.picture}
+              <ArtworkImage
+                fileId={undefined}
+                fallbackUrl={userProfile.pictureOverrideUrl || userProfile.picture}
                 alt={userProfile.name || 'User profile'}
                 className="w-10 h-10 rounded-full object-cover border border-white/30"
+                fallback={
+                  <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+                    KC
+                  </div>
+                }
               />
             ) : (
-                <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
-                  KC
-                </div>
-              )}
+              <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+                KC
+              </div>
+            )}
               <div className="overflow-hidden flex-1">
                 <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
                 <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">

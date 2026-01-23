@@ -23,7 +23,17 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
         </button>
         <div className="flex items-center gap-4">
           {camper.pictureOverrideUrl || camper.picture ? (
-            <img src={camper.pictureOverrideUrl || camper.picture} alt={camper.name} className="w-16 h-16 rounded-2xl object-cover" />
+            <ArtworkImage
+              fileId={undefined}
+              fallbackUrl={camper.pictureOverrideUrl || camper.picture}
+              alt={camper.name}
+              className="w-16 h-16 rounded-2xl object-cover"
+              fallback={
+                <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
+                  {camper.name?.[0] || 'C'}
+                </div>
+              }
+            />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
               {camper.name?.[0] || 'C'}
