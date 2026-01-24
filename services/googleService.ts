@@ -108,9 +108,9 @@ export const findOrCreateDatabase = async () => {
   }
 
   const headerRanges = [
-    'Prompts!A1:H1',
-    'Assignments!A1:H1',
-    'Submissions!A1:M1',
+    'Prompts!A1:J1',
+    'Assignments!A1:J1',
+    'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1'
   ];
@@ -119,15 +119,38 @@ export const findOrCreateDatabase = async () => {
   const headersResult = await callGoogleApi(headersCheckUrl);
   const headerValues = headersResult.valueRanges || [];
 
-  if (!headerValues[0]?.values?.length) {
-    await updateSheetRows(SPREADSHEET_ID, 'Prompts!A1', [['id', 'title', 'description', 'tags', 'upvotes', 'status', 'createdAt', 'createdBy']]);
+  const promptsHeader = headerValues[0]?.values?.[0] || [];
+  if (promptsHeader.length < 10) {
+    await updateSheetRows(SPREADSHEET_ID, 'Prompts!A1', [[
+      'id',
+      'title',
+      'description',
+      'tags',
+      'upvotes',
+      'status',
+      'createdAt',
+      'createdBy',
+      'deletedAt',
+      'deletedBy'
+    ]]);
   }
   const assignmentsHeader = headerValues[1]?.values?.[0] || [];
-  if (assignmentsHeader.length < 8) {
-    await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [['id', 'promptId', 'title', 'dueDate', 'assignedTo', 'instructions', 'status', 'driveFolderId']]);
+  if (assignmentsHeader.length < 10) {
+    await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [[
+      'id',
+      'promptId',
+      'title',
+      'dueDate',
+      'assignedTo',
+      'instructions',
+      'status',
+      'driveFolderId',
+      'deletedAt',
+      'deletedBy'
+    ]]);
   }
   const submissionsHeader = headerValues[2]?.values?.[0] || [];
-  if (submissionsHeader.length < 13) {
+  if (submissionsHeader.length < 15) {
     await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [[
       'id',
       'assignmentId',
@@ -141,7 +164,9 @@ export const findOrCreateDatabase = async () => {
       'lyricsDocUrl',
       'lyricsRevisionCount',
       'artworkFileId',
-      'artworkUrl'
+      'artworkUrl',
+      'deletedAt',
+      'deletedBy'
     ]]);
   }
 
@@ -202,7 +227,9 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
     prompt.upvotes,
     prompt.status,
     prompt.createdAt,
-    prompt.createdBy
+    prompt.createdBy,
+    prompt.deletedAt || '',
+    prompt.deletedBy || ''
   ]];
 
   if (rowIndex === -1) {
@@ -210,12 +237,39 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Prompts!A${sheetRow}:H${sheetRow}`;
+  const range = `Prompts!A${sheetRow}:J${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
+export const updateAssignmentRow = async (spreadsheetId: string, assignment: Assignment) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:J1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
+  const rowValues = [[
+    assignment.id,
+    assignment.promptId,
+    assignment.title,
+    assignment.dueDate,
+    assignment.assignedTo.join(','),
+    assignment.instructions,
+    assignment.status,
+    assignment.driveFolderId || '',
+    assignment.deletedAt || '',
+    assignment.deletedBy || ''
+  ]];
+
+  if (rowIndex === -1) {
+    return appendSheetRow(spreadsheetId, 'Assignments!A1', rowValues);
+  }
+
+  const sheetRow = rowIndex + 2;
+  const range = `Assignments!A${sheetRow}:J${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:M1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:O1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
@@ -232,7 +286,9 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
     submission.lyricsDocUrl || '',
     submission.lyricsRevisionCount ?? 0,
     submission.artworkFileId || '',
-    submission.artworkUrl || ''
+    submission.artworkUrl || '',
+    submission.deletedAt || '',
+    submission.deletedBy || ''
   ]];
 
   if (rowIndex === -1) {
@@ -240,12 +296,12 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Submissions!A${sheetRow}:M${sheetRow}`;
+  const range = `Submissions!A${sheetRow}:O${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:H1000&ranges=Assignments!A2:H1000&ranges=Submissions!A2:M1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:J1000&ranges=Submissions!A2:O1000`;
   const result = await callGoogleApi(url);
   
   const promptsRaw = result.valueRanges[0].values || [];
@@ -260,7 +316,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
     upvotes: parseInt(row[4]) || 0,
     status: (row[5] as PromptStatus) || PromptStatus.DRAFT,
     createdAt: row[6] || new Date().toISOString(),
-    createdBy: row[7] || 'Admin'
+    createdBy: row[7] || 'Admin',
+    deletedAt: row[8] || '',
+    deletedBy: row[9] || ''
   }));
 
   const assignments: Assignment[] = assignmentsRaw.map((row: any[]) => ({
@@ -271,13 +329,17 @@ export const fetchAllData = async (spreadsheetId: string) => {
     assignedTo: (row[4] || '').split(','),
     instructions: row[5] || '',
     status: (row[6] as 'Open' | 'Closed') || 'Open',
-    driveFolderId: row[7] || ''
+    driveFolderId: row[7] || '',
+    deletedAt: row[8] || '',
+    deletedBy: row[9] || ''
   }));
 
   const submissions: Submission[] = submissionsRaw.map((row: any[]) => {
     const rawRevision = row[10];
     const rawArtworkId = row[11];
     const rawArtworkUrl = row[12];
+    const rawDeletedAt = row[13];
+    const rawDeletedBy = row[14];
     const legacyArtworkId = row[10];
     const legacyArtworkUrl = row[11];
     const revisionCount = Number.isFinite(parseInt(rawRevision, 10)) ? parseInt(rawRevision, 10) : 0;
@@ -306,7 +368,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
       lyricsDocUrl: row[9] || '',
       lyricsRevisionCount: revisionCount,
       artworkFileId,
-      artworkUrl
+      artworkUrl,
+      deletedAt: rawDeletedAt || '',
+      deletedBy: rawDeletedBy || ''
     };
   });
 

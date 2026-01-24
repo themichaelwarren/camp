@@ -8,9 +8,10 @@ interface PromptDetailProps {
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (prompt: Prompt) => void;
+  currentUser?: string;
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, currentUser }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -39,6 +40,12 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
     };
     onUpdate(updatedPrompt);
     setShowEditModal(false);
+  };
+
+  const handleDeletePrompt = () => {
+    if (!window.confirm('Soft delete this prompt? It will be hidden but can be restored later.')) return;
+    onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser || 'Unknown' });
+    onNavigate('prompts');
   };
 
   return (
@@ -227,6 +234,13 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Save Changes
+              </button>
+              <button
+                type="button"
+                onClick={handleDeletePrompt}
+                className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
+              >
+                Soft Delete Prompt
               </button>
             </form>
           </div>

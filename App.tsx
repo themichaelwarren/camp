@@ -190,7 +190,8 @@ const App: React.FC = () => {
       try {
         await googleService.appendSheetRow(spreadsheetId, 'Prompts!A1', [[
           newPrompt.id, newPrompt.title, newPrompt.description, newPrompt.tags.join(','),
-          newPrompt.upvotes, newPrompt.status, newPrompt.createdAt, newPrompt.createdBy
+          newPrompt.upvotes, newPrompt.status, newPrompt.createdAt, newPrompt.createdBy,
+          newPrompt.deletedAt || '', newPrompt.deletedBy || ''
         ]]);
       } catch (error) {
         console.error('Failed to save prompt to sheet', error);
@@ -255,7 +256,8 @@ const App: React.FC = () => {
         await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
           assignmentWithFolder.id, assignmentWithFolder.promptId, assignmentWithFolder.title, assignmentWithFolder.dueDate,
           assignmentWithFolder.assignedTo.join(','), assignmentWithFolder.instructions, assignmentWithFolder.status,
-          assignmentWithFolder.driveFolderId || ''
+          assignmentWithFolder.driveFolderId || '',
+          assignmentWithFolder.deletedAt || '', assignmentWithFolder.deletedBy || ''
         ]]);
       } catch (error) {
         console.error('Failed to save assignment to sheet', error);
@@ -273,7 +275,8 @@ const App: React.FC = () => {
           newSubmission.title, newSubmission.lyrics, JSON.stringify(newSubmission.versions),
           newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || '',
           newSubmission.lyricsRevisionCount ?? 0,
-          newSubmission.artworkFileId || '', newSubmission.artworkUrl || ''
+          newSubmission.artworkFileId || '', newSubmission.artworkUrl || '',
+          newSubmission.deletedAt || '', newSubmission.deletedBy || ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);
@@ -290,6 +293,18 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Failed to update submission in sheet', error);
         alert('Song updated locally, but failed to sync to the sheet. Please try again.');
+      }
+    }
+  };
+
+  const handleUpdateAssignment = async (updatedAssignment: Assignment) => {
+    setAssignments(prev => prev.map(a => a.id === updatedAssignment.id ? updatedAssignment : a));
+    if (spreadsheetId) {
+      try {
+        await googleService.updateAssignmentRow(spreadsheetId, updatedAssignment);
+      } catch (error) {
+        console.error('Failed to update assignment in sheet', error);
+        alert('Assignment updated locally, but failed to sync to the sheet. Please try again.');
       }
     }
   };
@@ -389,9 +404,9 @@ const App: React.FC = () => {
       case 'dashboard':
         return (
           <Dashboard
-            prompts={prompts}
-            assignments={assignments}
-            submissions={submissions}
+            prompts={prompts.filter((p) => !p.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
+            submissions={submissions.filter((s) => !s.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
             onNavigate={navigateTo}
@@ -400,7 +415,7 @@ const App: React.FC = () => {
       case 'prompts':
         return (
           <PromptsPage
-            prompts={prompts}
+            prompts={prompts.filter((p) => !p.deletedAt)}
             onAdd={handleAddPrompt}
             onUpdate={handleUpdatePrompt}
             onUpvote={handlePromptUpvote}
@@ -412,8 +427,8 @@ const App: React.FC = () => {
       case 'assignments':
         return (
           <AssignmentsPage
-            assignments={assignments}
-            prompts={prompts}
+            assignments={assignments.filter((a) => !a.deletedAt)}
+            prompts={prompts.filter((p) => !p.deletedAt)}
             campersCount={campers.length}
             onAdd={handleAddAssignment}
             onViewDetail={(id) => navigateTo('assignment-detail', id)}
@@ -422,8 +437,8 @@ const App: React.FC = () => {
       case 'submissions':
         return (
           <SubmissionsPage
-            submissions={submissions}
-            assignments={assignments}
+            submissions={submissions.filter((s) => !s.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
             onAdd={handleAddSubmission}
             onViewDetail={(id) => navigateTo('song-detail', id)}
             userProfile={userProfile}
@@ -434,10 +449,11 @@ const App: React.FC = () => {
         return p ? (
           <PromptDetail
             prompt={p}
-            assignments={assignments.filter(a => a.promptId === p.id)}
-            submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id)}
+            assignments={assignments.filter(a => a.promptId === p.id && !a.deletedAt)}
+            submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id && !s.deletedAt)}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
+            currentUser={userProfile?.email || userProfile?.name}
           />
         ) : null;
       case 'assignment-detail':
@@ -446,9 +462,11 @@ const App: React.FC = () => {
           <AssignmentDetail
             assignment={a}
             prompt={prompts.find(pr => pr.id === a.promptId)}
-            submissions={submissions.filter(s => s.assignmentId === a.id)}
+            submissions={submissions.filter(s => s.assignmentId === a.id && !s.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}
+            onUpdate={handleUpdateAssignment}
+            currentUser={userProfile?.email || userProfile?.name}
           />
         ) : null;
       case 'song-detail':
@@ -461,6 +479,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onUpdate={handleUpdateSubmission}
             onPlayTrack={handlePlayTrack}
+            currentUser={userProfile?.email || userProfile?.name}
           />
         ) : null;
       case 'settings':
@@ -483,17 +502,17 @@ const App: React.FC = () => {
         return camper ? (
           <CamperDetail
             camper={camper}
-            prompts={prompts.filter((prompt) => prompt.createdBy === camper.email || prompt.createdBy === camper.name)}
-            submissions={submissions.filter((submission) => submission.camperId === camper.email || submission.camperName === camper.name)}
+            prompts={prompts.filter((prompt) => !prompt.deletedAt && (prompt.createdBy === camper.email || prompt.createdBy === camper.name))}
+            submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name))}
             onNavigate={navigateTo}
           />
         ) : null;
       default:
         return (
           <Dashboard
-            prompts={prompts}
-            assignments={assignments}
-            submissions={submissions}
+            prompts={prompts.filter((p) => !p.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
+            submissions={submissions.filter((s) => !s.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
             onNavigate={navigateTo}

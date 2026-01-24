@@ -8,9 +8,11 @@ interface AssignmentDetailProps {
   submissions: Submission[];
   campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
+  onUpdate: (assignment: Assignment) => void;
+  currentUser?: { name: string; email: string };
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, campersCount, onNavigate }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, campersCount, onNavigate, onUpdate, currentUser }) => {
   const totalCampers = campersCount || 0;
   const submissionRate = totalCampers > 0 ? Math.round((submissions.length / totalCampers) * 100) : 0;
   const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
@@ -128,6 +130,28 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             <p className="text-amber-900 text-sm mb-4 leading-relaxed">Closing an assignment prevents new submissions and marks the project as archived.</p>
             <button className="w-full bg-amber-950 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
               Close Assignment
+            </button>
+          </section>
+
+          <section className="bg-white p-6 rounded-3xl border border-rose-200 text-rose-600">
+            <h4 className="font-bold mb-2 flex items-center gap-2">
+              <i className="fa-solid fa-trash"></i>
+              Soft Delete
+            </h4>
+            <p className="text-rose-500 text-sm mb-4 leading-relaxed">Hide this assignment without removing the data.</p>
+            <button
+              onClick={() => {
+                if (!window.confirm('Soft delete this assignment? It will be hidden but can be restored later.')) return;
+                onUpdate({
+                  ...assignment,
+                  deletedAt: new Date().toISOString(),
+                  deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+                });
+                onNavigate('assignments');
+              }}
+              className="w-full bg-rose-600 text-white font-bold py-3 rounded-xl hover:bg-rose-700 transition-colors"
+            >
+              Soft Delete Assignment
             </button>
           </section>
         </div>

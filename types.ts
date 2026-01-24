@@ -14,6 +14,8 @@ export interface Prompt {
   status: PromptStatus;
   createdAt: string;
   createdBy: string;
+  deletedAt?: string;
+  deletedBy?: string;
 }
 
 export interface Assignment {
@@ -25,6 +27,8 @@ export interface Assignment {
   instructions: string;
   status: 'Open' | 'Closed';
   driveFolderId?: string;
+  deletedAt?: string;
+  deletedBy?: string;
 }
 
 export interface SongVersion {
@@ -49,6 +53,8 @@ export interface Submission {
   lyricsRevisionCount?: number;
   artworkFileId?: string;
   artworkUrl?: string;
+  deletedAt?: string;
+  deletedBy?: string;
 }
 
 export interface CamperProfile {

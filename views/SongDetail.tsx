@@ -11,9 +11,10 @@ interface SongDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (submission: Submission) => void;
   onPlayTrack: (track: { versionId: string; title: string; artist: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
+  currentUser?: { name: string; email: string };
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, currentUser }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -320,27 +321,42 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 />
                 <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
               </div>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <i className="fa-solid fa-spinner fa-spin"></i>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-check"></i>
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-check"></i>
+                  Save Changes
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.confirm('Soft delete this song? It will be hidden but can be restored later.')) return;
+                onUpdate({
+                  ...submission,
+                  deletedAt: new Date().toISOString(),
+                  deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+                });
+                onNavigate('submissions');
+              }}
+              className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
+            >
+              Soft Delete Song
+            </button>
+          </form>
         </div>
-      )}
+      </div>
+    )}
     </>
   );
 };
