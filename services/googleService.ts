@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment } from '../types';
 
 // Global declaration for the Google Identity Services script
 declare var google: any;
@@ -92,7 +92,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -112,7 +112,8 @@ export const findOrCreateDatabase = async () => {
     'Assignments!A1:J1',
     'Submissions!A1:O1',
     'Users!A1:H1',
-    'PromptUpvotes!A1:E1'
+    'PromptUpvotes!A1:E1',
+    'Comments!A1:H1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -192,6 +193,20 @@ export const findOrCreateDatabase = async () => {
       'userEmail',
       'userName',
       'createdAt'
+    ]]);
+  }
+
+  const commentsHeader = headerValues[5]?.values?.[0] || [];
+  if (commentsHeader.length < 8) {
+    await updateSheetRows(SPREADSHEET_ID, 'Comments!A1', [[
+      'id',
+      'songId',
+      'parentId',
+      'author',
+      'authorEmail',
+      'text',
+      'timestamp',
+      'reactions'
     ]]);
   }
 
@@ -624,4 +639,132 @@ export const fetchDriveFile = async (fileId: string) => {
   });
   if (!response.ok) throw new Error('Failed to fetch Drive file');
   return response.blob();
+};
+
+// Comments functions
+export const fetchCommentsForSong = async (spreadsheetId: string, songId: string): Promise<Comment[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+
+  return rows
+    .filter((row: any[]) => row[1] === songId)
+    .map((row: any[]) => ({
+      id: row[0] || '',
+      songId: row[1] || '',
+      parentId: row[2] || null,
+      author: row[3] || 'Anonymous',
+      authorEmail: row[4] || '',
+      text: row[5] || '',
+      timestamp: row[6] || new Date().toISOString(),
+      reactions: row[7] ? JSON.parse(row[7]) : {}
+    }));
+};
+
+export const createComment = async (
+  spreadsheetId: string,
+  data: {
+    songId: string;
+    parentId: string | null;
+    author: string;
+    authorEmail: string;
+    text: string;
+  }
+): Promise<Comment> => {
+  const comment: Comment = {
+    id: Math.random().toString(36).substr(2, 9),
+    songId: data.songId,
+    parentId: data.parentId,
+    author: data.author,
+    authorEmail: data.authorEmail,
+    text: data.text,
+    timestamp: new Date().toISOString(),
+    reactions: {}
+  };
+
+  const rowValues = [[
+    comment.id,
+    comment.songId,
+    comment.parentId || '',
+    comment.author,
+    comment.authorEmail,
+    comment.text,
+    comment.timestamp,
+    JSON.stringify(comment.reactions)
+  ]];
+
+  await appendSheetRow(spreadsheetId, 'Comments!A1', rowValues);
+  return comment;
+};
+
+export const updateCommentRow = async (spreadsheetId: string, comment: Comment) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === comment.id);
+
+  if (rowIndex === -1) {
+    throw new Error('Comment not found');
+  }
+
+  const rowValues = [[
+    comment.id,
+    comment.songId,
+    comment.parentId || '',
+    comment.author,
+    comment.authorEmail,
+    comment.text,
+    comment.timestamp,
+    JSON.stringify(comment.reactions)
+  ]];
+
+  const sheetRow = rowIndex + 2;
+  const range = `Comments!A${sheetRow}:H${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
+export const toggleReaction = async (
+  spreadsheetId: string,
+  commentId: string,
+  emoji: string,
+  userEmail: string
+): Promise<Comment> => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === commentId);
+
+  if (rowIndex === -1) {
+    throw new Error('Comment not found');
+  }
+
+  const row = rows[rowIndex];
+  const comment: Comment = {
+    id: row[0],
+    songId: row[1],
+    parentId: row[2] || null,
+    author: row[3],
+    authorEmail: row[4],
+    text: row[5],
+    timestamp: row[6],
+    reactions: row[7] ? JSON.parse(row[7]) : {}
+  };
+
+  // Toggle the reaction
+  if (!comment.reactions[emoji]) {
+    comment.reactions[emoji] = [];
+  }
+
+  const userIndex = comment.reactions[emoji].indexOf(userEmail);
+  if (userIndex > -1) {
+    comment.reactions[emoji].splice(userIndex, 1);
+    if (comment.reactions[emoji].length === 0) {
+      delete comment.reactions[emoji];
+    }
+  } else {
+    comment.reactions[emoji].push(userEmail);
+  }
+
+  await updateCommentRow(spreadsheetId, comment);
+  return comment;
 };

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Submission, Assignment, Prompt, ViewState } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
+import CommentsSection from '../components/CommentsSection';
 
 interface SongDetailProps {
   submission: Submission;
@@ -12,9 +13,10 @@ interface SongDetailProps {
   onUpdate: (submission: Submission) => void;
   onPlayTrack: (track: { versionId: string; title: string; artist: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   currentUser?: { name: string; email: string };
+  spreadsheetId: string;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, currentUser }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, currentUser, spreadsheetId }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -274,6 +276,14 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           </section>
         </div>
       </div>
+
+      {currentUser && (
+        <CommentsSection
+          songId={submission.id}
+          spreadsheetId={spreadsheetId}
+          currentUser={currentUser}
+        />
+      )}
       </div>
       {showEdit && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">

@@ -68,10 +68,21 @@ export interface CamperProfile {
   pictureOverrideUrl?: string;
 }
 
-export type ViewState = 
-  | 'dashboard' 
-  | 'prompts' 
-  | 'assignments' 
+export interface Comment {
+  id: string;
+  songId: string;
+  parentId: string | null;
+  author: string;
+  authorEmail: string;
+  text: string;
+  timestamp: string;
+  reactions: Record<string, string[]>; // emoji -> array of user emails who reacted
+}
+
+export type ViewState =
+  | 'dashboard'
+  | 'prompts'
+  | 'assignments'
   | 'submissions'
   | 'campers'
   | 'settings'

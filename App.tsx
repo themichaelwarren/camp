@@ -471,7 +471,7 @@ const App: React.FC = () => {
         ) : null;
       case 'song-detail':
         const s = submissions.find(su => su.id === selectedId);
-        return s ? (
+        return s && spreadsheetId && userProfile ? (
           <SongDetail
             submission={s}
             assignment={assignments.find(as => as.id === s.assignmentId)}
@@ -479,7 +479,8 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onUpdate={handleUpdateSubmission}
             onPlayTrack={handlePlayTrack}
-            currentUser={userProfile?.email || userProfile?.name}
+            currentUser={{ name: userProfile.name || 'Anonymous', email: userProfile.email || '' }}
+            spreadsheetId={spreadsheetId}
           />
         ) : null;
       case 'settings':
