@@ -185,6 +185,59 @@
         :root[data-skin="notebook"][data-theme="dark"] .text-slate-500 {
             color: #d1d5db !important;
         }
+
+        /* Notebook theme: Fix header text in light mode */
+        :root[data-skin="notebook"][data-theme="light"] .text-slate-700 {
+            color: #374151 !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .text-slate-600 {
+            color: #4b5563 !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .text-slate-400 {
+            color: #9ca3af !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .text-slate-900 {
+            color: #111827 !important;
+        }
+
+        /* Notebook theme: Navigation hover states - gray instead of purple */
+        :root[data-skin="notebook"] .bg-indigo-800 {
+            background-color: #262626 !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .bg-indigo-900 {
+            background-color: #171717 !important;
+        }
+        :root[data-skin="notebook"][data-theme="dark"] .bg-indigo-900 {
+            background-color: #171717 !important;
+        }
+
+        /* Notebook theme: Table row hover states */
+        :root[data-skin="notebook"][data-theme="light"] .hover\:bg-white:hover {
+            background-color: #f3f4f6 !important;
+        }
+        :root[data-skin="notebook"][data-theme="dark"] .hover\:bg-white:hover {
+            background-color: #1a1a1a !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .hover\:bg-slate-50:hover {
+            background-color: #f3f4f6 !important;
+        }
+        :root[data-skin="notebook"][data-theme="dark"] .hover\:bg-slate-50:hover {
+            background-color: #1a1a1a !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .hover\:bg-indigo-50:hover {
+            background-color: #e5e7eb !important;
+        }
+        :root[data-skin="notebook"][data-theme="dark"] .hover\:bg-indigo-50:hover {
+            background-color: #1a1a1a !important;
+        }
+
+        /* Notebook theme: Fix white backgrounds in light mode */
+        :root[data-skin="notebook"][data-theme="light"] .bg-white {
+            background-color: #ffffff !important;
+        }
+        :root[data-skin="notebook"][data-theme="light"] .bg-slate-100 {
+            background-color: #f3f4f6 !important;
+        }
     </style>
 <script type="importmap">
 {
