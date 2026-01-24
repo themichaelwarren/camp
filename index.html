@@ -7,7 +7,7 @@
     <title>Koi Camp | Songwriter Toolkit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -89,6 +89,52 @@
         :root[data-theme="dark"] .shadow-xl,
         :root[data-theme="dark"] .shadow-2xl {
             box-shadow: none !important;
+        }
+        :root[data-skin="notebook"] body {
+            font-family: "IBM Plex Mono", monospace;
+            background-color: #f8fafc;
+        }
+        :root[data-skin="notebook"] h1,
+        :root[data-skin="notebook"] h2,
+        :root[data-skin="notebook"] h3,
+        :root[data-skin="notebook"] .font-display {
+            font-family: "IBM Plex Mono", monospace;
+        }
+        :root[data-skin="notebook"] .bg-indigo-900 {
+            background-color: #111827 !important;
+        }
+        :root[data-skin="notebook"] .bg-indigo-800 {
+            background-color: #111827 !important;
+        }
+        :root[data-skin="notebook"] .bg-indigo-700 {
+            background-color: #1f2937 !important;
+        }
+        :root[data-skin="notebook"] .text-indigo-100,
+        :root[data-skin="notebook"] .text-indigo-200,
+        :root[data-skin="notebook"] .text-indigo-300 {
+            color: #e5e7eb !important;
+        }
+        :root[data-skin="notebook"] .bg-indigo-600 {
+            background-color: #b91c1c !important;
+        }
+        :root[data-skin="notebook"] .text-indigo-600 {
+            color: #b91c1c !important;
+        }
+        :root[data-skin="notebook"] .border-indigo-500 {
+            border-color: #b91c1c !important;
+        }
+        :root[data-skin="notebook"] .bg-amber-400 {
+            background-color: #e5e7eb !important;
+            color: #111827 !important;
+        }
+        :root[data-skin="notebook"] .bg-slate-50 {
+            background-color: #f9fafb !important;
+        }
+        :root[data-skin="notebook"] .text-slate-800 {
+            color: #111827 !important;
+        }
+        :root[data-skin="notebook"] .text-slate-500 {
+            color: #4b5563 !important;
         }
     </style>
 <script type="importmap">

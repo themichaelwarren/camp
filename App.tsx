@@ -34,6 +34,10 @@ const App: React.FC = () => {
     artworkUrl?: string;
   } | null>(null);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
+  const [visualTheme, setVisualTheme] = useState<'default' | 'notebook'>(() => {
+    const stored = window.localStorage.getItem('camp-skin');
+    return stored === 'notebook' ? 'notebook' : 'default';
+  });
   const previousAudioUrl = useRef<string | null>(null);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
@@ -115,6 +119,11 @@ const App: React.FC = () => {
       window.localStorage.removeItem('camp-last-email');
     }
   }, [rememberMe]);
+
+  useEffect(() => {
+    document.documentElement.dataset.skin = visualTheme;
+    window.localStorage.setItem('camp-skin', visualTheme);
+  }, [visualTheme]);
 
   useEffect(() => {
     return () => {
@@ -463,6 +472,8 @@ const App: React.FC = () => {
             onProfileUpdate={handleProfileUpdate}
             rememberMe={rememberMe}
             onRememberMeChange={setRememberMe}
+            visualTheme={visualTheme}
+            onVisualThemeChange={setVisualTheme}
           />
         );
       case 'campers':
