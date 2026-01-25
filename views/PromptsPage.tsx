@@ -1,6 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Prompt, PromptStatus } from '../types';
+import TagInput from '../components/TagInput';
+import * as googleService from '../services/googleService';
 
 interface PromptsPageProps {
   prompts: Prompt[];
@@ -10,14 +12,39 @@ interface PromptsPageProps {
   onViewDetail: (id: string) => void;
   userProfile?: { name?: string; email?: string } | null;
   upvotedPromptIds: string[];
+  spreadsheetId: string;
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId }) => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: '' });
+  const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: [] as string[] });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PromptStatus>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  const loadTags = async () => {
+    try {
+      const tags = await googleService.fetchTags(spreadsheetId);
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Failed to load tags', error);
+    }
+  };
+
+  const handleCreateTag = async (tagName: string) => {
+    try {
+      await googleService.createTag(spreadsheetId, tagName);
+      await loadTags();
+    } catch (error) {
+      console.error('Failed to create tag', error);
+      throw error;
+    }
+  };
 
   const handleUpvote = (prompt: Prompt) => {
     onUpvote(prompt);
@@ -33,7 +60,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
       id: Math.random().toString(36).substr(2, 9),
       title: newPrompt.title,
       description: newPrompt.description,
-      tags: newPrompt.tags.split(',').map(t => t.trim()).filter(t => t),
+      tags: newPrompt.tags,
       upvotes: 0,
       status: PromptStatus.DRAFT,
       createdAt: new Date().toISOString().split('T')[0],
@@ -41,7 +68,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
     };
     onAdd(prompt);
     setShowAddModal(false);
-    setNewPrompt({ title: '', description: '', tags: '' });
+    setNewPrompt({ title: '', description: '', tags: [] });
   };
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -84,8 +111,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 md:items-center">
-        <div className="flex-1">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
+        <div>
           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</label>
           <input
             type="text"
@@ -95,7 +122,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
             <select
@@ -125,7 +152,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
             <tr>
@@ -133,13 +161,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
               <th className="px-6 py-4">Tags</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Upvotes</th>
-              <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredPrompts.map(prompt => (
-              <tr 
-                key={prompt.id} 
+              <tr
+                key={prompt.id}
                 className="hover:bg-slate-50 transition-colors group cursor-pointer"
                 onClick={() => onViewDetail(prompt.id)}
               >
@@ -157,7 +184,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                   </div>
                 </td>
                 <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                  <select 
+                  <select
                     value={prompt.status}
                     onChange={(e) => handleStatusChange(prompt, e.target.value as PromptStatus)}
                     className={`text-[11px] font-bold px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-200 cursor-pointer ${
@@ -172,7 +199,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                   </select>
                 </td>
                 <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                  <button 
+                  <button
                     onClick={() => handleUpvote(prompt)}
                     disabled={upvotedPromptIds.includes(prompt.id)}
                     className={`flex items-center gap-2 font-bold transition-colors ${
@@ -185,22 +212,78 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                     {prompt.upvotes}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                  <button className="text-slate-400 hover:text-indigo-600 transition-colors">
-                    <i className="fa-solid fa-chevron-right"></i>
-                  </button>
-                </td>
               </tr>
             ))}
             {filteredPrompts.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
                   No prompts match your filters.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredPrompts.map(prompt => (
+          <div
+            key={prompt.id}
+            onClick={() => onViewDetail(prompt.id)}
+            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <h4 className="font-bold text-slate-800 flex-1">{prompt.title}</h4>
+              <div onClick={e => e.stopPropagation()}>
+                <select
+                  value={prompt.status}
+                  onChange={(e) => handleStatusChange(prompt, e.target.value as PromptStatus)}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-200 cursor-pointer ${
+                    prompt.status === PromptStatus.ACTIVE ? 'bg-green-100 text-green-700' :
+                    prompt.status === PromptStatus.DRAFT ? 'bg-amber-100 text-amber-700' :
+                    'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  <option value={PromptStatus.DRAFT}>Draft</option>
+                  <option value={PromptStatus.ACTIVE}>Active</option>
+                  <option value={PromptStatus.ARCHIVED}>Archived</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mb-3 line-clamp-2">{prompt.description}</p>
+            <div className="flex flex-wrap gap-1 mb-3">
+              {prompt.tags.map(tag => (
+                <span key={tag} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-xs text-slate-400">By {prompt.createdBy}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUpvote(prompt);
+                }}
+                disabled={upvotedPromptIds.includes(prompt.id)}
+                className={`flex items-center gap-1 text-sm font-bold ${
+                  upvotedPromptIds.includes(prompt.id)
+                    ? 'text-rose-500 cursor-not-allowed'
+                    : 'text-slate-500'
+                }`}
+              >
+                <i className={`fa-solid fa-heart ${upvotedPromptIds.includes(prompt.id) ? 'text-rose-400' : 'text-slate-300'}`}></i>
+                {prompt.upvotes}
+              </button>
+            </div>
+          </div>
+        ))}
+        {filteredPrompts.length === 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+            No prompts match your filters.
+          </div>
+        )}
       </div>
 
       {showAddModal && (
@@ -235,13 +318,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                 ></textarea>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags (comma separated)</label>
-                <input 
-                  type="text" 
-                  placeholder="Acoustic, Pop, Melancholic"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags</label>
+                <TagInput
                   value={newPrompt.tags}
-                  onChange={e => setNewPrompt({...newPrompt, tags: e.target.value})}
+                  onChange={(tags) => setNewPrompt({ ...newPrompt, tags })}
+                  availableTags={availableTags}
+                  onCreateTag={handleCreateTag}
+                  placeholder="Type to add tags..."
                 />
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">

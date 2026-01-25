@@ -410,7 +410,7 @@ const App: React.FC = () => {
           />
         );
       case 'prompts':
-        return (
+        return spreadsheetId ? (
           <PromptsPage
             prompts={prompts.filter((p) => !p.deletedAt)}
             onAdd={handleAddPrompt}
@@ -419,8 +419,9 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('prompt-detail', id)}
             userProfile={userProfile}
             upvotedPromptIds={upvotedPromptIds}
+            spreadsheetId={spreadsheetId}
           />
-        );
+        ) : null;
       case 'assignments':
         return (
           <AssignmentsPage
@@ -443,7 +444,7 @@ const App: React.FC = () => {
         );
       case 'prompt-detail':
         const p = prompts.find(pr => pr.id === selectedId);
-        return p ? (
+        return p && spreadsheetId ? (
           <PromptDetail
             prompt={p}
             assignments={assignments.filter(a => a.promptId === p.id && !a.deletedAt)}
@@ -451,6 +452,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
             currentUser={userProfile?.email || userProfile?.name}
+            spreadsheetId={spreadsheetId}
           />
         ) : null;
       case 'assignment-detail':

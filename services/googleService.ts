@@ -92,7 +92,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -113,7 +113,8 @@ export const findOrCreateDatabase = async () => {
     'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
-    'Comments!A1:H1'
+    'Comments!A1:H1',
+    'Tags!A1:C1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -207,6 +208,15 @@ export const findOrCreateDatabase = async () => {
       'text',
       'timestamp',
       'reactions'
+    ]]);
+  }
+
+  const tagsHeader = headerValues[6]?.values?.[0] || [];
+  if (tagsHeader.length < 3) {
+    await updateSheetRows(SPREADSHEET_ID, 'Tags!A1', [[
+      'id',
+      'name',
+      'createdAt'
     ]]);
   }
 
@@ -767,4 +777,31 @@ export const toggleReaction = async (
 
   await updateCommentRow(spreadsheetId, comment);
   return comment;
+};
+
+// Tags functions
+export const fetchTags = async (spreadsheetId: string): Promise<string[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Tags!A2:C1000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows.map((row: any[]) => row[1] || '').filter(Boolean);
+};
+
+export const createTag = async (spreadsheetId: string, tagName: string): Promise<string> => {
+  const normalized = tagName.trim();
+  if (!normalized) throw new Error('Tag name cannot be empty');
+
+  // Check if tag already exists
+  const existing = await fetchTags(spreadsheetId);
+  if (existing.includes(normalized)) {
+    return normalized;
+  }
+
+  const row = [[
+    Math.random().toString(36).substr(2, 9),
+    normalized,
+    new Date().toISOString()
+  ]];
+  await appendSheetRow(spreadsheetId, 'Tags!A1', row);
+  return normalized;
 };

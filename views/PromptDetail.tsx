@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus } from '../types';
+import TagInput from '../components/TagInput';
+import * as googleService from '../services/googleService';
 
 interface PromptDetailProps {
   prompt: Prompt;
@@ -9,25 +11,50 @@ interface PromptDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (prompt: Prompt) => void;
   currentUser?: string;
+  spreadsheetId: string;
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, currentUser }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
     description: prompt.description,
-    tags: prompt.tags.join(', '),
+    tags: prompt.tags,
     status: prompt.status
   });
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   useEffect(() => {
     setEditPrompt({
       title: prompt.title,
       description: prompt.description,
-      tags: prompt.tags.join(', '),
+      tags: prompt.tags,
       status: prompt.status
     });
   }, [prompt]);
+
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  const loadTags = async () => {
+    try {
+      const tags = await googleService.fetchTags(spreadsheetId);
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Failed to load tags', error);
+    }
+  };
+
+  const handleCreateTag = async (tagName: string) => {
+    try {
+      await googleService.createTag(spreadsheetId, tagName);
+      await loadTags();
+    } catch (error) {
+      console.error('Failed to create tag', error);
+      throw error;
+    }
+  };
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +62,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
       ...prompt,
       title: editPrompt.title.trim(),
       description: editPrompt.description.trim(),
-      tags: editPrompt.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      tags: editPrompt.tags,
       status: editPrompt.status
     };
     onUpdate(updatedPrompt);
@@ -212,12 +239,13 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags (comma separated)</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags</label>
+                <TagInput
                   value={editPrompt.tags}
-                  onChange={e => setEditPrompt({ ...editPrompt, tags: e.target.value })}
+                  onChange={(tags: string[]) => setEditPrompt({ ...editPrompt, tags })}
+                  availableTags={availableTags}
+                  onCreateTag={handleCreateTag}
+                  placeholder="Type to add tags..."
                 />
               </div>
               <div>
