@@ -150,15 +150,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
       <section className="bg-white border border-slate-200 rounded-3xl p-8">
         <h3 className="text-lg font-bold text-slate-800">Login</h3>
         <p className="text-slate-500 text-sm mt-1">Control how this device remembers your session.</p>
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <div>
+        <div className="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex-1">
             <p className="text-sm font-semibold text-slate-800">Remember this device</p>
             <p className="text-xs text-slate-500">Attempts a silent sign-in on reload and uses your last email as a hint.</p>
           </div>
           <button
             type="button"
             onClick={() => onRememberMeChange(!rememberMe)}
-            className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors ${
+            className={`w-14 h-8 rounded-full flex items-center px-1 transition-colors flex-shrink-0 ${
               rememberMe ? 'bg-indigo-600' : 'bg-slate-200'
             }`}
             aria-pressed={rememberMe}
