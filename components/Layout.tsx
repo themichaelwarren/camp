@@ -20,6 +20,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef<number | null>(null);
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
     { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
@@ -44,6 +47,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       }
     }
   }, [player?.src]);
+
+  useEffect(() => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    if (isSyncing) {
+      setToastMessage('Cloud Sync in Progress');
+      setShowToast(true);
+    } else if (showToast) {
+      setToastMessage('Changes Saved to Sheets');
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    }
+
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, [isSyncing]);
 
   const sidebarContent = (
     <>
@@ -228,25 +253,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                {activeView.split('-').join(' ')}
              </h2>
           </div>
-          <div className="flex items-center gap-4">
-            {isLoggedIn && (
-              <span className={`text-[10px] px-3 py-1 rounded-full font-bold flex items-center gap-2 border ${
-                isSyncing ? 'bg-amber-50 border-amber-100 text-amber-600' : 'bg-green-50 border-green-100 text-green-700'
-              }`}>
-                <i className={`fa-solid ${isSyncing ? 'fa-arrows-rotate animate-spin' : 'fa-cloud-check'}`}></i>
-                {isSyncing ? 'Cloud Sync in Progress' : 'Changes Saved to Sheets'}
-              </span>
-            )}
-            {player && (
-              <button
-                className="md:hidden text-indigo-900 text-lg w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center"
-                onClick={() => setIsPlayerOpen(true)}
-                aria-label="Open player"
-              >
-                <i className="fa-solid fa-play"></i>
-              </button>
-            )}
-          </div>
+          {player && (
+            <button
+              className="md:hidden text-indigo-900 text-lg w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center"
+              onClick={() => setIsPlayerOpen(true)}
+              aria-label="Open player"
+            >
+              <i className="fa-solid fa-play"></i>
+            </button>
+          )}
         </header>
 
         {player && (
@@ -314,6 +329,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           Build: {import.meta.env.VITE_BUILD_ID || 'dev'}
         </footer>
       </main>
+
+      {isLoggedIn && showToast && (
+        <div className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
+          showToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+        }`}>
+          <div className={`px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg border ${
+            isSyncing
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-green-50 border-green-200 text-green-700'
+          }`}>
+            <i className={`fa-solid ${isSyncing ? 'fa-arrows-rotate animate-spin' : 'fa-cloud-check'}`}></i>
+            {toastMessage}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
