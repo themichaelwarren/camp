@@ -46,18 +46,24 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
     }
   };
 
-  const handleCreateTag = async (tagName: string) => {
-    try {
-      await googleService.createTag(spreadsheetId, tagName);
-      await loadTags();
-    } catch (error) {
-      console.error('Failed to create tag', error);
-      throw error;
-    }
-  };
-
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Create any new tags that don't exist yet
+    const newTags = editPrompt.tags.filter((tag: string) => !availableTags.includes(tag));
+    for (const tag of newTags) {
+      try {
+        await googleService.createTag(spreadsheetId, tag);
+      } catch (error) {
+        console.error('Failed to create tag', error);
+      }
+    }
+
+    // Reload tags to include newly created ones
+    if (newTags.length > 0) {
+      await loadTags();
+    }
+
     const updatedPrompt: Prompt = {
       ...prompt,
       title: editPrompt.title.trim(),
@@ -244,7 +250,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                   value={editPrompt.tags}
                   onChange={(tags: string[]) => setEditPrompt({ ...editPrompt, tags })}
                   availableTags={availableTags}
-                  onCreateTag={handleCreateTag}
+                  onCreateTag={async () => {}} // No-op: tags created on form submit
                   placeholder="Type to add tags..."
                 />
               </div>

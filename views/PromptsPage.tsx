@@ -36,16 +36,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
     }
   };
 
-  const handleCreateTag = async (tagName: string) => {
-    try {
-      await googleService.createTag(spreadsheetId, tagName);
-      await loadTags();
-    } catch (error) {
-      console.error('Failed to create tag', error);
-      throw error;
-    }
-  };
-
   const handleUpvote = (prompt: Prompt) => {
     onUpvote(prompt);
   };
@@ -54,8 +44,24 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
     onUpdate({ ...prompt, status });
   };
 
-  const handleManualAdd = (e: React.FormEvent) => {
+  const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Create any new tags that don't exist yet
+    const newTags = newPrompt.tags.filter((tag: string) => !availableTags.includes(tag));
+    for (const tag of newTags) {
+      try {
+        await googleService.createTag(spreadsheetId, tag);
+      } catch (error) {
+        console.error('Failed to create tag', error);
+      }
+    }
+
+    // Reload tags to include newly created ones
+    if (newTags.length > 0) {
+      await loadTags();
+    }
+
     const prompt: Prompt = {
       id: Math.random().toString(36).substr(2, 9),
       title: newPrompt.title,
@@ -323,7 +329,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                   value={newPrompt.tags}
                   onChange={(tags) => setNewPrompt({ ...newPrompt, tags })}
                   availableTags={availableTags}
-                  onCreateTag={handleCreateTag}
+                  onCreateTag={async () => {}} // No-op: tags created on form submit
                   placeholder="Type to add tags..."
                 />
               </div>

@@ -29,7 +29,8 @@ const TagInput: React.FC<TagInputProps> = ({
           !value.includes(tag)
       );
       setSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
+      // Always show suggestions dropdown when typing (even if no matches, so user can create new tag)
+      setShowSuggestions(true);
       setSelectedIndex(0);
     } else {
       setSuggestions([]);
@@ -37,15 +38,12 @@ const TagInput: React.FC<TagInputProps> = ({
     }
   }, [inputValue, availableTags, value]);
 
-  const addTag = async (tag: string) => {
+  const addTag = (tag: string) => {
     const trimmed = tag.trim();
     if (!trimmed || value.includes(trimmed)) return;
 
-    // If tag doesn't exist in available tags, create it
-    if (!availableTags.includes(trimmed)) {
-      await onCreateTag(trimmed);
-    }
-
+    // Just add the tag to the local list - don't create in database yet
+    // The parent component will handle creation on form submit
     onChange([...value, trimmed]);
     setInputValue('');
     setShowSuggestions(false);
@@ -110,7 +108,7 @@ const TagInput: React.FC<TagInputProps> = ({
           className="flex-1 min-w-[120px] outline-none text-sm"
         />
       </div>
-      {showSuggestions && suggestions.length > 0 && (
+      {showSuggestions && inputValue.trim() && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {suggestions.map((tag, index) => (
             <button
@@ -124,11 +122,18 @@ const TagInput: React.FC<TagInputProps> = ({
               {tag}
             </button>
           ))}
-          {inputValue && !availableTags.includes(inputValue.trim()) && (
+          {suggestions.length === 0 && (
+            <div className="px-4 py-2 text-xs text-slate-400 italic">
+              No existing tags match
+            </div>
+          )}
+          {inputValue && !availableTags.includes(inputValue.trim()) && !value.includes(inputValue.trim()) && (
             <button
               type="button"
               onClick={() => addTag(inputValue)}
-              className="w-full text-left px-4 py-2 text-sm border-t border-slate-100 hover:bg-green-50 text-green-600 font-semibold"
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-green-50 text-green-600 font-semibold ${
+                suggestions.length > 0 ? 'border-t border-slate-100' : ''
+              }`}
             >
               <i className="fa-solid fa-plus mr-2"></i>
               Create "{inputValue.trim()}"
