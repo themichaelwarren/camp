@@ -115,9 +115,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     window.localStorage.setItem('camp-remember', rememberMe ? '1' : '0');
-    if (!rememberMe) {
-      window.localStorage.removeItem('camp-last-email');
-    }
   }, [rememberMe]);
 
   useEffect(() => {
