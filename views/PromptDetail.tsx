@@ -82,6 +82,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
   };
 
   return (
+    <>
     <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -214,7 +215,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
       </div>
 
       {showEditModal && (
-        <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-slate-900/60 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-xl text-slate-800">Edit Prompt</h3>
@@ -279,6 +280,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         </div>
       )}
     </div>
+    </>
   );
 };
 
