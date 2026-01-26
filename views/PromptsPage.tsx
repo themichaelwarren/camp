@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Prompt, PromptStatus } from '../types';
 import TagInput from '../components/TagInput';
 import * as googleService from '../services/googleService';
@@ -102,13 +103,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
     });
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowAddModal(true)}
           className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
         >
@@ -292,8 +294,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
         )}
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+      {showAddModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center rounded-t-3xl overflow-hidden">
               <h3 className="font-bold text-xl text-slate-800">Add New Prompt</h3>
@@ -304,9 +306,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
             <form onSubmit={handleManualAdd} className="p-6 space-y-4 overflow-visible rounded-b-3xl">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-                <input 
+                <input
                   required
-                  type="text" 
+                  type="text"
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   value={newPrompt.title}
                   onChange={e => setNewPrompt({...newPrompt, title: e.target.value})}
@@ -315,7 +317,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <textarea 
+                <textarea
                   required
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24"
                   value={newPrompt.description}
@@ -338,9 +340,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
+    </>
   );
 };
 
