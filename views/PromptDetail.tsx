@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus } from '../types';
 import TagInput from '../components/TagInput';
 import * as googleService from '../services/googleService';
@@ -214,7 +215,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         </div>
       </div>
 
-      {showEditModal && (
+      {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -277,7 +278,8 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
     </>
