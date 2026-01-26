@@ -136,12 +136,12 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           <section className="bg-white p-6 rounded-3xl border border-rose-200 text-rose-600">
             <h4 className="font-bold mb-2 flex items-center gap-2">
               <i className="fa-solid fa-trash"></i>
-              Soft Delete
+              Delete
             </h4>
             <p className="text-rose-500 text-sm mb-4 leading-relaxed">Hide this assignment without removing the data.</p>
             <button
               onClick={() => {
-                if (!window.confirm('Soft delete this assignment? It will be hidden but can be restored later.')) return;
+                if (!window.confirm('Delete this assignment? It will be hidden but can be restored later.')) return;
                 onUpdate({
                   ...assignment,
                   deletedAt: new Date().toISOString(),
@@ -151,7 +151,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               }}
               className="w-full bg-rose-600 text-white font-bold py-3 rounded-xl hover:bg-rose-700 transition-colors"
             >
-              Soft Delete Assignment
+              Delete Assignment
             </button>
           </section>
         </div>

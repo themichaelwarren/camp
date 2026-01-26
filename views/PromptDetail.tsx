@@ -76,7 +76,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
   };
 
   const handleDeletePrompt = () => {
-    if (!window.confirm('Soft delete this prompt? It will be hidden but can be restored later.')) return;
+    if (!window.confirm('Delete this prompt? It will be hidden but can be restored later.')) return;
     onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser || 'Unknown' });
     onNavigate('prompts');
   };
@@ -214,7 +214,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
       </div>
 
       {showEditModal && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-slate-900/60 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-xl text-slate-800">Edit Prompt</h3>
@@ -272,7 +272,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                 onClick={handleDeletePrompt}
                 className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
               >
-                Soft Delete Prompt
+                Delete Prompt
               </button>
             </form>
           </div>

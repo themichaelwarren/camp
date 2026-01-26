@@ -351,7 +351,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             <button
               type="button"
               onClick={() => {
-                if (!window.confirm('Soft delete this song? It will be hidden but can be restored later.')) return;
+                if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
                 onUpdate({
                   ...submission,
                   deletedAt: new Date().toISOString(),
@@ -361,7 +361,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               }}
               className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
             >
-              Soft Delete Song
+              Delete Song
             </button>
           </form>
         </div>
