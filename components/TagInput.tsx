@@ -109,7 +109,7 @@ const TagInput: React.FC<TagInputProps> = ({
         />
       </div>
       {showSuggestions && inputValue.trim() && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-[9999] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {suggestions.map((tag, index) => (
             <button
               key={tag}

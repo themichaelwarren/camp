@@ -301,7 +301,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleManualAdd} className="p-6 space-y-4">
+            <form onSubmit={handleManualAdd} className="p-6 space-y-4 overflow-visible">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
                 <input 
