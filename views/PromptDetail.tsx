@@ -83,17 +83,26 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={() => onNavigate('prompts')}
-          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          <i className="fa-solid fa-arrow-left"></i>
-        </button>
-        <div>
-          <h2 className="text-3xl font-bold text-slate-800">{prompt.title}</h2>
-          <p className="text-slate-500 font-medium">Prompt ID: {prompt.id}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => onNavigate('prompts')}
+            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+          </button>
+          <div>
+            <h2 className="text-3xl font-bold text-slate-800">{prompt.title}</h2>
+            <p className="text-slate-500 font-medium">Prompt ID: {prompt.id}</p>
+          </div>
         </div>
+        <button
+          onClick={() => setShowEditModal(true)}
+          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+        >
+          <i className="fa-solid fa-pen"></i>
+          Edit
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -177,40 +186,29 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Prompt Meta</h3>
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                <span className="text-sm text-slate-500 font-medium">Created By</span>
-                <span className="text-sm text-slate-800 font-bold">{prompt.createdBy}</span>
+              <div className="py-2 border-b border-slate-50">
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Created By</span>
+                <span className="text-sm text-slate-800 font-bold break-words">{prompt.createdBy}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                <span className="text-sm text-slate-500 font-medium">Creation Date</span>
+              <div className="py-2 border-b border-slate-50">
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Creation Date</span>
                 <span className="text-sm text-slate-800 font-bold">{prompt.createdAt}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                <span className="text-sm text-slate-500 font-medium">Status</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+              <div className="py-2 border-b border-slate-50">
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Status</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase inline-block ${
                   prompt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                 }`}>
                   {prompt.status}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-sm text-slate-500 font-medium">Total Hearts</span>
+              <div className="py-2">
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Total Hearts</span>
                 <span className="text-sm text-red-500 font-bold flex items-center gap-1">
                   <i className="fa-solid fa-heart"></i> {prompt.upvotes}
                 </span>
               </div>
             </div>
-          </section>
-
-          <section className="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100">
-            <h4 className="font-bold mb-2">Need a refresh?</h4>
-            <p className="text-indigo-100 text-sm mb-4 leading-relaxed">You can modify this prompt's details or archive it if it's no longer serving the camp.</p>
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="w-full bg-white text-indigo-600 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors"
-            >
-              Edit Prompt Details
-            </button>
           </section>
         </div>
       </div>
