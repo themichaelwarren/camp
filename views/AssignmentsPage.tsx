@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
+import PromptSelector from '../components/PromptSelector';
 
 interface AssignmentsPageProps {
   assignments: Assignment[];
@@ -12,9 +14,7 @@ interface AssignmentsPageProps {
 
 const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onViewDetail }) => {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ title: '', promptId: '', dueDate: '', instructions: '' });
-
-  const activePrompts = prompts.filter(p => p.status === 'Active');
+  const [form, setForm] = useState({ title: '', promptId: '', startDate: '', dueDate: '', instructions: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +22,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       id: Math.random().toString(36).substr(2, 9),
       title: form.title,
       promptId: form.promptId,
+      startDate: form.startDate,
       dueDate: form.dueDate,
       instructions: form.instructions,
       assignedTo: ['All Campers'],
@@ -29,7 +30,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     };
     onAdd(assignment);
     setShowAdd(false);
-    setForm({ title: '', promptId: '', dueDate: '', instructions: '' });
+    setForm({ title: '', promptId: '', startDate: '', dueDate: '', instructions: '' });
   };
 
   return (
@@ -87,46 +88,51 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         })}
       </div>
 
-      {showAdd && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+      {showAdd && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-xl text-slate-800">Create Assignment</h3>
               <button onClick={() => setShowAdd(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-visible">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={form.title}
+                  onChange={e => setForm({...form, title: e.target.value})}
+                  placeholder="e.g. Winter Songwriting Challenge"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompt</label>
+                <PromptSelector
+                  prompts={prompts}
+                  selectedPromptId={form.promptId}
+                  onChange={(promptId) => setForm({...form, promptId})}
+                  required
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
-                  <input 
-                    required
-                    type="text" 
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                  <input
+                    type="date"
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={form.title}
-                    onChange={e => setForm({...form, title: e.target.value})}
+                    value={form.startDate}
+                    onChange={e => setForm({...form, startDate: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompt</label>
-                  <select 
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                  <input
                     required
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={form.promptId}
-                    onChange={e => setForm({...form, promptId: e.target.value})}
-                  >
-                    <option value="">Choose active prompt...</option>
-                    {activePrompts.map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Deadline Date</label>
-                  <input 
-                    required
-                    type="date" 
+                    type="date"
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
                     value={form.dueDate}
                     onChange={e => setForm({...form, dueDate: e.target.value})}
@@ -135,7 +141,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
-                <textarea 
+                <textarea
                   required
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-32"
                   value={form.instructions}
@@ -143,12 +149,13 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                   placeholder="e.g. Focus on complex chord changes or experimental vocals..."
                 ></textarea>
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4">
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Launch Assignment
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

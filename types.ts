@@ -22,6 +22,7 @@ export interface Assignment {
   id: string;
   promptId: string;
   title: string;
+  startDate?: string;
   dueDate: string;
   assignedTo: string[];
   instructions: string;

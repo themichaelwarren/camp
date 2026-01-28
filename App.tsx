@@ -461,6 +461,7 @@ const App: React.FC = () => {
           <AssignmentDetail
             assignment={a}
             prompt={prompts.find(pr => pr.id === a.promptId)}
+            prompts={prompts.filter((p) => !p.deletedAt)}
             submissions={submissions.filter(s => s.assignmentId === a.id && !s.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}

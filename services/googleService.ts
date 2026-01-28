@@ -109,7 +109,7 @@ export const findOrCreateDatabase = async () => {
 
   const headerRanges = [
     'Prompts!A1:J1',
-    'Assignments!A1:J1',
+    'Assignments!A1:K1',
     'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
@@ -137,11 +137,12 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
   const assignmentsHeader = headerValues[1]?.values?.[0] || [];
-  if (assignmentsHeader.length < 10) {
+  if (assignmentsHeader.length < 11) {
     await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [[
       'id',
       'promptId',
       'title',
+      'startDate',
       'dueDate',
       'assignedTo',
       'instructions',
@@ -267,7 +268,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const updateAssignmentRow = async (spreadsheetId: string, assignment: Assignment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:J1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:K1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
@@ -275,6 +276,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
     assignment.id,
     assignment.promptId,
     assignment.title,
+    assignment.startDate || '',
     assignment.dueDate,
     assignment.assignedTo.join(','),
     assignment.instructions,
@@ -289,7 +291,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Assignments!A${sheetRow}:J${sheetRow}`;
+  const range = `Assignments!A${sheetRow}:K${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
@@ -326,7 +328,7 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:J1000&ranges=Submissions!A2:O1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:K1000&ranges=Submissions!A2:O1000`;
   const result = await callGoogleApi(url);
   
   const promptsRaw = result.valueRanges[0].values || [];
@@ -350,13 +352,14 @@ export const fetchAllData = async (spreadsheetId: string) => {
     id: row[0] || Math.random().toString(36).substr(2, 9),
     promptId: row[1] || '',
     title: row[2] || 'Untitled Assignment',
-    dueDate: row[3] || '',
-    assignedTo: (row[4] || '').split(','),
-    instructions: row[5] || '',
-    status: (row[6] as 'Open' | 'Closed') || 'Open',
-    driveFolderId: row[7] || '',
-    deletedAt: row[8] || '',
-    deletedBy: row[9] || ''
+    startDate: row[3] || '',
+    dueDate: row[4] || '',
+    assignedTo: (row[5] || '').split(','),
+    instructions: row[6] || '',
+    status: (row[7] as 'Open' | 'Closed') || 'Open',
+    driveFolderId: row[8] || '',
+    deletedAt: row[9] || '',
+    deletedBy: row[10] || ''
   }));
 
   const submissions: Submission[] = submissionsRaw.map((row: any[]) => {

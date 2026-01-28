@@ -1,10 +1,13 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, ViewState } from '../types';
+import PromptSelector from '../components/PromptSelector';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
   prompt?: Prompt;
+  prompts: Prompt[];
   submissions: Submission[];
   campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
@@ -12,31 +15,95 @@ interface AssignmentDetailProps {
   currentUser?: { name: string; email: string };
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, submissions, campersCount, onNavigate, onUpdate, currentUser }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, campersCount, onNavigate, onUpdate, currentUser }) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: assignment.title,
+    promptId: assignment.promptId,
+    startDate: assignment.startDate || '',
+    dueDate: assignment.dueDate,
+    instructions: assignment.instructions,
+    status: assignment.status
+  });
+
   const totalCampers = campersCount || 0;
   const submissionRate = totalCampers > 0 ? Math.round((submissions.length / totalCampers) * 100) : 0;
   const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
 
+  useEffect(() => {
+    setEditForm({
+      title: assignment.title,
+      promptId: assignment.promptId,
+      startDate: assignment.startDate || '',
+      dueDate: assignment.dueDate,
+      instructions: assignment.instructions,
+      status: assignment.status
+    });
+  }, [assignment]);
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedAssignment: Assignment = {
+      ...assignment,
+      title: editForm.title.trim(),
+      promptId: editForm.promptId,
+      startDate: editForm.startDate,
+      dueDate: editForm.dueDate,
+      instructions: editForm.instructions.trim(),
+      status: editForm.status
+    };
+    onUpdate(updatedAssignment);
+    setShowEditModal(false);
+  };
+
+  const handleCloseAssignment = () => {
+    if (!window.confirm('Close this assignment? This will prevent new submissions and mark it as archived.')) return;
+    onUpdate({ ...assignment, status: 'Closed' });
+  };
+
+  const handleDeleteAssignment = () => {
+    if (!window.confirm('Delete this assignment? It will be hidden but can be restored later.')) return;
+    onUpdate({
+      ...assignment,
+      deletedAt: new Date().toISOString(),
+      deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+    });
+    onNavigate('assignments');
+  };
+
   return (
+    <>
     <div className="space-y-8 animate-in fade-in duration-300">
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={() => onNavigate('assignments')}
-          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          <i className="fa-solid fa-arrow-left"></i>
-        </button>
-        <div>
-          <h2 className="text-3xl font-bold text-slate-800">{assignment.title}</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-              assignment.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-            }`}>
-              {assignment.status}
-            </span>
-            <span className="text-slate-400 text-xs font-medium">Due {assignment.dueDate}</span>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => onNavigate('assignments')}
+            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+          </button>
+          <div>
+            <h2 className="text-3xl font-bold text-slate-800">{assignment.title}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                assignment.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {assignment.status}
+              </span>
+              {assignment.startDate && (
+                <span className="text-slate-400 text-xs font-medium">Started {assignment.startDate}</span>
+              )}
+              <span className="text-slate-400 text-xs font-medium">Due {assignment.dueDate}</span>
+            </div>
           </div>
         </div>
+        <button
+          onClick={() => setShowEditModal(true)}
+          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+        >
+          <i className="fa-solid fa-pen"></i>
+          Edit
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -122,16 +189,21 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </section>
 
-          <section className="bg-amber-400 p-6 rounded-3xl text-amber-950 shadow-lg shadow-amber-100">
-            <h4 className="font-bold mb-2 flex items-center gap-2">
-              <i className="fa-solid fa-triangle-exclamation"></i>
-              Deadline Management
-            </h4>
-            <p className="text-amber-900 text-sm mb-4 leading-relaxed">Closing an assignment prevents new submissions and marks the project as archived.</p>
-            <button className="w-full bg-amber-950 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
-              Close Assignment
-            </button>
-          </section>
+          {assignment.status === 'Open' && (
+            <section className="bg-amber-400 p-6 rounded-3xl text-amber-950 shadow-lg shadow-amber-100">
+              <h4 className="font-bold mb-2 flex items-center gap-2">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                Deadline Management
+              </h4>
+              <p className="text-amber-900 text-sm mb-4 leading-relaxed">Closing an assignment prevents new submissions and marks the project as archived.</p>
+              <button
+                onClick={handleCloseAssignment}
+                className="w-full bg-amber-950 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors"
+              >
+                Close Assignment
+              </button>
+            </section>
+          )}
 
           <section className="bg-white p-6 rounded-3xl border border-rose-200 text-rose-600">
             <h4 className="font-bold mb-2 flex items-center gap-2">
@@ -140,15 +212,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </h4>
             <p className="text-rose-500 text-sm mb-4 leading-relaxed">Hide this assignment without removing the data.</p>
             <button
-              onClick={() => {
-                if (!window.confirm('Delete this assignment? It will be hidden but can be restored later.')) return;
-                onUpdate({
-                  ...assignment,
-                  deletedAt: new Date().toISOString(),
-                  deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
-                });
-                onNavigate('assignments');
-              }}
+              onClick={handleDeleteAssignment}
               className="w-full bg-rose-600 text-white font-bold py-3 rounded-xl hover:bg-rose-700 transition-colors"
             >
               Delete Assignment
@@ -156,7 +220,88 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </section>
         </div>
       </div>
+
+      {showEditModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-xl text-slate-800">Edit Assignment</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 overflow-visible">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editForm.title}
+                  onChange={e => setEditForm({...editForm, title: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompt</label>
+                <PromptSelector
+                  prompts={prompts}
+                  selectedPromptId={editForm.promptId}
+                  onChange={(promptId) => setEditForm({...editForm, promptId})}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editForm.startDate}
+                    onChange={e => setEditForm({...editForm, startDate: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                  <input
+                    required
+                    type="date"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editForm.dueDate}
+                    onChange={e => setEditForm({...editForm, dueDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
+                <textarea
+                  required
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-32"
+                  value={editForm.instructions}
+                  onChange={e => setEditForm({...editForm, instructions: e.target.value})}
+                  placeholder="e.g. Focus on complex chord changes or experimental vocals..."
+                ></textarea>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+                <select
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editForm.status}
+                  onChange={e => setEditForm({...editForm, status: e.target.value as 'Open' | 'Closed'})}
+                >
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
+                Save Changes
+              </button>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
+    </>
   );
 };
 
