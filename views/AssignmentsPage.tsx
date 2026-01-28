@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
 import PromptSelector from '../components/PromptSelector';
+import MarkdownEditor from '../components/MarkdownEditor';
 
 interface AssignmentsPageProps {
   assignments: Assignment[];
@@ -141,13 +142,13 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-32"
+                <MarkdownEditor
                   value={form.instructions}
-                  onChange={e => setForm({...form, instructions: e.target.value})}
+                  onChange={(instructions) => setForm({...form, instructions})}
                   placeholder="e.g. Focus on complex chord changes or experimental vocals..."
-                ></textarea>
+                  required
+                  minHeight="h-48"
+                />
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Launch Assignment

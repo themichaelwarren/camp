@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, ViewState } from '../types';
 import PromptSelector from '../components/PromptSelector';
+import MarkdownPreview from '../components/MarkdownPreview';
+import MarkdownEditor from '../components/MarkdownEditor';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
@@ -111,9 +113,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-8 border-b border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Instructions</h3>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {assignment.instructions}
-              </p>
+              <MarkdownPreview content={assignment.instructions} className="text-slate-700" />
             </div>
             {prompt && (
               <div 
@@ -273,13 +273,13 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-32"
+                <MarkdownEditor
                   value={editForm.instructions}
-                  onChange={e => setEditForm({...editForm, instructions: e.target.value})}
+                  onChange={(instructions) => setEditForm({...editForm, instructions})}
                   placeholder="e.g. Focus on complex chord changes or experimental vocals..."
-                ></textarea>
+                  required
+                  minHeight="h-48"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
