@@ -63,10 +63,24 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           return a.title.localeCompare(b.title);
         case 'title-desc':
           return b.title.localeCompare(a.title);
-        case 'due-asc':
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'due-asc': {
+          // Upcoming deadlines first, sorted by closeness to today
+          const now = new Date().getTime();
+          const aDue = new Date(a.dueDate).getTime();
+          const bDue = new Date(b.dueDate).getTime();
+          const aIsFuture = aDue >= now;
+          const bIsFuture = bDue >= now;
+
+          // Both future: show closest first
+          if (aIsFuture && bIsFuture) return aDue - bDue;
+          // Both past: show most recent first
+          if (!aIsFuture && !bIsFuture) return bDue - aDue;
+          // Future dates come before past dates
+          return aIsFuture ? -1 : 1;
+        }
         case 'due-desc':
-          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+          // Chronological: oldest to newest
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         case 'start-asc': {
           const aStart = a.startDate || '';
           const bStart = b.startDate || '';
@@ -179,14 +193,14 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc')}
             >
-              <option value="due-asc">Due Date (Soonest)</option>
-              <option value="due-desc">Due Date (Latest)</option>
-              <option value="start-asc">Start Date (Oldest)</option>
-              <option value="start-desc">Start Date (Newest)</option>
-              <option value="title-asc">Title A-Z</option>
-              <option value="title-desc">Title Z-A</option>
-              <option value="prompt-asc">Prompt A-Z</option>
-              <option value="prompt-desc">Prompt Z-A</option>
+              <option value="due-asc">Due Date: Upcoming First</option>
+              <option value="due-desc">Due Date: Oldest First</option>
+              <option value="start-asc">Start Date: Oldest First</option>
+              <option value="start-desc">Start Date: Newest First</option>
+              <option value="title-asc">Title: A-Z</option>
+              <option value="title-desc">Title: Z-A</option>
+              <option value="prompt-asc">Prompt: A-Z</option>
+              <option value="prompt-desc">Prompt: Z-A</option>
             </select>
           </div>
         </div>
