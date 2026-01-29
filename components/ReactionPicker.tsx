@@ -6,7 +6,18 @@ interface ReactionPickerProps {
   onToggleReaction: (emoji: string) => void;
 }
 
-const AVAILABLE_EMOJIS = ['👍', '❤️', '😂', '🎵', '🔥', '👏'];
+const EMOJI_CATEGORIES = {
+  'Music & Camp': ['🤘', '🎸', '🎵', '🎶', '🎤', '🎹', '🥁', '🎺', '🎻', '🎧', '🎼', '🔊'],
+  'Reactions': ['👍', '👎', '👏', '🙌', '🤝', '✊', '👊', '🤙', '✌️', '🤟', '💪', '🫶'],
+  'Love & Energy': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🔥', '⚡', '✨', '💫'],
+  'Faces': ['😂', '😭', '😍', '🥰', '😎', '🤩', '🥳', '😊', '😢', '😅', '🤔', '😮', '😱', '🤯', '🥺', '😤', '😈'],
+  'Symbols': ['⭐', '🌟', '💯', '✅', '❌', '❓', '❗', '💡', '🎉', '🎊', '🏆', '🥇'],
+  'Nature': ['🌈', '🌙', '☀️', '⛈️', '🌸', '🌹', '🌺', '🍀', '🌲', '🌊'],
+  'Animals': ['🐱', '🐶', '🦄', '🦋', '🐝', '🦅', '🦉', '🐢', '🐍', '🦖'],
+  'Food & Drink': ['🍕', '🌮', '🍔', '🍰', '🍪', '☕', '🥤', '🍺', '🍷', '🥂']
+};
+
+const AVAILABLE_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
 
 const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserEmail, onToggleReaction }) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -51,16 +62,29 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserE
                 className="fixed inset-0 z-10"
                 onClick={() => setShowPicker(false)}
               />
-              <div className="absolute bottom-full mb-2 left-0 bg-white rounded-xl shadow-lg border border-slate-200 p-2 flex gap-1 z-20">
-                {AVAILABLE_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleEmojiClick(emoji)}
-                    className="w-8 h-8 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center text-lg"
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              <div className="absolute bottom-full mb-2 left-0 bg-white rounded-xl shadow-xl border border-slate-200 z-20 w-80 max-h-96 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-slate-100 px-3 py-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pick a reaction</p>
+                </div>
+                <div className="p-3 space-y-4">
+                  {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                    <div key={category}>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{category}</p>
+                      <div className="grid grid-cols-8 gap-1">
+                        {emojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => handleEmojiClick(emoji)}
+                            className="w-9 h-9 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center text-xl"
+                            title={emoji}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}
