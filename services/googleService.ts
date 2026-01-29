@@ -1,10 +1,10 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee } from '../types';
 
 // Global declaration for the Google Identity Services script
 declare var google: any;
 
 const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com'; 
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents';
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = '1ihYCXKBQKTS7Jz4XgybQONAnDfbmkBiCwnAam3td2Vg';
 const ASSIGNMENTS_PARENT_FOLDER_ID = '1Lifl1lByscTeluVSfZWSXNuCTh7JSppQ';
 
@@ -92,7 +92,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -109,12 +109,13 @@ export const findOrCreateDatabase = async () => {
 
   const headerRanges = [
     'Prompts!A1:J1',
-    'Assignments!A1:K1',
+    'Assignments!A1:L1',
     'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
     'Comments!A1:I1',
-    'Tags!A1:C1'
+    'Tags!A1:C1',
+    'Events!A1:M1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -137,7 +138,7 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
   const assignmentsHeader = headerValues[1]?.values?.[0] || [];
-  if (assignmentsHeader.length < 11) {
+  if (assignmentsHeader.length < 12) {
     await updateSheetRows(SPREADSHEET_ID, 'Assignments!A1', [[
       'id',
       'promptId',
@@ -148,6 +149,7 @@ export const findOrCreateDatabase = async () => {
       'instructions',
       'status',
       'driveFolderId',
+      'eventId',
       'deletedAt',
       'deletedBy'
     ]]);
@@ -222,6 +224,27 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
 
+  const eventsHeader = headerValues[7]?.values?.[0] || [];
+  if (eventsHeader.length < 13) {
+    await updateSheetRows(SPREADSHEET_ID, 'Events!A1', [[
+      'id',
+      'assignmentId',
+      'calendarEventId',
+      'title',
+      'description',
+      'startDateTime',
+      'endDateTime',
+      'location',
+      'meetLink',
+      'attendeesJson',
+      'createdBy',
+      'createdAt',
+      'updatedAt',
+      'deletedAt',
+      'deletedBy'
+    ]]);
+  }
+
   return SPREADSHEET_ID;
 };
 
@@ -269,7 +292,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const updateAssignmentRow = async (spreadsheetId: string, assignment: Assignment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:K1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:L1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
@@ -283,6 +306,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
     assignment.instructions,
     assignment.status,
     assignment.driveFolderId || '',
+    assignment.eventId || '',
     assignment.deletedAt || '',
     assignment.deletedBy || ''
   ]];
@@ -292,7 +316,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Assignments!A${sheetRow}:K${sheetRow}`;
+  const range = `Assignments!A${sheetRow}:L${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
@@ -329,9 +353,9 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:K1000&ranges=Submissions!A2:O1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:L1000&ranges=Submissions!A2:O1000`;
   const result = await callGoogleApi(url);
-  
+
   const promptsRaw = result.valueRanges[0].values || [];
   const assignmentsRaw = result.valueRanges[1].values || [];
   const submissionsRaw = result.valueRanges[2].values || [];
@@ -359,8 +383,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
     instructions: row[6] || '',
     status: (row[7] as 'Open' | 'Closed') || 'Open',
     driveFolderId: row[8] || '',
-    deletedAt: row[9] || '',
-    deletedBy: row[10] || ''
+    eventId: row[9] || '',
+    deletedAt: row[10] || '',
+    deletedBy: row[11] || ''
   }));
 
   const submissions: Submission[] = submissionsRaw.map((row: any[]) => {
@@ -818,4 +843,262 @@ export const createTag = async (spreadsheetId: string, tagName: string): Promise
   ]];
   await appendSheetRow(spreadsheetId, 'Tags!A1', row);
   return normalized;
+};
+
+// Calendar API functions
+export const createCalendarEvent = async (eventData: {
+  title: string;
+  description: string;
+  startDateTime: string; // ISO 8601
+  endDateTime: string; // ISO 8601
+  attendees?: { email: string }[];
+  location?: string;
+}): Promise<{ id: string; meetLink?: string }> => {
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+
+  const calendarEvent = {
+    summary: eventData.title,
+    description: eventData.description,
+    start: {
+      dateTime: eventData.startDateTime,
+      timeZone: 'America/New_York'
+    },
+    end: {
+      dateTime: eventData.endDateTime,
+      timeZone: 'America/New_York'
+    },
+    attendees: eventData.attendees || [],
+    location: eventData.location || '',
+    conferenceData: {
+      createRequest: {
+        requestId: Math.random().toString(36).substr(2, 9),
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
+      }
+    }
+  };
+
+  const result = await callGoogleApi(url + '?conferenceDataVersion=1', {
+    method: 'POST',
+    body: JSON.stringify(calendarEvent)
+  });
+
+  return {
+    id: result.id,
+    meetLink: result.hangoutLink || result.conferenceData?.entryPoints?.[0]?.uri
+  };
+};
+
+export const updateCalendarEvent = async (
+  calendarEventId: string,
+  eventData: {
+    title: string;
+    description: string;
+    startDateTime: string;
+    endDateTime: string;
+    attendees?: { email: string }[];
+    location?: string;
+  }
+): Promise<{ meetLink?: string }> => {
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarEventId}`;
+
+  const calendarEvent = {
+    summary: eventData.title,
+    description: eventData.description,
+    start: {
+      dateTime: eventData.startDateTime,
+      timeZone: 'America/New_York'
+    },
+    end: {
+      dateTime: eventData.endDateTime,
+      timeZone: 'America/New_York'
+    },
+    attendees: eventData.attendees || [],
+    location: eventData.location || ''
+  };
+
+  const result = await callGoogleApi(url, {
+    method: 'PUT',
+    body: JSON.stringify(calendarEvent)
+  });
+
+  return {
+    meetLink: result.hangoutLink || result.conferenceData?.entryPoints?.[0]?.uri
+  };
+};
+
+export const deleteCalendarEvent = async (calendarEventId: string): Promise<void> => {
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarEventId}`;
+  await callGoogleApi(url, { method: 'DELETE' });
+};
+
+export const fetchCalendarEvent = async (calendarEventId: string): Promise<{
+  title: string;
+  description: string;
+  startDateTime: string;
+  endDateTime: string;
+  location?: string;
+  meetLink?: string;
+  attendees: EventAttendee[];
+}> => {
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${calendarEventId}`;
+  const result = await callGoogleApi(url);
+
+  return {
+    title: result.summary || '',
+    description: result.description || '',
+    startDateTime: result.start?.dateTime || result.start?.date || '',
+    endDateTime: result.end?.dateTime || result.end?.date || '',
+    location: result.location || '',
+    meetLink: result.hangoutLink || result.conferenceData?.entryPoints?.[0]?.uri,
+    attendees: (result.attendees || []).map((a: any) => ({
+      email: a.email,
+      name: a.displayName,
+      responseStatus: a.responseStatus || 'needsAction'
+    }))
+  };
+};
+
+// Events sheet functions
+export const fetchEvents = async (spreadsheetId: string): Promise<Event[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Events!A2:O5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+
+  return rows.map((row: any[]) => ({
+    id: row[0] || '',
+    assignmentId: row[1] || null,
+    calendarEventId: row[2] || '',
+    title: row[3] || '',
+    description: row[4] || '',
+    startDateTime: row[5] || '',
+    endDateTime: row[6] || '',
+    location: row[7] || '',
+    meetLink: row[8] || '',
+    attendees: row[9] ? JSON.parse(row[9]) : [],
+    createdBy: row[10] || '',
+    createdAt: row[11] || '',
+    updatedAt: row[12] || '',
+    deletedAt: row[13] || undefined,
+    deletedBy: row[14] || undefined
+  }));
+};
+
+export const createEvent = async (
+  spreadsheetId: string,
+  eventData: {
+    assignmentId: string | null;
+    title: string;
+    description: string;
+    startDateTime: string;
+    endDateTime: string;
+    attendees?: string[]; // array of email addresses
+    location?: string;
+    createdBy: string;
+  }
+): Promise<Event> => {
+  // Create the Calendar event first
+  const calendarResult = await createCalendarEvent({
+    title: eventData.title,
+    description: eventData.description,
+    startDateTime: eventData.startDateTime,
+    endDateTime: eventData.endDateTime,
+    attendees: (eventData.attendees || []).map(email => ({ email })),
+    location: eventData.location
+  });
+
+  // Create the event record in our sheet
+  const event: Event = {
+    id: Math.random().toString(36).substr(2, 9),
+    assignmentId: eventData.assignmentId,
+    calendarEventId: calendarResult.id,
+    title: eventData.title,
+    description: eventData.description,
+    startDateTime: eventData.startDateTime,
+    endDateTime: eventData.endDateTime,
+    location: eventData.location || '',
+    meetLink: calendarResult.meetLink || '',
+    attendees: (eventData.attendees || []).map(email => ({
+      email,
+      responseStatus: 'needsAction' as const
+    })),
+    createdBy: eventData.createdBy,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const rowValues = [[
+    event.id,
+    event.assignmentId || '',
+    event.calendarEventId,
+    event.title,
+    event.description,
+    event.startDateTime,
+    event.endDateTime,
+    event.location,
+    event.meetLink,
+    JSON.stringify(event.attendees),
+    event.createdBy,
+    event.createdAt,
+    event.updatedAt,
+    event.deletedAt || '',
+    event.deletedBy || ''
+  ]];
+
+  await appendSheetRow(spreadsheetId, 'Events!A1', rowValues);
+  return event;
+};
+
+export const updateEventRow = async (spreadsheetId: string, event: Event) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Events!A2:O5000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === event.id);
+
+  if (rowIndex === -1) {
+    throw new Error('Event not found');
+  }
+
+  const rowValues = [[
+    event.id,
+    event.assignmentId || '',
+    event.calendarEventId,
+    event.title,
+    event.description,
+    event.startDateTime,
+    event.endDateTime,
+    event.location,
+    event.meetLink,
+    JSON.stringify(event.attendees),
+    event.createdBy,
+    event.createdAt,
+    event.updatedAt,
+    event.deletedAt || '',
+    event.deletedBy || ''
+  ]];
+
+  const sheetRow = rowIndex + 2;
+  const range = `Events!A${sheetRow}:O${sheetRow}`;
+  return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
+export const syncEventFromCalendar = async (spreadsheetId: string, event: Event): Promise<Event> => {
+  // Fetch latest data from Google Calendar
+  const calendarData = await fetchCalendarEvent(event.calendarEventId);
+
+  // Update our event with the latest data from Calendar
+  const updatedEvent: Event = {
+    ...event,
+    title: calendarData.title,
+    description: calendarData.description,
+    startDateTime: calendarData.startDateTime,
+    endDateTime: calendarData.endDateTime,
+    location: calendarData.location || '',
+    meetLink: calendarData.meetLink || event.meetLink,
+    attendees: calendarData.attendees,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Update the sheet
+  await updateEventRow(spreadsheetId, updatedEvent);
+  return updatedEvent;
 };

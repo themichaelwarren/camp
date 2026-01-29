@@ -28,6 +28,7 @@ export interface Assignment {
   instructions: string;
   status: 'Open' | 'Closed';
   driveFolderId?: string;
+  eventId?: string;
   deletedAt?: string;
   deletedBy?: string;
 }
@@ -81,14 +82,40 @@ export interface Comment {
   reactions: Record<string, string[]>; // emoji -> array of user emails who reacted
 }
 
+export interface EventAttendee {
+  email: string;
+  name?: string;
+  responseStatus: 'needsAction' | 'declined' | 'tentative' | 'accepted';
+}
+
+export interface Event {
+  id: string;
+  assignmentId: string | null;
+  calendarEventId: string;
+  title: string;
+  description: string;
+  startDateTime: string; // ISO 8601 datetime
+  endDateTime: string; // ISO 8601 datetime
+  location?: string;
+  meetLink?: string;
+  attendees: EventAttendee[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
 export type ViewState =
   | 'dashboard'
   | 'prompts'
   | 'assignments'
   | 'submissions'
+  | 'events'
   | 'campers'
   | 'settings'
   | 'prompt-detail'
   | 'assignment-detail'
   | 'song-detail'
+  | 'event-detail'
   | 'camper-detail';
