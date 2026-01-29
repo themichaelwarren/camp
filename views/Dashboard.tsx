@@ -92,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
              <div className="p-6">
                {assignments.length > 0 ? (
                   <div className="space-y-4">
-                    {assignments.map(a => (
+                    {[...assignments].reverse().map(a => (
                       <div 
                         key={a.id} 
                         className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl bg-slate-50"
