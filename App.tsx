@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
 import AssignmentsPage from './views/AssignmentsPage';
 import SubmissionsPage from './views/SubmissionsPage';
+import EventsPage from './views/EventsPage';
 import PromptDetail from './views/PromptDetail';
 import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
@@ -19,7 +20,8 @@ const App: React.FC = () => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  
+  const [events, setEvents] = useState<Event[]>([]);
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
@@ -196,6 +198,8 @@ const App: React.FC = () => {
       setSubmissions(data.submissions);
       const campersData = await googleService.fetchCampers(sId);
       setCampers(campersData);
+      const eventsData = await googleService.fetchEvents(sId);
+      setEvents(eventsData);
       if (profile?.email) {
         const match = campersData.find((camper) => camper.email === profile.email);
         if (match) {
@@ -231,6 +235,9 @@ const App: React.FC = () => {
 
       const campersData = await googleService.fetchCampers(spreadsheetId);
       setCampers(campersData);
+
+      const eventsData = await googleService.fetchEvents(spreadsheetId);
+      setEvents(eventsData);
 
       if (userProfile?.email) {
         const match = campersData.find((camper) => camper.email === userProfile.email);
@@ -313,24 +320,60 @@ const App: React.FC = () => {
   };
 
   const handleAddAssignment = async (newAssignment: Assignment) => {
-    let assignmentWithFolder = newAssignment;
-    if (spreadsheetId) {
+    let assignmentWithFolderAndEvent = newAssignment;
+    if (spreadsheetId && userProfile?.email) {
+      // Create Drive folder
       try {
         const folderId = await googleService.createAssignmentFolder(newAssignment.title);
-        assignmentWithFolder = { ...newAssignment, driveFolderId: folderId };
+        assignmentWithFolderAndEvent = { ...assignmentWithFolderAndEvent, driveFolderId: folderId };
       } catch (error) {
         console.error('Failed to create Drive folder for assignment', error);
         alert('Assignment saved, but Drive folder could not be created.');
       }
+
+      // Auto-create calendar event (7pm on due date)
+      try {
+        const dueDate = new Date(newAssignment.dueDate);
+        const eventStart = new Date(dueDate);
+        eventStart.setHours(19, 0, 0, 0); // 7:00 PM
+        const eventEnd = new Date(eventStart);
+        eventEnd.setHours(21, 0, 0, 0); // 9:00 PM (2 hour event)
+
+        const event = await googleService.createEvent(spreadsheetId, {
+          assignmentId: newAssignment.id,
+          title: `${newAssignment.title} - Listening Party`,
+          description: newAssignment.instructions,
+          startDateTime: eventStart.toISOString(),
+          endDateTime: eventEnd.toISOString(),
+          attendees: campers.map(c => c.email),
+          location: 'Virtual (Google Meet)',
+          createdBy: userProfile.email
+        });
+
+        assignmentWithFolderAndEvent = { ...assignmentWithFolderAndEvent, eventId: event.id };
+        setEvents(prev => [event, ...prev]);
+      } catch (error) {
+        console.error('Failed to create calendar event for assignment', error);
+        alert('Assignment saved, but calendar event could not be created.');
+      }
     }
-    setAssignments(prev => [assignmentWithFolder, ...prev]);
+
+    setAssignments(prev => [assignmentWithFolderAndEvent, ...prev]);
     if (spreadsheetId) {
       try {
         await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
-          assignmentWithFolder.id, assignmentWithFolder.promptId, assignmentWithFolder.title, assignmentWithFolder.dueDate,
-          assignmentWithFolder.assignedTo.join(','), assignmentWithFolder.instructions, assignmentWithFolder.status,
-          assignmentWithFolder.driveFolderId || '',
-          assignmentWithFolder.deletedAt || '', assignmentWithFolder.deletedBy || ''
+          assignmentWithFolderAndEvent.id,
+          assignmentWithFolderAndEvent.promptId,
+          assignmentWithFolderAndEvent.title,
+          assignmentWithFolderAndEvent.startDate || '',
+          assignmentWithFolderAndEvent.dueDate,
+          assignmentWithFolderAndEvent.assignedTo.join(','),
+          assignmentWithFolderAndEvent.instructions,
+          assignmentWithFolderAndEvent.status,
+          assignmentWithFolderAndEvent.driveFolderId || '',
+          assignmentWithFolderAndEvent.eventId || '',
+          assignmentWithFolderAndEvent.deletedAt || '',
+          assignmentWithFolderAndEvent.deletedBy || ''
         ]]);
       } catch (error) {
         console.error('Failed to save assignment to sheet', error);
@@ -379,6 +422,42 @@ const App: React.FC = () => {
         console.error('Failed to update assignment in sheet', error);
         alert('Assignment updated locally, but failed to sync to the sheet. Please try again.');
       }
+    }
+  };
+
+  const handleUpdateEvent = async (updatedEvent: Event) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+    if (spreadsheetId) {
+      try {
+        // Update Calendar event
+        await googleService.updateCalendarEvent(updatedEvent.calendarEventId, {
+          title: updatedEvent.title,
+          description: updatedEvent.description,
+          startDateTime: updatedEvent.startDateTime,
+          endDateTime: updatedEvent.endDateTime,
+          attendees: updatedEvent.attendees.map(a => ({ email: a.email })),
+          location: updatedEvent.location
+        });
+        // Update sheet
+        await googleService.updateEventRow(spreadsheetId, updatedEvent);
+      } catch (error) {
+        console.error('Failed to update event', error);
+        alert('Event updated locally, but failed to sync to Calendar/Sheet. Please try again.');
+      }
+    }
+  };
+
+  const handleSyncEventFromCalendar = async (eventId: string) => {
+    if (!spreadsheetId) return;
+    try {
+      const event = events.find(e => e.id === eventId);
+      if (!event) return;
+
+      const updatedEvent = await googleService.syncEventFromCalendar(spreadsheetId, event);
+      setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
+    } catch (error) {
+      console.error('Failed to sync event from calendar', error);
+      alert('Failed to sync event from Google Calendar. Please try again.');
     }
   };
 
@@ -518,6 +597,14 @@ const App: React.FC = () => {
             userProfile={userProfile}
           />
         );
+      case 'events':
+        return (
+          <EventsPage
+            events={events.filter((e) => !e.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
+            onNavigate={navigateTo}
+          />
+        );
       case 'prompt-detail':
         const p = prompts.find(pr => pr.id === selectedId);
         return p && spreadsheetId ? (
@@ -539,6 +626,7 @@ const App: React.FC = () => {
             prompt={prompts.find(pr => pr.id === a.promptId)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             submissions={submissions.filter(s => s.assignmentId === a.id && !s.deletedAt)}
+            events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}
             onUpdate={handleUpdateAssignment}

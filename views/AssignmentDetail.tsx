@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, ViewState } from '../types';
+import { Assignment, Prompt, Submission, ViewState, Event } from '../types';
 import PromptSelector from '../components/PromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -12,6 +12,7 @@ interface AssignmentDetailProps {
   prompt?: Prompt;
   prompts: Prompt[];
   submissions: Submission[];
+  events: Event[];
   campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (assignment: Assignment) => void;
@@ -19,7 +20,7 @@ interface AssignmentDetailProps {
   spreadsheetId: string;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, campersCount, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: assignment.title,
@@ -33,6 +34,24 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   const totalCampers = campersCount || 0;
   const submissionRate = totalCampers > 0 ? Math.round((submissions.length / totalCampers) * 100) : 0;
   const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
+
+  // Find the event associated with this assignment
+  const assignmentEvent = assignment.eventId ? events.find(e => e.id === assignment.eventId) : null;
+
+  const formatEventDateTime = (isoDateTime: string) => {
+    const date = new Date(isoDateTime);
+    const dateStr = date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    return { dateStr, timeStr };
+  };
 
   useEffect(() => {
     // Only sync form state when modal is closed to avoid overwriting user's edits
@@ -193,6 +212,60 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                <p className="text-xs text-slate-400">Submission Rate</p>
             </div>
           </section>
+
+          {assignmentEvent && (
+            <section className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-3xl border border-green-200 shadow-sm">
+              <h3 className="text-xs font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i className="fa-solid fa-calendar-days"></i>
+                Listening Party
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-green-600 font-bold mb-1">Date & Time</p>
+                  <p className="text-sm text-green-900 font-semibold">
+                    {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
+                  </p>
+                  <p className="text-sm text-green-800">
+                    {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
+                  </p>
+                </div>
+                {assignmentEvent.location && (
+                  <div>
+                    <p className="text-xs text-green-600 font-bold mb-1">Location</p>
+                    <p className="text-sm text-green-900">{assignmentEvent.location}</p>
+                  </div>
+                )}
+                {assignmentEvent.attendees.length > 0 && (
+                  <div>
+                    <p className="text-xs text-green-600 font-bold mb-1">Attendees</p>
+                    <p className="text-sm text-green-900">
+                      {assignmentEvent.attendees.length} invited
+                    </p>
+                  </div>
+                )}
+                <div className="pt-3 space-y-2">
+                  {assignmentEvent.meetLink && (
+                    <a
+                      href={assignmentEvent.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors"
+                    >
+                      <i className="fa-solid fa-video"></i>
+                      Join Google Meet
+                    </a>
+                  )}
+                  <button
+                    onClick={() => onNavigate('events')}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                  >
+                    <i className="fa-solid fa-calendar"></i>
+                    View All Events
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           {assignment.status === 'Open' && (
             <section className="bg-amber-400 p-6 rounded-3xl text-amber-950 shadow-lg shadow-amber-100">
