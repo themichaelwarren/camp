@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Submission, Assignment, SongVersion } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
@@ -163,7 +164,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         )}
       </div>
 
-      {showUpload && (
+      {showUpload && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-8">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -172,15 +173,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            
+
             <div className="overflow-y-auto flex-1 p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Song Title</label>
-                    <input 
+                    <input
                       required
-                      type="text" 
+                      type="text"
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
                       value={form.title}
                       onChange={e => setForm({...form, title: e.target.value})}
@@ -188,7 +189,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assignment</label>
-                    <select 
+                    <select
                       required
                       className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
                       value={form.assignmentId}
@@ -202,9 +203,9 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Upload to Drive (.mp3/.wav)</label>
-                    <input 
+                    <input
                       required
-                      type="file" 
+                      type="file"
                       accept=".mp3,.wav,.m4a"
                       className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                       onChange={handleFileChange}
@@ -221,10 +222,10 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                     <p className="text-[10px] text-slate-400 mt-2">Max size 5MB. JPG, PNG, or GIF.</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
-                  <textarea 
+                  <textarea
                     required
                     placeholder="Verse 1: ..."
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-64 font-serif text-sm"
@@ -235,15 +236,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
-                  <textarea 
+                  <textarea
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
                     value={form.details}
                     onChange={e => setForm({...form, details: e.target.value})}
                   ></textarea>
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isUploading}
                   className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-3"
                 >
@@ -262,7 +263,8 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
