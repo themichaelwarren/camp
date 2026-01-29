@@ -551,8 +551,8 @@ const App: React.FC = () => {
         return s && spreadsheetId && userProfile ? (
           <SongDetail
             submission={s}
-            assignment={assignments.find(as => as.id === s.assignmentId)}
-            prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId)?.promptId)}
+            assignment={assignments.find(as => as.id === s.assignmentId && !as.deletedAt)}
+            prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId && !as.deletedAt)?.promptId)}
             onNavigate={navigateTo}
             onUpdate={handleUpdateSubmission}
             onPlayTrack={handlePlayTrack}
