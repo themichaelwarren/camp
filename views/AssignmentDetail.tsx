@@ -5,6 +5,7 @@ import { Assignment, Prompt, Submission, ViewState } from '../types';
 import PromptSelector from '../components/PromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
+import CommentsSection from '../components/CommentsSection';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
@@ -15,9 +16,10 @@ interface AssignmentDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (assignment: Assignment) => void;
   currentUser?: { name: string; email: string };
+  spreadsheetId: string;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, campersCount, onNavigate, onUpdate, currentUser }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, campersCount, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: assignment.title,
@@ -220,6 +222,15 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </section>
         </div>
       </div>
+
+      {currentUser && (
+        <CommentsSection
+          entityType="assignment"
+          entityId={assignment.id}
+          spreadsheetId={spreadsheetId}
+          currentUser={currentUser}
+        />
+      )}
 
       {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">

@@ -5,13 +5,15 @@ import Comment from './Comment';
 import CommentForm from './CommentForm';
 
 interface CommentsSectionProps {
-  songId: string;
+  entityType: 'song' | 'prompt' | 'assignment';
+  entityId: string;
   spreadsheetId: string;
   currentUser: { name: string; email: string };
 }
 
 const CommentsSection: React.FC<CommentsSectionProps> = ({
-  songId,
+  entityType,
+  entityId,
   spreadsheetId,
   currentUser
 }) => {
@@ -20,11 +22,11 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
   useEffect(() => {
     loadComments();
-  }, [songId]);
+  }, [entityType, entityId]);
 
   const loadComments = async () => {
     try {
-      const fetchedComments = await googleService.fetchCommentsForSong(spreadsheetId, songId);
+      const fetchedComments = await googleService.fetchComments(spreadsheetId, entityType, entityId);
       setComments(fetchedComments);
     } catch (error) {
       console.error('Failed to load comments', error);
@@ -35,7 +37,8 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
   const handleCreateComment = async (text: string) => {
     const newComment = await googleService.createComment(spreadsheetId, {
-      songId,
+      entityType,
+      entityId,
       parentId: null,
       author: currentUser.name,
       authorEmail: currentUser.email,
@@ -46,7 +49,8 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
   const handleReply = async (parentId: string, text: string) => {
     const newComment = await googleService.createComment(spreadsheetId, {
-      songId,
+      entityType,
+      entityId,
       parentId,
       author: currentUser.name,
       authorEmail: currentUser.email,

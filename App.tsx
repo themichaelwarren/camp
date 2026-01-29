@@ -451,7 +451,7 @@ const App: React.FC = () => {
             submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id && !s.deletedAt)}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
-            currentUser={userProfile?.email || userProfile?.name}
+            currentUser={userProfile}
             spreadsheetId={spreadsheetId}
           />
         ) : null;
@@ -466,7 +466,8 @@ const App: React.FC = () => {
             campersCount={campers.length}
             onNavigate={navigateTo}
             onUpdate={handleUpdateAssignment}
-            currentUser={userProfile?.email || userProfile?.name}
+            currentUser={userProfile}
+            spreadsheetId={spreadsheetId}
           />
         ) : null;
       case 'song-detail':

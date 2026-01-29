@@ -71,7 +71,8 @@ export interface CamperProfile {
 
 export interface Comment {
   id: string;
-  songId: string;
+  entityType: 'song' | 'prompt' | 'assignment';
+  entityId: string;
   parentId: string | null;
   author: string;
   authorEmail: string;

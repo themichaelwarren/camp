@@ -113,7 +113,7 @@ export const findOrCreateDatabase = async () => {
     'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
-    'Comments!A1:H1',
+    'Comments!A1:I1',
     'Tags!A1:C1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
@@ -199,10 +199,11 @@ export const findOrCreateDatabase = async () => {
   }
 
   const commentsHeader = headerValues[5]?.values?.[0] || [];
-  if (commentsHeader.length < 8) {
+  if (commentsHeader.length < 9) {
     await updateSheetRows(SPREADSHEET_ID, 'Comments!A1', [[
       'id',
-      'songId',
+      'entityType',
+      'entityId',
       'parentId',
       'author',
       'authorEmail',
@@ -655,29 +656,35 @@ export const fetchDriveFile = async (fileId: string) => {
 };
 
 // Comments functions
-export const fetchCommentsForSong = async (spreadsheetId: string, songId: string): Promise<Comment[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+export const fetchComments = async (
+  spreadsheetId: string,
+  entityType: 'song' | 'prompt' | 'assignment',
+  entityId: string
+): Promise<Comment[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
 
   return rows
-    .filter((row: any[]) => row[1] === songId)
+    .filter((row: any[]) => row[1] === entityType && row[2] === entityId)
     .map((row: any[]) => ({
       id: row[0] || '',
-      songId: row[1] || '',
-      parentId: row[2] || null,
-      author: row[3] || 'Anonymous',
-      authorEmail: row[4] || '',
-      text: row[5] || '',
-      timestamp: row[6] || new Date().toISOString(),
-      reactions: row[7] ? JSON.parse(row[7]) : {}
+      entityType: row[1] as 'song' | 'prompt' | 'assignment',
+      entityId: row[2] || '',
+      parentId: row[3] || null,
+      author: row[4] || 'Anonymous',
+      authorEmail: row[5] || '',
+      text: row[6] || '',
+      timestamp: row[7] || new Date().toISOString(),
+      reactions: row[8] ? JSON.parse(row[8]) : {}
     }));
 };
 
 export const createComment = async (
   spreadsheetId: string,
   data: {
-    songId: string;
+    entityType: 'song' | 'prompt' | 'assignment';
+    entityId: string;
     parentId: string | null;
     author: string;
     authorEmail: string;
@@ -686,7 +693,8 @@ export const createComment = async (
 ): Promise<Comment> => {
   const comment: Comment = {
     id: Math.random().toString(36).substr(2, 9),
-    songId: data.songId,
+    entityType: data.entityType,
+    entityId: data.entityId,
     parentId: data.parentId,
     author: data.author,
     authorEmail: data.authorEmail,
@@ -697,7 +705,8 @@ export const createComment = async (
 
   const rowValues = [[
     comment.id,
-    comment.songId,
+    comment.entityType,
+    comment.entityId,
     comment.parentId || '',
     comment.author,
     comment.authorEmail,
@@ -711,7 +720,7 @@ export const createComment = async (
 };
 
 export const updateCommentRow = async (spreadsheetId: string, comment: Comment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === comment.id);
@@ -722,7 +731,8 @@ export const updateCommentRow = async (spreadsheetId: string, comment: Comment) 
 
   const rowValues = [[
     comment.id,
-    comment.songId,
+    comment.entityType,
+    comment.entityId,
     comment.parentId || '',
     comment.author,
     comment.authorEmail,
@@ -732,7 +742,7 @@ export const updateCommentRow = async (spreadsheetId: string, comment: Comment) 
   ]];
 
   const sheetRow = rowIndex + 2;
-  const range = `Comments!A${sheetRow}:H${sheetRow}`;
+  const range = `Comments!A${sheetRow}:I${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
@@ -742,7 +752,7 @@ export const toggleReaction = async (
   emoji: string,
   userEmail: string
 ): Promise<Comment> => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:H5000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === commentId);
@@ -754,13 +764,14 @@ export const toggleReaction = async (
   const row = rows[rowIndex];
   const comment: Comment = {
     id: row[0],
-    songId: row[1],
-    parentId: row[2] || null,
-    author: row[3],
-    authorEmail: row[4],
-    text: row[5],
-    timestamp: row[6],
-    reactions: row[7] ? JSON.parse(row[7]) : {}
+    entityType: row[1] as 'song' | 'prompt' | 'assignment',
+    entityId: row[2],
+    parentId: row[3] || null,
+    author: row[4],
+    authorEmail: row[5],
+    text: row[6],
+    timestamp: row[7],
+    reactions: row[8] ? JSON.parse(row[8]) : {}
   };
 
   // Toggle the reaction

@@ -279,7 +279,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
       {currentUser && (
         <CommentsSection
-          songId={submission.id}
+          entityType="song"
+          entityId={submission.id}
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
         />

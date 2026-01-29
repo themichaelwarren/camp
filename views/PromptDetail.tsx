@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus } from '../types';
 import TagInput from '../components/TagInput';
+import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
 
 interface PromptDetailProps {
@@ -11,7 +12,7 @@ interface PromptDetailProps {
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (prompt: Prompt) => void;
-  currentUser?: string;
+  currentUser?: { name: string; email: string };
   spreadsheetId: string;
 }
 
@@ -78,7 +79,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
   const handleDeletePrompt = () => {
     if (!window.confirm('Delete this prompt? It will be hidden but can be restored later.')) return;
-    onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser || 'Unknown' });
+    onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser?.email || currentUser?.name || 'Unknown' });
     onNavigate('prompts');
   };
 
@@ -214,6 +215,15 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           </section>
         </div>
       </div>
+
+      {currentUser && (
+        <CommentsSection
+          entityType="prompt"
+          entityId={prompt.id}
+          spreadsheetId={spreadsheetId}
+          currentUser={currentUser}
+        />
+      )}
 
       {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
