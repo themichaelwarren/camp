@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
 import PromptSelector from '../components/PromptSelector';
 import MarkdownEditor from '../components/MarkdownEditor';
+import MarkdownPreview from '../components/MarkdownPreview';
 
 interface AssignmentsPageProps {
   assignments: Assignment[];
@@ -261,9 +262,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       ) : (
         /* Cards View */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredAssignments.map(a => {
-          const prompt = prompts.find(p => p.id === a.promptId);
-          return (
+          {filteredAssignments.map(a => (
             <div 
               key={a.id} 
               onClick={() => onViewDetail(a.id)}
@@ -278,9 +277,9 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                 <span className="text-[10px] text-slate-400 font-bold uppercase">Due {a.dueDate}</span>
               </div>
               <h3 className="font-bold text-lg text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{a.title}</h3>
-              <p className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 italic line-clamp-2">
-                "{prompt?.description}"
-              </p>
+              <div className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 line-clamp-3 overflow-hidden">
+                <MarkdownPreview content={a.instructions} className="text-xs" />
+              </div>
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map(i => (
@@ -295,9 +294,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                 <span className="text-xs text-slate-400 font-medium">Assigned to {campersCount || 0} campers</span>
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
       )}
 
       {showAdd && createPortal(
