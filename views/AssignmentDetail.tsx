@@ -6,6 +6,7 @@ import PromptSelector from '../components/PromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
 import CommentsSection from '../components/CommentsSection';
+import * as googleService from '../services/googleService';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
@@ -22,6 +23,7 @@ interface AssignmentDetailProps {
 
 const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: assignment.title,
     promptId: assignment.promptId,
@@ -29,6 +31,14 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
     dueDate: assignment.dueDate,
     instructions: assignment.instructions,
     status: assignment.status
+  });
+
+  const [editEventForm, setEditEventForm] = useState({
+    title: '',
+    description: '',
+    startDateTime: '',
+    endDateTime: '',
+    location: ''
   });
 
   const totalCampers = campersCount || 0;
@@ -95,6 +105,71 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
       deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
     });
     onNavigate('assignments');
+  };
+
+  const handleEditEvent = () => {
+    if (!assignmentEvent) return;
+
+    // Convert ISO datetime to local datetime-local input format
+    const startDate = new Date(assignmentEvent.startDateTime);
+    const endDate = new Date(assignmentEvent.endDateTime);
+
+    setEditEventForm({
+      title: assignmentEvent.title,
+      description: assignmentEvent.description,
+      startDateTime: startDate.toISOString().slice(0, 16), // Format for datetime-local input
+      endDateTime: endDate.toISOString().slice(0, 16),
+      location: assignmentEvent.location || ''
+    });
+    setShowEventEditModal(true);
+  };
+
+  const handleEventEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignmentEvent || !spreadsheetId) return;
+
+    const updatedEvent = {
+      ...assignmentEvent,
+      title: editEventForm.title.trim(),
+      description: editEventForm.description.trim(),
+      startDateTime: new Date(editEventForm.startDateTime).toISOString(),
+      endDateTime: new Date(editEventForm.endDateTime).toISOString(),
+      location: editEventForm.location.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update via googleService (will sync to both Calendar and Sheet)
+    try {
+      await googleService.updateCalendarEvent(updatedEvent.calendarEventId, {
+        title: updatedEvent.title,
+        description: updatedEvent.description,
+        startDateTime: updatedEvent.startDateTime,
+        endDateTime: updatedEvent.endDateTime,
+        attendees: updatedEvent.attendees.map(a => ({ email: a.email })),
+        location: updatedEvent.location
+      });
+      await googleService.updateEventRow(spreadsheetId, updatedEvent);
+
+      setShowEventEditModal(false);
+      alert('Event updated! Page will refresh to show changes.');
+      window.location.reload(); // Simple refresh to get updated data
+    } catch (error) {
+      console.error('Failed to update event', error);
+      alert('Failed to update event. Please try again.');
+    }
+  };
+
+  const handleSyncFromCalendar = async () => {
+    if (!assignmentEvent || !spreadsheetId) return;
+
+    try {
+      await googleService.syncEventFromCalendar(spreadsheetId, assignmentEvent);
+      alert('Event synced from Google Calendar! Page will refresh.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to sync event from calendar', error);
+      alert('Failed to sync from Google Calendar. Please try again.');
+    }
   };
 
   return (
@@ -255,6 +330,23 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       Join Google Meet
                     </a>
                   )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleEditEvent}
+                      className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                    >
+                      <i className="fa-solid fa-pen"></i>
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleSyncFromCalendar}
+                      className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                      title="Sync changes from Google Calendar"
+                    >
+                      <i className="fa-solid fa-rotate"></i>
+                      Sync
+                    </button>
+                  </div>
                   <button
                     onClick={() => onNavigate('events')}
                     className="w-full flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
@@ -381,6 +473,82 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Save Changes
+              </button>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showEventEditModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-xl text-slate-800">Edit Event</h3>
+              <button onClick={() => setShowEventEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleEventEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editEventForm.title}
+                  onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                <textarea
+                  required
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24"
+                  value={editEventForm.description}
+                  onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.startDateTime}
+                    onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.endDateTime}
+                    onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editEventForm.location}
+                  onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
+                  placeholder="Virtual (Google Meet)"
+                />
+              </div>
+
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                Save Event Changes
               </button>
             </form>
           </div>

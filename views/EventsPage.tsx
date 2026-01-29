@@ -1,14 +1,26 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Event, Assignment, ViewState } from '../types';
+import * as googleService from '../services/googleService';
 
 interface EventsPageProps {
   events: Event[];
   assignments: Assignment[];
   onNavigate: (view: ViewState, id?: string) => void;
+  spreadsheetId?: string;
 }
 
-const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate }) => {
+const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate, spreadsheetId }) => {
+  const [showEventEditModal, setShowEventEditModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [editEventForm, setEditEventForm] = useState({
+    title: '',
+    description: '',
+    startDateTime: '',
+    endDateTime: '',
+    location: ''
+  });
   const formatEventDateTime = (isoDateTime: string) => {
     const date = new Date(isoDateTime);
     const dateStr = date.toLocaleDateString('en-US', {
@@ -27,6 +39,71 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
   const getAssignmentForEvent = (event: Event) => {
     if (!event.assignmentId) return null;
     return assignments.find(a => a.id === event.assignmentId);
+  };
+
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event);
+
+    const startDate = new Date(event.startDateTime);
+    const endDate = new Date(event.endDateTime);
+
+    setEditEventForm({
+      title: event.title,
+      description: event.description,
+      startDateTime: startDate.toISOString().slice(0, 16),
+      endDateTime: endDate.toISOString().slice(0, 16),
+      location: event.location || ''
+    });
+    setShowEventEditModal(true);
+  };
+
+  const handleEventEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent || !spreadsheetId) return;
+
+    const updatedEvent = {
+      ...selectedEvent,
+      title: editEventForm.title.trim(),
+      description: editEventForm.description.trim(),
+      startDateTime: new Date(editEventForm.startDateTime).toISOString(),
+      endDateTime: new Date(editEventForm.endDateTime).toISOString(),
+      location: editEventForm.location.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await googleService.updateCalendarEvent(updatedEvent.calendarEventId, {
+        title: updatedEvent.title,
+        description: updatedEvent.description,
+        startDateTime: updatedEvent.startDateTime,
+        endDateTime: updatedEvent.endDateTime,
+        attendees: updatedEvent.attendees.map(a => ({ email: a.email })),
+        location: updatedEvent.location
+      });
+      await googleService.updateEventRow(spreadsheetId, updatedEvent);
+
+      setShowEventEditModal(false);
+      setSelectedEvent(null);
+      alert('Event updated! Page will refresh to show changes.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to update event', error);
+      alert('Failed to update event. Please try again.');
+    }
+  };
+
+  const handleSyncFromCalendar = async (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    if (!spreadsheetId) return;
+
+    try {
+      await googleService.syncEventFromCalendar(spreadsheetId, event);
+      alert('Event synced from Google Calendar! Page will refresh.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to sync event from calendar', error);
+      alert('Failed to sync from Google Calendar. Please try again.');
+    }
   };
 
   // Separate upcoming and past events
@@ -75,7 +152,8 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
               return (
                 <div
                   key={event.id}
-                  className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-300 hover:shadow-md transition-all"
+                  onClick={() => handleEditEvent(event)}
+                  className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-16 h-16 bg-indigo-100 rounded-xl flex flex-col items-center justify-center">
@@ -113,14 +191,23 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <i className="fa-solid fa-video"></i>
                             Join Meet
                           </a>
                         )}
+                        <button
+                          onClick={(e) => handleSyncFromCalendar(event, e)}
+                          className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors"
+                          title="Sync from Google Calendar"
+                        >
+                          <i className="fa-solid fa-rotate"></i>
+                          Sync
+                        </button>
                         {assignment && (
                           <button
-                            onClick={() => onNavigate('assignment-detail', assignment.id)}
+                            onClick={(e) => { e.stopPropagation(); onNavigate('assignment-detail', assignment.id); }}
                             className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
                           >
                             <i className="fa-solid fa-tasks"></i>
@@ -156,7 +243,8 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
               return (
                 <div
                   key={event.id}
-                  className="bg-slate-50 border border-slate-200 rounded-2xl p-6 opacity-75"
+                  onClick={() => handleEditEvent(event)}
+                  className="bg-slate-50 border border-slate-200 rounded-2xl p-6 opacity-75 cursor-pointer hover:opacity-100 transition-opacity"
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-16 h-16 bg-slate-200 rounded-xl flex flex-col items-center justify-center">
@@ -192,6 +280,82 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
             })}
           </div>
         </section>
+      )}
+
+      {showEventEditModal && selectedEvent && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-xl text-slate-800">Edit Event</h3>
+              <button onClick={() => setShowEventEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleEventEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editEventForm.title}
+                  onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                <textarea
+                  required
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24"
+                  value={editEventForm.description}
+                  onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.startDateTime}
+                    onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.endDateTime}
+                    onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  value={editEventForm.location}
+                  onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
+                  placeholder="Virtual (Google Meet)"
+                />
+              </div>
+
+              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                Save Event Changes
+              </button>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

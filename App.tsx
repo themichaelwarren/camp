@@ -237,7 +237,26 @@ const App: React.FC = () => {
       setCampers(campersData);
 
       const eventsData = await googleService.fetchEvents(spreadsheetId);
-      setEvents(eventsData);
+
+      // Sync each event from Google Calendar to get latest changes
+      const syncedEvents = await Promise.allSettled(
+        eventsData
+          .filter(event => !event.deletedAt)
+          .map(event => googleService.syncEventFromCalendar(spreadsheetId, event))
+      );
+
+      // Update events state with synced data (ignore failed syncs)
+      const updatedEvents = syncedEvents
+        .map((result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          } else {
+            console.warn(`Failed to sync event ${eventsData[index].id}:`, result.reason);
+            return eventsData[index]; // Fall back to sheet data if sync fails
+          }
+        });
+
+      setEvents(updatedEvents);
 
       if (userProfile?.email) {
         const match = campersData.find((camper) => camper.email === userProfile.email);
@@ -603,6 +622,7 @@ const App: React.FC = () => {
             events={events.filter((e) => !e.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
             onNavigate={navigateTo}
+            spreadsheetId={spreadsheetId || undefined}
           />
         );
       case 'prompt-detail':
