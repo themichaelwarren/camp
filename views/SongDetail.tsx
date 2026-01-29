@@ -28,6 +28,17 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [newArtwork, setNewArtwork] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  React.useEffect(() => {
+    // Only sync form state when modal is closed to avoid overwriting user's edits
+    if (!showEdit) {
+      setEditForm({
+        title: submission.title,
+        lyrics: submission.lyrics,
+        details: submission.details
+      });
+    }
+  }, [submission, showEdit]);
+
   const loadAudio = async (versionId: string) => {
     if (activeVersionId === versionId) return;
     setLoadingVersionId(versionId);

@@ -27,13 +27,16 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   useEffect(() => {
-    setEditPrompt({
-      title: prompt.title,
-      description: prompt.description,
-      tags: prompt.tags,
-      status: prompt.status
-    });
-  }, [prompt]);
+    // Only sync form state when modal is closed to avoid overwriting user's edits
+    if (!showEditModal) {
+      setEditPrompt({
+        title: prompt.title,
+        description: prompt.description,
+        tags: prompt.tags,
+        status: prompt.status
+      });
+    }
+  }, [prompt, showEditModal]);
 
   useEffect(() => {
     loadTags();

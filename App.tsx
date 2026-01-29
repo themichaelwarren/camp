@@ -130,6 +130,51 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Polling effect: refresh data every 10 seconds
+  useEffect(() => {
+    if (!isLoggedIn || !spreadsheetId) return;
+
+    const POLL_INTERVAL = 10000; // 10 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+    let isPageVisible = !document.hidden;
+
+    const startPolling = () => {
+      if (intervalId) return; // Already polling
+      intervalId = setInterval(() => {
+        if (isPageVisible) {
+          syncData();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      isPageVisible = !document.hidden;
+      if (isPageVisible) {
+        // Page became visible - sync immediately and resume polling
+        syncData();
+        startPolling();
+      } else {
+        // Page hidden - stop polling to save quota
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startPolling();
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isLoggedIn, spreadsheetId, userProfile?.email]);
+
   const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
     try {
@@ -172,6 +217,37 @@ const App: React.FC = () => {
       console.error('Initial sync failed', e);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const syncData = async () => {
+    if (!spreadsheetId || !isLoggedIn) return;
+
+    try {
+      const data = await googleService.fetchAllData(spreadsheetId);
+      setPrompts(data.prompts);
+      setAssignments(data.assignments);
+      setSubmissions(data.submissions);
+
+      const campersData = await googleService.fetchCampers(spreadsheetId);
+      setCampers(campersData);
+
+      if (userProfile?.email) {
+        const match = campersData.find((camper) => camper.email === userProfile.email);
+        if (match) {
+          setUserProfile((prev) => ({
+            ...prev,
+            location: match.location,
+            status: match.status,
+            pictureOverrideUrl: match.pictureOverrideUrl
+          }));
+        }
+
+        const upvoted = await googleService.fetchUserUpvotes(spreadsheetId, userProfile.email);
+        setUpvotedPromptIds(upvoted);
+      }
+    } catch (e) {
+      console.error('Background sync failed', e);
     }
   };
 

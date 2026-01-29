@@ -35,15 +35,18 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
 
   useEffect(() => {
-    setEditForm({
-      title: assignment.title,
-      promptId: assignment.promptId,
-      startDate: assignment.startDate || '',
-      dueDate: assignment.dueDate,
-      instructions: assignment.instructions,
-      status: assignment.status
-    });
-  }, [assignment]);
+    // Only sync form state when modal is closed to avoid overwriting user's edits
+    if (!showEditModal) {
+      setEditForm({
+        title: assignment.title,
+        promptId: assignment.promptId,
+        startDate: assignment.startDate || '',
+        dueDate: assignment.dueDate,
+        instructions: assignment.instructions,
+        status: assignment.status
+      });
+    }
+  }, [assignment, showEditModal]);
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();

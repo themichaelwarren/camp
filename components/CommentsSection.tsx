@@ -24,6 +24,47 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     loadComments();
   }, [entityType, entityId]);
 
+  // Polling effect: refresh comments every 10 seconds
+  useEffect(() => {
+    const POLL_INTERVAL = 10000; // 10 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+    let isPageVisible = !document.hidden;
+
+    const startPolling = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        if (isPageVisible) {
+          loadComments();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      isPageVisible = !document.hidden;
+      if (isPageVisible) {
+        loadComments();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startPolling();
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [entityType, entityId, spreadsheetId]);
+
   const loadComments = async () => {
     try {
       const fetchedComments = await googleService.fetchComments(spreadsheetId, entityType, entityId);
