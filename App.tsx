@@ -36,9 +36,10 @@ const App: React.FC = () => {
     artworkUrl?: string;
   } | null>(null);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
-  const [visualTheme, setVisualTheme] = useState<'default' | 'notebook'>(() => {
+  const [visualTheme, setVisualTheme] = useState<'default' | 'notebook' | 'modern'>(() => {
     const stored = window.localStorage.getItem('camp-skin');
-    return stored === 'notebook' ? 'notebook' : 'default';
+    if (stored === 'notebook' || stored === 'modern') return stored;
+    return 'default';
   });
   const previousAudioUrl = useRef<string | null>(null);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
