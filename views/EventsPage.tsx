@@ -92,20 +92,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
     }
   };
 
-  const handleSyncFromCalendar = async (event: Event, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    if (!spreadsheetId) return;
-
-    try {
-      await googleService.syncEventFromCalendar(spreadsheetId, event);
-      alert('Event synced from Google Calendar! Page will refresh.');
-      window.location.reload();
-    } catch (error) {
-      console.error('Failed to sync event from calendar', error);
-      alert('Failed to sync from Google Calendar. Please try again.');
-    }
-  };
-
   // Separate upcoming and past events
   const now = new Date();
   const upcomingEvents = events
@@ -197,14 +183,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                             Join Meet
                           </a>
                         )}
-                        <button
-                          onClick={(e) => handleSyncFromCalendar(event, e)}
-                          className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors"
-                          title="Sync from Google Calendar"
-                        >
-                          <i className="fa-solid fa-rotate"></i>
-                          Sync
-                        </button>
                         {assignment && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onNavigate('assignment-detail', assignment.id); }}

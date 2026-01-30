@@ -1,17 +1,18 @@
 
 import React from 'react';
-import { Prompt, Assignment, Submission, ViewState } from '../types';
+import { Prompt, Assignment, Submission, Event, ViewState } from '../types';
 
 interface DashboardProps {
   prompts: Prompt[];
   assignments: Assignment[];
   submissions: Submission[];
+  events: Event[];
   campersCount: number;
   isSyncing: boolean;
   onNavigate: (view: ViewState, id?: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, campersCount, isSyncing, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => p.status === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -122,18 +123,71 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
         </div>
 
         <div className="space-y-6">
-          <section className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <i className="fa-solid fa-guitar text-amber-400 text-xl"></i>
-              <h3 className="font-bold text-lg">Next Live Session</h3>
-            </div>
-            <p className="text-indigo-200 text-sm mb-6">
-              Tonight at 7:00 PM: Group listening and acoustic walkthrough of "Digital Silence" drafts.
-            </p>
-            <button className="w-full bg-white text-indigo-900 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">
-              RSVP for Session
-            </button>
-          </section>
+          {(() => {
+            const now = new Date();
+            const upcomingEvent = events
+              .filter(e => !e.deletedAt && new Date(e.startDateTime) >= now)
+              .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())[0];
+
+            return upcomingEvent ? (
+              <section
+                className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl cursor-pointer hover:bg-indigo-800 transition-colors"
+                onClick={() => onNavigate('events')}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <i className="fa-solid fa-calendar-days text-amber-400 text-xl"></i>
+                  <h3 className="font-bold text-lg">Next Live Session</h3>
+                </div>
+                <p className="text-indigo-200 text-sm mb-2 font-semibold">
+                  {upcomingEvent.title}
+                </p>
+                <p className="text-indigo-300 text-xs mb-4">
+                  {new Date(upcomingEvent.startDateTime).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric'
+                  })} at {new Date(upcomingEvent.startDateTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </p>
+                {upcomingEvent.meetLink ? (
+                  <a
+                    href={upcomingEvent.meetLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="block w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors shadow-lg text-center"
+                  >
+                    <i className="fa-solid fa-video mr-2"></i>
+                    Join Meet
+                  </a>
+                ) : (
+                  <button className="w-full bg-white text-indigo-900 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">
+                    View Details
+                  </button>
+                )}
+              </section>
+            ) : (
+              <section className="bg-slate-100 rounded-2xl p-6 border-2 border-dashed border-slate-300">
+                <div className="flex items-center gap-3 mb-4">
+                  <i className="fa-solid fa-calendar-days text-slate-400 text-xl"></i>
+                  <h3 className="font-bold text-lg text-slate-600">Next Live Session</h3>
+                </div>
+                <p className="text-slate-500 text-sm mb-6">
+                  No upcoming events scheduled. Check back soon!
+                </p>
+                <button
+                  onClick={() => onNavigate('events')}
+                  className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  View All Events
+                </button>
+              </section>
+            );
+          })()}
+
 
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
              <h3 className="font-bold text-slate-800 text-lg mb-4">Camp Activity</h3>

@@ -699,6 +699,7 @@ const App: React.FC = () => {
             prompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
             submissions={submissions.filter((s) => !s.deletedAt)}
+            events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
             onNavigate={navigateTo}
