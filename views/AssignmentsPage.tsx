@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
-import PromptSelector from '../components/PromptSelector';
+import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 
@@ -11,12 +11,16 @@ interface AssignmentsPageProps {
   prompts: Prompt[];
   campersCount: number;
   onAdd: (assignment: Assignment) => void;
+  onAddPrompt: (prompt: Prompt) => Promise<void>;
   onViewDetail: (id: string) => void;
+  userProfile?: { name?: string; email?: string } | null;
+  spreadsheetId: string | null;
+  availableTags: string[];
 }
 
-const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onViewDetail }) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags }) => {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ title: '', promptId: '', startDate: '', dueDate: '', instructions: '' });
+  const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('cards');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
@@ -28,7 +32,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     const assignment: Assignment = {
       id: Math.random().toString(36).substr(2, 9),
       title: form.title,
-      promptId: form.promptId,
+      promptId: form.promptIds[0] || '',      // First prompt for backwards compat
+      promptIds: form.promptIds,               // All prompts
       startDate: form.startDate,
       dueDate: form.dueDate,
       instructions: form.instructions,
@@ -37,7 +42,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     };
     onAdd(assignment);
     setShowAdd(false);
-    setForm({ title: '', promptId: '', startDate: '', dueDate: '', instructions: '' });
+    setForm({ title: '', promptIds: [], startDate: '', dueDate: '', instructions: '' });
   };
 
   // Filter and sort assignments
@@ -47,8 +52,11 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       // Status filter
       if (statusFilter !== 'all' && assignment.status !== statusFilter) return false;
 
-      // Prompt filter
-      if (promptFilter !== 'all' && assignment.promptId !== promptFilter) return false;
+      // Prompt filter - check both promptIds array and legacy promptId
+      if (promptFilter !== 'all') {
+        const hasPrompt = assignment.promptIds?.includes(promptFilter) || assignment.promptId === promptFilter;
+        if (!hasPrompt) return false;
+      }
 
       // Search filter
       if (!normalizedSearch) return true;
@@ -221,7 +229,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredAssignments.map(a => {
-                const prompt = prompts.find(p => p.id === a.promptId);
+                const assignmentPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
+                const assignmentPrompts = assignmentPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
                 return (
                   <tr
                     key={a.id}
@@ -233,7 +242,22 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                       <p className="text-xs text-slate-500 line-clamp-1">{a.instructions.substring(0, 60)}...</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-slate-700">{prompt?.title || 'No Prompt'}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {assignmentPrompts.length > 0 ? (
+                          <>
+                            {assignmentPrompts.slice(0, 2).map(p => (
+                              <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                                {p!.title}
+                              </span>
+                            ))}
+                            {assignmentPrompts.length > 2 && (
+                              <span className="text-xs text-slate-400">+{assignmentPrompts.length - 2}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm text-slate-400">No Prompt</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-700">{a.dueDate}</div>
@@ -280,6 +304,22 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               <div className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 line-clamp-3 overflow-hidden">
                 <MarkdownPreview content={a.instructions} className="text-xs" />
               </div>
+              {(() => {
+                const cardPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
+                const cardPrompts = cardPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
+                return cardPrompts.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {cardPrompts.slice(0, 2).map(p => (
+                      <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                        {p!.title}
+                      </span>
+                    ))}
+                    {cardPrompts.length > 2 && (
+                      <span className="text-xs text-slate-400">+{cardPrompts.length - 2}</span>
+                    )}
+                  </div>
+                ) : null;
+              })()}
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map(i => (
@@ -320,11 +360,15 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompt</label>
-                <PromptSelector
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
+                <MultiPromptSelector
                   prompts={prompts}
-                  selectedPromptId={form.promptId}
-                  onChange={(promptId) => setForm({...form, promptId})}
+                  selectedPromptIds={form.promptIds}
+                  onChange={(promptIds) => setForm({...form, promptIds})}
+                  onCreatePrompt={onAddPrompt}
+                  availableTags={availableTags}
+                  spreadsheetId={spreadsheetId || ''}
+                  userEmail={userProfile?.email}
                   required
                 />
               </div>

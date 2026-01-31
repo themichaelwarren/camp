@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [player, setPlayer] = useState<{
     src: string;
     title: string;
@@ -201,6 +202,8 @@ const App: React.FC = () => {
       setCampers(campersData);
       const eventsData = await googleService.fetchEvents(sId);
       setEvents(eventsData);
+      const tagsData = await googleService.fetchTags(sId);
+      setAvailableTags(tagsData);
       if (profile?.email) {
         const match = campersData.find((camper) => camper.email === profile.email);
         if (match) {
@@ -258,6 +261,9 @@ const App: React.FC = () => {
         });
 
       setEvents(updatedEvents);
+
+      const tagsData = await googleService.fetchTags(spreadsheetId);
+      setAvailableTags(tagsData);
 
       if (userProfile?.email) {
         const match = campersData.find((camper) => camper.email === userProfile.email);
@@ -381,9 +387,10 @@ const App: React.FC = () => {
     setAssignments(prev => [assignmentWithFolderAndEvent, ...prev]);
     if (spreadsheetId) {
       try {
+        const promptIdsStr = (assignmentWithFolderAndEvent.promptIds?.length ? assignmentWithFolderAndEvent.promptIds : [assignmentWithFolderAndEvent.promptId]).filter(Boolean).join(',');
         await googleService.appendSheetRow(spreadsheetId, 'Assignments!A1', [[
           assignmentWithFolderAndEvent.id,
-          assignmentWithFolderAndEvent.promptId,
+          promptIdsStr,
           assignmentWithFolderAndEvent.title,
           assignmentWithFolderAndEvent.startDate || '',
           assignmentWithFolderAndEvent.dueDate,
@@ -599,15 +606,19 @@ const App: React.FC = () => {
           />
         ) : null;
       case 'assignments':
-        return (
+        return spreadsheetId ? (
           <AssignmentsPage
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             campersCount={campers.length}
             onAdd={handleAddAssignment}
             onViewDetail={(id) => navigateTo('assignment-detail', id)}
+            onAddPrompt={handleAddPrompt}
+            userProfile={userProfile}
+            spreadsheetId={spreadsheetId}
+            availableTags={availableTags}
           />
-        );
+        ) : null;
       case 'submissions':
         return (
           <SubmissionsPage
@@ -632,8 +643,11 @@ const App: React.FC = () => {
         return p && spreadsheetId ? (
           <PromptDetail
             prompt={p}
-            assignments={assignments.filter(a => a.promptId === p.id && !a.deletedAt)}
-            submissions={submissions.filter(s => assignments.find(a => a.id === s.assignmentId)?.promptId === p.id && !s.deletedAt)}
+            assignments={assignments.filter(a => (a.promptIds?.includes(p.id) || a.promptId === p.id) && !a.deletedAt)}
+            submissions={submissions.filter(s => {
+              const assignment = assignments.find(asn => asn.id === s.assignmentId);
+              return assignment && (assignment.promptIds?.includes(p.id) || assignment.promptId === p.id) && !s.deletedAt;
+            })}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
             currentUser={userProfile}
@@ -642,7 +656,7 @@ const App: React.FC = () => {
         ) : null;
       case 'assignment-detail':
         const a = assignments.find(as => as.id === selectedId);
-        return a ? (
+        return a && spreadsheetId ? (
           <AssignmentDetail
             assignment={a}
             prompt={prompts.find(pr => pr.id === a.promptId)}
@@ -654,6 +668,8 @@ const App: React.FC = () => {
             onUpdate={handleUpdateAssignment}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
+            onAddPrompt={handleAddPrompt}
+            availableTags={availableTags}
           />
         ) : null;
       case 'song-detail':

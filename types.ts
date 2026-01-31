@@ -20,7 +20,8 @@ export interface Prompt {
 
 export interface Assignment {
   id: string;
-  promptId: string;
+  promptId: string;           // Keep for backwards compatibility
+  promptIds?: string[];       // Primary field for multiple prompts
   title: string;
   startDate?: string;
   dueDate: string;

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, ViewState, Event } from '../types';
-import PromptSelector from '../components/PromptSelector';
+import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
 import CommentsSection from '../components/CommentsSection';
@@ -17,16 +17,21 @@ interface AssignmentDetailProps {
   campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (assignment: Assignment) => void;
+  onAddPrompt: (prompt: Prompt) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
+  availableTags: string[];
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, currentUser, spreadsheetId, availableTags }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
+
+  // Initialize promptIds from assignment, falling back to single promptId
+  const initialPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
   const [editForm, setEditForm] = useState({
     title: assignment.title,
-    promptId: assignment.promptId,
+    promptIds: initialPromptIds,
     startDate: assignment.startDate || '',
     dueDate: assignment.dueDate,
     instructions: assignment.instructions,
@@ -66,9 +71,10 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   useEffect(() => {
     // Only sync form state when modal is closed to avoid overwriting user's edits
     if (!showEditModal) {
+      const promptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
       setEditForm({
         title: assignment.title,
-        promptId: assignment.promptId,
+        promptIds,
         startDate: assignment.startDate || '',
         dueDate: assignment.dueDate,
         instructions: assignment.instructions,
@@ -82,7 +88,8 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
     const updatedAssignment: Assignment = {
       ...assignment,
       title: editForm.title.trim(),
-      promptId: editForm.promptId,
+      promptId: editForm.promptIds[0] || '',    // First prompt for backwards compat
+      promptIds: editForm.promptIds,             // All prompts
       startDate: editForm.startDate,
       dueDate: editForm.dueDate,
       instructions: editForm.instructions.trim(),
@@ -214,23 +221,37 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Instructions</h3>
               <MarkdownPreview content={assignment.instructions} className="text-slate-700" />
             </div>
-            {prompt && (
-              <div 
-                onClick={() => onNavigate('prompt-detail', prompt.id)}
-                className="bg-slate-50 p-8 flex items-center justify-between cursor-pointer hover:bg-indigo-50 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-indigo-600">
-                    <i className="fa-solid fa-lightbulb"></i>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Linked Prompt</p>
-                    <p className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{prompt.title}</p>
+            {(() => {
+              const linkedPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
+              const linkedPrompts = linkedPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
+              if (linkedPrompts.length === 0) return null;
+              return (
+                <div className="bg-slate-50 p-6">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-3">
+                    Linked Prompt{linkedPrompts.length > 1 ? 's' : ''} ({linkedPrompts.length})
+                  </p>
+                  <div className="space-y-2">
+                    {linkedPrompts.map(p => (
+                      <div
+                        key={p!.id}
+                        onClick={() => onNavigate('prompt-detail', p!.id)}
+                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 cursor-pointer hover:bg-indigo-50 hover:border-indigo-200 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+                            <i className="fa-solid fa-lightbulb text-sm"></i>
+                          </div>
+                          <span className="font-semibold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
+                            {p!.title}
+                          </span>
+                        </div>
+                        <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
-              </div>
-            )}
+              );
+            })()}
           </section>
 
           <section>
@@ -421,11 +442,15 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompt</label>
-                <PromptSelector
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
+                <MultiPromptSelector
                   prompts={prompts}
-                  selectedPromptId={editForm.promptId}
-                  onChange={(promptId) => setEditForm({...editForm, promptId})}
+                  selectedPromptIds={editForm.promptIds}
+                  onChange={(promptIds) => setEditForm({...editForm, promptIds})}
+                  onCreatePrompt={onAddPrompt}
+                  availableTags={availableTags}
+                  spreadsheetId={spreadsheetId}
+                  userEmail={currentUser?.email}
                   required
                 />
               </div>

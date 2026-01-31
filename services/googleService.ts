@@ -296,9 +296,11 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
+  // Serialize promptIds as comma-separated, falling back to single promptId
+  const promptIdsStr = (assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId]).filter(Boolean).join(',');
   const rowValues = [[
     assignment.id,
-    assignment.promptId,
+    promptIdsStr,
     assignment.title,
     assignment.startDate || '',
     assignment.dueDate,
@@ -373,20 +375,25 @@ export const fetchAllData = async (spreadsheetId: string) => {
     deletedBy: row[9] || ''
   }));
 
-  const assignments: Assignment[] = assignmentsRaw.map((row: any[]) => ({
-    id: row[0] || Math.random().toString(36).substr(2, 9),
-    promptId: row[1] || '',
-    title: row[2] || 'Untitled Assignment',
-    startDate: row[3] || '',
-    dueDate: row[4] || '',
-    assignedTo: (row[5] || '').split(','),
-    instructions: row[6] || '',
-    status: (row[7] as 'Open' | 'Closed') || 'Open',
-    driveFolderId: row[8] || '',
-    eventId: row[9] || '',
-    deletedAt: row[10] || '',
-    deletedBy: row[11] || ''
-  }));
+  const assignments: Assignment[] = assignmentsRaw.map((row: any[]) => {
+    const promptIdRaw = row[1] || '';
+    const promptIdArray = promptIdRaw.split(',').map((id: string) => id.trim()).filter(Boolean);
+    return {
+      id: row[0] || Math.random().toString(36).substr(2, 9),
+      promptId: promptIdArray[0] || '',           // First prompt for backwards compat
+      promptIds: promptIdArray,                    // All prompts
+      title: row[2] || 'Untitled Assignment',
+      startDate: row[3] || '',
+      dueDate: row[4] || '',
+      assignedTo: (row[5] || '').split(','),
+      instructions: row[6] || '',
+      status: (row[7] as 'Open' | 'Closed') || 'Open',
+      driveFolderId: row[8] || '',
+      eventId: row[9] || '',
+      deletedAt: row[10] || '',
+      deletedBy: row[11] || ''
+    };
+  });
 
   const submissions: Submission[] = submissionsRaw.map((row: any[]) => {
     const rawRevision = row[10];
