@@ -33,9 +33,19 @@ const App: React.FC = () => {
     src: string;
     title: string;
     artist: string;
+    submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   } | null>(null);
+  const [isPlayerLoading, setIsPlayerLoading] = useState(false);
+  const [queue, setQueue] = useState<{
+    src: string;
+    title: string;
+    artist: string;
+    submissionId?: string;
+    artworkFileId?: string;
+    artworkUrl?: string;
+  }[]>([]);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
   const [visualTheme, setVisualTheme] = useState<'default' | 'notebook' | 'modern'>(() => {
     const stored = window.localStorage.getItem('camp-skin');
@@ -284,11 +294,33 @@ const App: React.FC = () => {
     }
   };
 
-  const navigateTo = (view: ViewState, id: string | null = null) => {
+  const navigateTo = (view: ViewState, id: string | null = null, { replace = false } = {}) => {
     setActiveView(view);
     setSelectedId(id);
     window.scrollTo(0, 0);
+    const state = { view, id };
+    if (replace) {
+      window.history.replaceState(state, '', '');
+    } else {
+      window.history.pushState(state, '', '');
+    }
   };
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    // Set initial state
+    window.history.replaceState({ view: activeView, id: selectedId }, '', '');
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state?.view) {
+        setActiveView(e.state.view);
+        setSelectedId(e.state.id || null);
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddPrompt = async (newPrompt: Prompt) => {
     setPrompts(prev => [newPrompt, ...prev]);
@@ -494,9 +526,20 @@ const App: React.FC = () => {
     versionId: string;
     title: string;
     artist: string;
+    submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
+    // Show player immediately with track info while audio loads
+    setPlayer({
+      src: '',
+      title: track.title,
+      artist: track.artist,
+      submissionId: track.submissionId,
+      artworkFileId: track.artworkFileId,
+      artworkUrl: track.artworkUrl
+    });
+    setIsPlayerLoading(true);
     try {
       const blob = await googleService.fetchDriveFile(track.versionId);
       const url = URL.createObjectURL(blob);
@@ -508,13 +551,73 @@ const App: React.FC = () => {
         src: url,
         title: track.title,
         artist: track.artist,
+        submissionId: track.submissionId,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
       });
     } catch (error) {
       console.error('Failed to load audio', error);
+      setPlayer(null);
+      alert('Failed to load audio from Drive. Please try again.');
+    } finally {
+      setIsPlayerLoading(false);
+    }
+  };
+
+  const handleAddToQueue = async (track: {
+    versionId: string;
+    title: string;
+    artist: string;
+    submissionId?: string;
+    artworkFileId?: string;
+    artworkUrl?: string;
+  }) => {
+    try {
+      const blob = await googleService.fetchDriveFile(track.versionId);
+      const url = URL.createObjectURL(blob);
+      setQueue(prev => [...prev, {
+        src: url,
+        title: track.title,
+        artist: track.artist,
+        submissionId: track.submissionId,
+        artworkFileId: track.artworkFileId,
+        artworkUrl: track.artworkUrl
+      }]);
+    } catch (error) {
+      console.error('Failed to add to queue', error);
       alert('Failed to load audio from Drive. Please try again.');
     }
+  };
+
+  const handleReorderQueue = (fromIndex: number, toIndex: number) => {
+    setQueue(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+  };
+
+  const handleRemoveFromQueue = (index: number) => {
+    setQueue(prev => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.src);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handlePlayNext = () => {
+    if (queue.length === 0) {
+      setPlayer(null);
+      return;
+    }
+    const [next, ...rest] = queue;
+    if (previousAudioUrl.current) {
+      URL.revokeObjectURL(previousAudioUrl.current);
+    }
+    previousAudioUrl.current = next.src;
+    setPlayer(next);
+    setQueue(rest);
   };
 
   const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => {
@@ -592,6 +695,7 @@ const App: React.FC = () => {
             campersCount={campers.length}
             isSyncing={isSyncing}
             onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
           />
         );
       case 'prompts':
@@ -626,8 +730,11 @@ const App: React.FC = () => {
           <SubmissionsPage
             submissions={submissions.filter((s) => !s.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
+            prompts={prompts.filter((p) => !p.deletedAt)}
             onAdd={handleAddSubmission}
             onViewDetail={(id) => navigateTo('song-detail', id)}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             userProfile={userProfile}
           />
         );
@@ -654,6 +761,8 @@ const App: React.FC = () => {
             })}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
           />
@@ -670,6 +779,8 @@ const App: React.FC = () => {
             campersCount={campers.length}
             onNavigate={navigateTo}
             onUpdate={handleUpdateAssignment}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
             onAddPrompt={handleAddPrompt}
@@ -686,6 +797,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onUpdate={handleUpdateSubmission}
             onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             currentUser={{ name: userProfile.name || 'Anonymous', email: userProfile.email || '' }}
             spreadsheetId={spreadsheetId}
           />
@@ -713,6 +825,8 @@ const App: React.FC = () => {
             prompts={prompts.filter((prompt) => !prompt.deletedAt && (prompt.createdBy === camper.email || prompt.createdBy === camper.name))}
             submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name))}
             onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
           />
         ) : null;
       default:
@@ -725,6 +839,7 @@ const App: React.FC = () => {
             campersCount={campers.length}
             isSyncing={isSyncing}
             onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
           />
         );
     }
@@ -738,6 +853,12 @@ const App: React.FC = () => {
       isLoggedIn={isLoggedIn}
       userProfile={userProfile}
       player={player}
+      isPlayerLoading={isPlayerLoading}
+      queue={queue}
+      onPlayNext={handlePlayNext}
+      onRemoveFromQueue={handleRemoveFromQueue}
+      onReorderQueue={handleReorderQueue}
+      onNavigateToSong={(id) => navigateTo('song-detail', id)}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ViewState } from '../types';
 import ArtworkImage from './ArtworkImage';
+import NowPlayingOverlay from './NowPlayingOverlay';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,16 +10,22 @@ interface LayoutProps {
   onViewChange: (view: ViewState) => void;
   isSyncing?: boolean;
   isLoggedIn?: boolean;
+  isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
-  player?: { src: string; title: string; artist: string; artworkFileId?: string; artworkUrl?: string } | null;
+  player?: { src: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string } | null;
+  queue?: { src: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }[];
+  onPlayNext?: () => void;
+  onRemoveFromQueue?: (index: number) => void;
+  onReorderQueue?: (fromIndex: number, toIndex: number) => void;
+  onNavigateToSong?: (submissionId: string) => void;
   onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, userProfile, player, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onLogout }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [showNowPlaying, setShowNowPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -36,16 +43,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     onViewChange(view);
     setIsMobileNavOpen(false);
     setIsUserMenuOpen(false);
-    setIsPlayerOpen(false);
   };
+
+  // Auto-open overlay when a track starts loading/playing
+  useEffect(() => {
+    if (player) {
+      setShowNowPlaying(true);
+    }
+  }, [player?.title, player?.artist]);
 
   useEffect(() => {
     if (player?.src && audioRef.current) {
       audioRef.current.play().catch(() => undefined);
       setIsPlaying(true);
-      if (window.matchMedia('(max-width: 767px)').matches) {
-        setIsPlayerOpen(true);
-      }
     }
   }, [player?.src]);
 
@@ -111,46 +121,65 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
       <div className="p-4 bg-indigo-950/50 mt-auto relative space-y-4">
         {player && (
-          <div className="bg-indigo-950/70 border border-indigo-800 rounded-2xl p-4">
+          <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => setShowNowPlaying(true)}>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                 <ArtworkImage
                   fileId={player.artworkFileId}
                   fallbackUrl={player.artworkUrl}
                   alt={`${player.title} artwork`}
-                  className="w-full h-full object-contain bg-indigo-100"
-                  fallback={<i className="fa-solid fa-compact-disc"></i>}
+                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
+                  fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{player.title}</p>
+                {player.submissionId ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onNavigateToSong?.(player.submissionId!); setShowNowPlaying(false); }}
+                    className="text-sm font-semibold text-white truncate block hover:underline text-left w-full"
+                  >
+                    {player.title}
+                  </button>
+                ) : (
+                  <p className="text-sm font-semibold text-white truncate">{player.title}</p>
+                )}
                 <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
               </div>
-              <button
-                onClick={() => {
-                  if (!audioRef.current) return;
-                  if (audioRef.current.paused) {
-                    audioRef.current.play().catch(() => undefined);
-                    setIsPlaying(true);
-                  } else {
-                    audioRef.current.pause();
-                    setIsPlaying(false);
-                  }
-                }}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-              >
-                <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
-              </button>
+              {isPlayerLoading ? (
+                <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-spinner fa-spin text-xs"></i>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!audioRef.current) return;
+                    if (audioRef.current.paused) {
+                      audioRef.current.play().catch(() => undefined);
+                      setIsPlaying(true);
+                    } else {
+                      audioRef.current.pause();
+                      setIsPlaying(false);
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center flex-shrink-0"
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                >
+                  <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
+                </button>
+              )}
             </div>
+            {queue.length > 0 && (
+              <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
+            )}
             <audio
               ref={audioRef}
-              src={player.src}
-              controls
-              className="w-full mt-3"
+              src={player.src || undefined}
+              className="hidden"
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
+              onEnded={() => { setIsPlaying(false); onPlayNext?.(); }}
             />
           </div>
         )}
@@ -257,69 +286,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           {player && (
             <button
               className="md:hidden text-indigo-900 text-lg w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center"
-              onClick={() => setIsPlayerOpen(true)}
+              onClick={() => setShowNowPlaying(true)}
               aria-label="Open player"
             >
-              <i className="fa-solid fa-play"></i>
+              <i className={`fa-solid ${isPlaying ? 'fa-music' : 'fa-play'}`}></i>
             </button>
           )}
         </header>
 
-        {player && (
-          <div
-            className={`fixed inset-0 z-50 md:hidden transition-opacity ${
-              isPlayerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-            aria-hidden={!isPlayerOpen}
-          >
-            <button
-              className="absolute inset-0 bg-slate-900/70"
-              onClick={() => setIsPlayerOpen(false)}
-              aria-label="Close player"
-            />
-            <div className="absolute bottom-0 left-0 right-0 bg-indigo-950 text-white rounded-t-3xl p-6 shadow-2xl">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden border border-indigo-100">
-                  <ArtworkImage
-                    fileId={player.artworkFileId}
-                    fallbackUrl={player.artworkUrl}
-                    alt={`${player.title} artwork`}
-                    className="w-full h-full object-contain bg-indigo-100"
-                    fallback={<i className="fa-solid fa-compact-disc"></i>}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-bold truncate">{player.title}</p>
-                  <p className="text-xs text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    if (!audioRef.current) return;
-                    if (audioRef.current.paused) {
-                      audioRef.current.play().catch(() => undefined);
-                      setIsPlaying(true);
-                    } else {
-                      audioRef.current.pause();
-                      setIsPlaying(false);
-                    }
-                  }}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
-                </button>
-              </div>
-              <audio
-                ref={audioRef}
-                src={player.src}
-                controls
-                className="w-full mt-4"
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
-              />
-            </div>
-          </div>
+        {showNowPlaying && player && (
+          <NowPlayingOverlay
+            player={player}
+            queue={queue}
+            audioRef={audioRef as React.RefObject<HTMLAudioElement>}
+            isLoading={isPlayerLoading}
+            onClose={() => setShowNowPlaying(false)}
+            onPlayNext={() => onPlayNext?.()}
+            onRemoveFromQueue={(i) => onRemoveFromQueue?.(i)}
+            onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
+            onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); }}
+          />
         )}
 
         <div className="p-8 overflow-auto flex-1">

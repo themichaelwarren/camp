@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, ViewState, Event } from '../types';
+import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event } from '../types';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -18,12 +18,19 @@ interface AssignmentDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (assignment: Assignment) => void;
   onAddPrompt: (prompt: Prompt) => Promise<void>;
+  onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   availableTags: string[];
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, currentUser, spreadsheetId, availableTags }) => {
+const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+  if (!sub.versions?.length || !sub.versions[0].id) return null;
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+};
+
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, currentUser, spreadsheetId, availableTags }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
 
@@ -256,36 +263,75 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
 
           <section>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
-              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+              </div>
+              {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
+                <button
+                  onClick={async () => {
+                    const playable = submissions.map(s => trackFromSubmission(s)).filter((t): t is PlayableTrack => t !== null);
+                    if (playable.length === 0) return;
+                    await onPlayTrack(playable[0]);
+                    for (let i = 1; i < playable.length; i++) {
+                      onAddToQueue(playable[i]);
+                    }
+                  }}
+                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+                >
+                  <i className="fa-solid fa-play"></i>
+                  Play All ({submissions.filter(s => s.versions?.length > 0).length})
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {submissions.map(s => (
-                <div 
-                  key={s.id} 
-                  onClick={() => onNavigate('song-detail', s.id)}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                      <i className="fa-solid fa-music"></i>
+              {submissions.map(s => {
+                const track = trackFromSubmission(s);
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => onNavigate('song-detail', s.id)}
+                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                        <i className="fa-solid fa-music"></i>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{s.title}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
+                      </div>
+                      {track && (
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                            className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                            title="Play"
+                          >
+                            <i className="fa-solid fa-play text-xs"></i>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                            className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                            title="Add to queue"
+                          >
+                            <i className="fa-solid fa-list text-xs"></i>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate max-w-[150px]">{s.title}</h4>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 h-16 overflow-hidden">
+                      <p className="text-[10px] font-serif italic text-slate-500 line-clamp-2">
+                        {s.lyrics}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                      <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
+                      <span>UPDATED {new Date(s.updatedAt).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 h-16 overflow-hidden">
-                    <p className="text-[10px] font-serif italic text-slate-500 line-clamp-2">
-                      {s.lyrics}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                    <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
-                    <span>UPDATED {new Date(s.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {submissions.length === 0 && (
                 <div className="col-span-2 p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
                   <i className="fa-solid fa-music text-3xl mb-4 opacity-20"></i>

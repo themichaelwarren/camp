@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus } from '../types';
+import { Prompt, Assignment, Submission, PlayableTrack, ViewState, PromptStatus } from '../types';
 import TagInput from '../components/TagInput';
 import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
@@ -12,11 +12,18 @@ interface PromptDetailProps {
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (prompt: Prompt) => void;
+  onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, currentUser, spreadsheetId }) => {
+const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+  if (!sub.versions?.length || !sub.versions[0].id) return null;
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+};
+
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -160,25 +167,46 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
             </div>
             <div className="space-y-4">
-              {submissions.map(s => (
-                <div 
-                  key={s.id} 
-                  onClick={() => onNavigate('song-detail', s.id)}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 flex items-center gap-6 hover:shadow-md transition-all cursor-pointer group"
-                >
-                  <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                    <i className="fa-solid fa-music"></i>
+              {submissions.map(s => {
+                const track = trackFromSubmission(s);
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => onNavigate('song-detail', s.id)}
+                    className="bg-white p-6 rounded-2xl border border-slate-200 flex items-center gap-6 hover:shadow-md transition-all cursor-pointer group"
+                  >
+                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                      <i className="fa-solid fa-music"></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-slate-800">{s.title}</h4>
+                      <p className="text-xs text-slate-500">by {s.camperName}</p>
+                    </div>
+                    {track && (
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                          title="Play"
+                        >
+                          <i className="fa-solid fa-play text-xs"></i>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                          title="Add to queue"
+                        >
+                          <i className="fa-solid fa-list text-xs"></i>
+                        </button>
+                      </div>
+                    )}
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Last Update</p>
+                      <p className="text-xs font-semibold text-slate-700">{new Date(s.updatedAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-slate-800">{s.title}</h4>
-                    <p className="text-xs text-slate-500">by {s.camperName}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Last Update</p>
-                    <p className="text-xs font-semibold text-slate-700">{new Date(s.updatedAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {submissions.length === 0 && (
                 <div className="p-8 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400">
                   No songs have been submitted for this prompt yet.

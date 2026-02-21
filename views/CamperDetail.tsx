@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CamperProfile, Prompt, Submission, ViewState } from '../types';
+import { CamperProfile, Prompt, Submission, PlayableTrack, ViewState } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -7,9 +7,16 @@ interface CamperDetailProps {
   prompts: Prompt[];
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
+  onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
 }
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submissions, onNavigate }) => {
+const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+  if (!sub.versions?.length || !sub.versions[0].id) return null;
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+};
+
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submissions, onNavigate, onPlayTrack, onAddToQueue }) => {
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   return (
@@ -113,25 +120,50 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
 
         {songsView === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {submissions.map((submission) => (
-              <button
-                key={submission.id}
-                onClick={() => onNavigate('song-detail', submission.id)}
-                className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all"
-              >
-                <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4">
-                  <ArtworkImage
-                    fileId={submission.artworkFileId}
-                    fallbackUrl={submission.artworkUrl}
-                    alt={`${submission.title} artwork`}
-                    className="w-full h-full object-cover"
-                    fallback={<i className="fa-solid fa-compact-disc"></i>}
-                  />
+            {submissions.map((submission) => {
+              const track = trackFromSubmission(submission);
+              return (
+                <div
+                  key={submission.id}
+                  onClick={() => onNavigate('song-detail', submission.id)}
+                  className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer"
+                >
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4">
+                    <ArtworkImage
+                      fileId={submission.artworkFileId}
+                      fallbackUrl={submission.artworkUrl}
+                      alt={`${submission.title} artwork`}
+                      className="w-full h-full object-cover"
+                      fallback={<i className="fa-solid fa-compact-disc"></i>}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
+                      <p className="text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</p>
+                    </div>
+                    {track && (
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                          title="Play"
+                        >
+                          <i className="fa-solid fa-play text-xs"></i>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                          title="Add to queue"
+                        >
+                          <i className="fa-solid fa-list text-xs"></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
-                <p className="text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</p>
-              </button>
-            ))}
+              );
+            })}
             {submissions.length === 0 && (
               <div className="col-span-full text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl p-10">
                 No songs uploaded yet.
@@ -146,33 +178,57 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                   <th className="px-4 py-3">Song</th>
                   <th className="px-4 py-3">Updated</th>
                   <th className="px-4 py-3">Artwork</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {submissions.map((submission) => (
-                  <tr
-                    key={submission.id}
-                    onClick={() => onNavigate('song-detail', submission.id)}
-                    className="cursor-pointer hover:bg-white transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-700">{submission.title}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                        <ArtworkImage
-                          fileId={submission.artworkFileId}
-                          fallbackUrl={submission.artworkUrl}
-                          alt={`${submission.title} artwork`}
-                          className="w-full h-full object-cover"
-                          fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {submissions.map((submission) => {
+                  const track = trackFromSubmission(submission);
+                  return (
+                    <tr
+                      key={submission.id}
+                      onClick={() => onNavigate('song-detail', submission.id)}
+                      className="cursor-pointer hover:bg-white transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm font-semibold text-slate-700">{submission.title}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                          <ArtworkImage
+                            fileId={submission.artworkFileId}
+                            fallbackUrl={submission.artworkUrl}
+                            alt={`${submission.title} artwork`}
+                            className="w-full h-full object-cover"
+                            fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {track && (
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                              title="Play"
+                            >
+                              <i className="fa-solid fa-play text-xs"></i>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                              title="Add to queue"
+                            >
+                              <i className="fa-solid fa-list text-xs"></i>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {submissions.length === 0 && (
                   <tr>
-                    <td className="px-4 py-6 text-center text-slate-400" colSpan={3}>
+                    <td className="px-4 py-6 text-center text-slate-400" colSpan={4}>
                       No songs uploaded yet.
                     </td>
                   </tr>

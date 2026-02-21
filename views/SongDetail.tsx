@@ -11,14 +11,16 @@ interface SongDetailProps {
   prompt?: Prompt;
   onNavigate: (view: ViewState, id?: string) => void;
   onUpdate: (submission: Submission) => void;
-  onPlayTrack: (track: { versionId: string; title: string; artist: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
+  onPlayTrack: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
+  onAddToQueue?: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, currentUser, spreadsheetId }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
+  const [queueLoadingVersionId, setQueueLoadingVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
     title: submission.title,
@@ -47,6 +49,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         versionId,
         title: submission.title,
         artist: submission.camperName,
+        submissionId: submission.id,
         artworkFileId: submission.artworkFileId,
         artworkUrl: submission.artworkUrl
       });
@@ -247,13 +250,39 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                     </div>
                     <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
                     <p className="text-[10px] text-slate-500 italic mb-3">"{v.notes}"</p>
-                    <button
-                      onClick={() => loadAudio(v.id)}
-                      className="w-full flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                    >
-                      <i className={`fa-solid ${loadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
-                      {activeVersionId === v.id ? 'Loaded' : 'Play in App'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => loadAudio(v.id)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <i className={`fa-solid ${loadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
+                        {activeVersionId === v.id ? 'Loaded' : 'Play'}
+                      </button>
+                      {onAddToQueue && (
+                        <button
+                          onClick={async () => {
+                            setQueueLoadingVersionId(v.id);
+                            try {
+                              await onAddToQueue({
+                                versionId: v.id,
+                                title: submission.title,
+                                artist: submission.camperName,
+                                submissionId: submission.id,
+                                artworkFileId: submission.artworkFileId,
+                                artworkUrl: submission.artworkUrl
+                              });
+                            } finally {
+                              setQueueLoadingVersionId(null);
+                            }
+                          }}
+                          disabled={queueLoadingVersionId === v.id}
+                          className="flex items-center justify-center gap-1.5 bg-white text-slate-500 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-all shadow-sm disabled:opacity-50"
+                          title="Add to queue"
+                        >
+                          <i className={`fa-solid ${queueLoadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (

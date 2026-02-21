@@ -107,6 +107,15 @@ export interface Event {
   deletedBy?: string;
 }
 
+export interface PlayableTrack {
+  versionId: string;
+  title: string;
+  artist: string;
+  submissionId?: string;
+  artworkFileId?: string;
+  artworkUrl?: string;
+}
+
 export type ViewState =
   | 'dashboard'
   | 'prompts'

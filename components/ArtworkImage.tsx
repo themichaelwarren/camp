@@ -6,6 +6,7 @@ interface ArtworkImageProps {
   fallbackUrl?: string;
   alt: string;
   className?: string;
+  containerClassName?: string;
   fallback: React.ReactNode;
   lazy?: boolean;
 }
@@ -18,7 +19,7 @@ const parseFileId = (url?: string) => {
   return match ? match[1] : undefined;
 };
 
-const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, className, fallback, lazy = true }) => {
+const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, className, containerClassName, fallback, lazy = true }) => {
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -84,7 +85,7 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
     );
   }
 
-  return <span ref={containerRef} className="block">{content}</span>;
+  return <span ref={containerRef} className={`block ${containerClassName || ''}`}>{content}</span>;
 };
 
 export default ArtworkImage;

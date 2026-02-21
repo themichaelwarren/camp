@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Prompt, Assignment, Submission, Event, ViewState } from '../types';
+import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState } from '../types';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -10,9 +10,15 @@ interface DashboardProps {
   campersCount: number;
   isSyncing: boolean;
   onNavigate: (view: ViewState, id?: string) => void;
+  onPlayTrack: (track: PlayableTrack) => Promise<void>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate }) => {
+const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+  if (!sub.versions?.length || !sub.versions[0].id) return null;
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => p.status === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -192,19 +198,31 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
              <h3 className="font-bold text-slate-800 text-lg mb-4">Camp Activity</h3>
              <div className="space-y-6">
-                {submissions.slice(0, 4).map((sub, i) => (
-                  <div key={sub.id} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('song-detail', sub.id)}>
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 z-10 group-hover:bg-indigo-100">
-                      <i className="fa-solid fa-music text-xs"></i>
+                {submissions.slice(0, 4).map((sub) => {
+                  const track = trackFromSubmission(sub);
+                  return (
+                    <div key={sub.id} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('song-detail', sub.id)}>
+                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 z-10 group-hover:bg-indigo-100">
+                        <i className="fa-solid fa-music text-xs"></i>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700">
+                          <span className="font-bold">{sub.camperName}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">{new Date(sub.updatedAt).toLocaleDateString()}</p>
+                      </div>
+                      {track && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors flex-shrink-0 self-center"
+                          title="Play"
+                        >
+                          <i className="fa-solid fa-play text-xs"></i>
+                        </button>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">
-                        <span className="font-bold">{sub.camperName}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">{new Date(sub.updatedAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
              </div>
           </section>
         </div>
