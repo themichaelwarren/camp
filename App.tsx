@@ -456,16 +456,18 @@ const App: React.FC = () => {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
     if (spreadsheetId) {
       try {
-        // Update Calendar event
-        await googleService.updateCalendarEvent(updatedEvent.calendarEventId, {
-          title: updatedEvent.title,
-          description: updatedEvent.description,
-          startDateTime: updatedEvent.startDateTime,
-          endDateTime: updatedEvent.endDateTime,
-          attendees: updatedEvent.attendees.map(a => ({ email: a.email })),
-          location: updatedEvent.location
-        });
-        // Update sheet
+        // Skip calendar update if event is being deleted
+        if (!updatedEvent.deletedAt) {
+          await googleService.updateCalendarEvent(updatedEvent.calendarEventId, {
+            title: updatedEvent.title,
+            description: updatedEvent.description,
+            startDateTime: updatedEvent.startDateTime,
+            endDateTime: updatedEvent.endDateTime,
+            attendees: updatedEvent.attendees.map(a => ({ email: a.email })),
+            location: updatedEvent.location
+          });
+        }
+        // Always update sheet
         await googleService.updateEventRow(spreadsheetId, updatedEvent);
       } catch (error) {
         console.error('Failed to update event', error);
@@ -635,7 +637,9 @@ const App: React.FC = () => {
             events={events.filter((e) => !e.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
             onNavigate={navigateTo}
+            onUpdateEvent={handleUpdateEvent}
             spreadsheetId={spreadsheetId || undefined}
+            currentUser={userProfile}
           />
         );
       case 'prompt-detail':

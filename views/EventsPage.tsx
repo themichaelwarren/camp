@@ -8,10 +8,12 @@ interface EventsPageProps {
   events: Event[];
   assignments: Assignment[];
   onNavigate: (view: ViewState, id?: string) => void;
+  onUpdateEvent: (event: Event) => void;
   spreadsheetId?: string;
+  currentUser?: { name?: string; email?: string } | null;
 }
 
-const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate, spreadsheetId }) => {
+const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate, onUpdateEvent, spreadsheetId, currentUser }) => {
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editEventForm, setEditEventForm] = useState({
@@ -82,14 +84,35 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
       });
       await googleService.updateEventRow(spreadsheetId, updatedEvent);
 
+      onUpdateEvent(updatedEvent);
       setShowEventEditModal(false);
       setSelectedEvent(null);
-      alert('Event updated! Page will refresh to show changes.');
-      window.location.reload();
     } catch (error) {
       console.error('Failed to update event', error);
       alert('Failed to update event. Please try again.');
     }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    if (!window.confirm('Delete this event? It will be removed from the calendar and hidden from the app.')) return;
+
+    const deletedEvent = {
+      ...selectedEvent,
+      deletedAt: new Date().toISOString(),
+      deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+    };
+
+    // Try to delete from Google Calendar (may already be deleted)
+    try {
+      await googleService.deleteCalendarEvent(selectedEvent.calendarEventId);
+    } catch (error) {
+      console.warn('Calendar event may already be deleted', error);
+    }
+
+    onUpdateEvent(deletedEvent);
+    setShowEventEditModal(false);
+    setSelectedEvent(null);
   };
 
   // Separate upcoming and past events
@@ -327,9 +350,18 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                 />
               </div>
 
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                Save Event Changes
-              </button>
+              <div className="flex gap-3">
+                <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                  Save Event Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteEvent}
+                  className="px-5 py-3 rounded-xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                >
+                  <i className="fa-solid fa-trash"></i>
+                </button>
+              </div>
             </form>
           </div>
         </div>,

@@ -4,7 +4,7 @@ import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAtte
 declare var google: any;
 
 const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com'; 
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events';
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = '1ihYCXKBQKTS7Jz4XgybQONAnDfbmkBiCwnAam3td2Vg';
 const ASSIGNMENTS_PARENT_FOLDER_ID = '1Lifl1lByscTeluVSfZWSXNuCTh7JSppQ';
 
@@ -423,7 +423,7 @@ export const fetchAllData = async (spreadsheetId: string) => {
       camperName: row[3] || 'Anonymous',
       title: row[4] || 'Untitled Song',
       lyrics: row[5] || '',
-      versions: JSON.parse(row[6] || '[]'),
+      versions: (() => { try { return JSON.parse(row[6] || '[]'); } catch { return []; } })(),
       details: row[7] || '',
       updatedAt: row[8] || new Date().toISOString(),
       lyricsDocUrl: row[9] || '',

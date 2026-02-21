@@ -153,7 +153,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 <div className="mt-4 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
                   <span className="flex items-center gap-1">
                     <i className="fa-solid fa-calendar"></i>
-                    {new Date(sub.updatedAt).toLocaleDateString()}
+                    {new Date(sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt).toLocaleDateString()}
                   </span>
                   <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 font-bold uppercase tracking-tighter">Synced</span>
                 </div>
