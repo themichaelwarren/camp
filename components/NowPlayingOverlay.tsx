@@ -21,6 +21,8 @@ interface NowPlayingOverlayProps {
   onRemoveFromQueue: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
+  isJukeboxMode?: boolean;
+  onStopJukebox?: () => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -39,7 +41,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onPlayNext,
   onRemoveFromQueue,
   onReorderQueue,
-  onNavigateToSong
+  onNavigateToSong,
+  isJukeboxMode,
+  onStopJukebox
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -175,6 +179,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           )}
           <p className="text-white/50 text-sm font-medium truncate">{player.artist}</p>
         </div>
+
+        {isJukeboxMode && (
+          <button
+            onClick={onStopJukebox}
+            className="mx-6 mb-1 flex items-center gap-2 bg-amber-500/20 text-amber-400 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-amber-500/30 transition-colors w-fit"
+          >
+            <i className="fa-solid fa-shuffle"></i>
+            Jukebox Mode
+            <i className="fa-solid fa-xmark ml-1"></i>
+          </button>
+        )}
 
         {/* Seek Bar */}
         <div className="px-6 pb-1">

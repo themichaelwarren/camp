@@ -197,32 +197,82 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
 
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
              <h3 className="font-bold text-slate-800 text-lg mb-4">Camp Activity</h3>
-             <div className="space-y-6">
-                {submissions.slice(0, 4).map((sub) => {
-                  const track = trackFromSubmission(sub);
-                  return (
-                    <div key={sub.id} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('song-detail', sub.id)}>
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 z-10 group-hover:bg-indigo-100">
-                        <i className="fa-solid fa-music text-xs"></i>
+             <div className="space-y-5">
+                {(() => {
+                  type ActivityItem = { type: 'song'; date: string; data: typeof submissions[0] }
+                    | { type: 'prompt'; date: string; data: typeof prompts[0] }
+                    | { type: 'assignment'; date: string; data: typeof assignments[0] };
+
+                  const items: ActivityItem[] = [
+                    ...submissions.map(s => ({ type: 'song' as const, date: s.versions?.length ? s.versions[0].timestamp : s.updatedAt, data: s })),
+                    ...prompts.map(p => ({ type: 'prompt' as const, date: p.createdAt, data: p })),
+                    ...assignments.map(a => ({ type: 'assignment' as const, date: a.createdAt || a.startDate || a.dueDate, data: a })),
+                  ];
+                  items.sort((a, b) => {
+                    const ta = new Date(a.date).getTime() || 0;
+                    const tb = new Date(b.date).getTime() || 0;
+                    return tb - ta;
+                  });
+
+                  return items.slice(0, 6).map((item) => {
+                    if (item.type === 'song') {
+                      const sub = item.data as typeof submissions[0];
+                      const track = trackFromSubmission(sub);
+                      return (
+                        <div key={`song-${sub.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('song-detail', sub.id)}>
+                          <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0 z-10 group-hover:bg-green-100">
+                            <i className="fa-solid fa-music text-xs"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-700">
+                              <span className="font-bold">{sub.camperName}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                          </div>
+                          {track && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors flex-shrink-0 self-center"
+                              title="Play"
+                            >
+                              <i className="fa-solid fa-play text-xs"></i>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+                    if (item.type === 'prompt') {
+                      const p = item.data as typeof prompts[0];
+                      return (
+                        <div key={`prompt-${p.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('prompt-detail', p.id)}>
+                          <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 z-10 group-hover:bg-amber-100">
+                            <i className="fa-solid fa-lightbulb text-xs"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-700">
+                              New prompt: <span className="text-indigo-600 font-semibold">"{p.title}"</span>
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    const a = item.data as typeof assignments[0];
+                    return (
+                      <div key={`assignment-${a.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('assignment-detail', a.id)}>
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 z-10 group-hover:bg-indigo-100">
+                          <i className="fa-solid fa-tasks text-xs"></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-700">
+                            New assignment: <span className="text-indigo-600 font-semibold">"{a.title}"</span>
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700">
-                          <span className="font-bold">{sub.camperName}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">{new Date(sub.updatedAt).toLocaleDateString()}</p>
-                      </div>
-                      {track && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors flex-shrink-0 self-center"
-                          title="Play"
-                        >
-                          <i className="fa-solid fa-play text-xs"></i>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
              </div>
           </section>
         </div>

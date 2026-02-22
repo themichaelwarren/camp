@@ -38,7 +38,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       dueDate: form.dueDate,
       instructions: form.instructions,
       assignedTo: ['All Campers'],
-      status: 'Open'
+      status: 'Open',
+      createdAt: new Date().toISOString()
     };
     onAdd(assignment);
     setShowAdd(false);

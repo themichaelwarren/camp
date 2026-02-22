@@ -18,10 +18,12 @@ interface LayoutProps {
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
+  isJukeboxMode?: boolean;
+  onStopJukebox?: () => void;
   onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, isJukeboxMode, onStopJukebox, onLogout }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -173,14 +175,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             {queue.length > 0 && (
               <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
             )}
-            <audio
-              ref={audioRef}
-              src={player.src || undefined}
-              className="hidden"
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => { setIsPlaying(false); onPlayNext?.(); }}
-            />
           </div>
         )}
         {isLoggedIn ? (
@@ -305,6 +299,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onRemoveFromQueue={(i) => onRemoveFromQueue?.(i)}
             onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
             onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); }}
+            isJukeboxMode={isJukeboxMode}
+            onStopJukebox={onStopJukebox}
           />
         )}
 
@@ -330,6 +326,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             {toastMessage}
           </div>
         </div>
+      )}
+
+      {player && (
+        <audio
+          ref={audioRef}
+          src={player.src || undefined}
+          className="hidden"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => { setIsPlaying(false); onPlayNext?.(); }}
+        />
       )}
     </div>
   );

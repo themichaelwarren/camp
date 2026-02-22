@@ -438,35 +438,6 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </section>
           )}
 
-          {assignment.status === 'Open' && (
-            <section className="bg-amber-400 p-6 rounded-3xl text-amber-950 shadow-lg shadow-amber-100">
-              <h4 className="font-bold mb-2 flex items-center gap-2">
-                <i className="fa-solid fa-triangle-exclamation"></i>
-                Deadline Management
-              </h4>
-              <p className="text-amber-900 text-sm mb-4 leading-relaxed">Closing an assignment prevents new submissions and marks the project as archived.</p>
-              <button
-                onClick={handleCloseAssignment}
-                className="w-full bg-amber-950 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors"
-              >
-                Close Assignment
-              </button>
-            </section>
-          )}
-
-          <section className="bg-white p-6 rounded-3xl border border-rose-200 text-rose-600">
-            <h4 className="font-bold mb-2 flex items-center gap-2">
-              <i className="fa-solid fa-trash"></i>
-              Delete
-            </h4>
-            <p className="text-rose-500 text-sm mb-4 leading-relaxed">Hide this assignment without removing the data.</p>
-            <button
-              onClick={handleDeleteAssignment}
-              className="w-full bg-rose-600 text-white font-bold py-3 rounded-xl hover:bg-rose-700 transition-colors"
-            >
-              Delete Assignment
-            </button>
-          </section>
         </div>
       </div>
 
@@ -557,6 +528,24 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Save Changes
               </button>
+              <div className="flex gap-3 mt-3 pt-3 border-t border-slate-100">
+                {assignment.status === 'Open' && (
+                  <button
+                    type="button"
+                    onClick={() => { handleCloseAssignment(); setShowEditModal(false); }}
+                    className="flex-1 text-amber-600 border border-amber-200 py-2 rounded-xl text-sm font-semibold hover:bg-amber-50 transition-colors"
+                  >
+                    Close Assignment
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDeleteAssignment}
+                  className="flex-1 text-rose-600 border border-rose-200 py-2 rounded-xl text-sm font-semibold hover:bg-rose-50 transition-colors"
+                >
+                  Delete Assignment
+                </button>
+              </div>
             </form>
           </div>
         </div>,

@@ -12,6 +12,7 @@ interface SubmissionsPageProps {
   onViewDetail: (id: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onStartJukebox: (tracks: PlayableTrack[]) => void;
   userProfile?: { name?: string; email?: string } | null;
 }
 
@@ -22,7 +23,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, userProfile }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,13 +121,27 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           <h2 className="text-2xl font-bold text-slate-800">Song Vault</h2>
           <p className="text-slate-500 text-sm">Review, track versions, and refine your camp songs.</p>
         </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200 self-start md:self-auto"
-        >
-          <i className="fa-solid fa-cloud-arrow-up"></i>
-          Submit New Song
-        </button>
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <button
+            onClick={() => {
+              const tracks = filteredSubmissions
+                .map(s => trackFromSubmission(s))
+                .filter((t): t is PlayableTrack => t !== null);
+              if (tracks.length > 0) onStartJukebox(tracks);
+            }}
+            className="bg-amber-500 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-100"
+          >
+            <i className="fa-solid fa-shuffle"></i>
+            Jukebox
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+          >
+            <i className="fa-solid fa-cloud-arrow-up"></i>
+            Submit New Song
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}

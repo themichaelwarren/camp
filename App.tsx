@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -60,6 +60,9 @@ const App: React.FC = () => {
     return 'modern';
   });
   const previousAudioUrl = useRef<string | null>(null);
+  const [isJukeboxMode, setIsJukeboxMode] = useState(false);
+  const isJukeboxModeRef = useRef(false);
+  const jukeboxPoolRef = useRef<PlayableTrack[]>([]);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -613,9 +616,12 @@ const App: React.FC = () => {
     });
   };
 
+  useEffect(() => { isJukeboxModeRef.current = isJukeboxMode; }, [isJukeboxMode]);
+
   const handlePlayNext = () => {
     if (queue.length === 0) {
       setPlayer(null);
+      setIsJukeboxMode(false);
       return;
     }
     const [next, ...rest] = queue;
@@ -625,6 +631,36 @@ const App: React.FC = () => {
     previousAudioUrl.current = next.src;
     setPlayer(next);
     setQueue(rest);
+
+    // Jukebox: auto-add another random track
+    if (isJukeboxModeRef.current && jukeboxPoolRef.current.length > 0) {
+      const pool = jukeboxPoolRef.current;
+      const candidates = pool.filter(t => t.submissionId !== next.submissionId);
+      const pick = candidates.length > 0 ? candidates : pool;
+      const nextTrack = pick[Math.floor(Math.random() * pick.length)];
+      handleAddToQueue(nextTrack);
+    }
+  };
+
+  const handleStartJukebox = async (tracks: PlayableTrack[]) => {
+    if (tracks.length === 0) return;
+    jukeboxPoolRef.current = tracks;
+    setIsJukeboxMode(true);
+    queue.forEach(t => URL.revokeObjectURL(t.src));
+    setQueue([]);
+    const randomIndex = Math.floor(Math.random() * tracks.length);
+    const firstTrack = tracks[randomIndex];
+    await handlePlayTrack(firstTrack);
+    const remaining = tracks.filter((_, i) => i !== randomIndex);
+    if (remaining.length > 0) {
+      const nextTrack = remaining[Math.floor(Math.random() * remaining.length)];
+      await handleAddToQueue(nextTrack);
+    }
+  };
+
+  const handleStopJukebox = () => {
+    setIsJukeboxMode(false);
+    jukeboxPoolRef.current = [];
   };
 
   const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => {
@@ -716,6 +752,7 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onStartJukebox={handleStartJukebox}
             userProfile={userProfile}
           />
         );
@@ -867,6 +904,8 @@ const App: React.FC = () => {
       onRemoveFromQueue={handleRemoveFromQueue}
       onReorderQueue={handleReorderQueue}
       onNavigateToSong={(id) => navigateTo('song-detail', id)}
+      isJukeboxMode={isJukeboxMode}
+      onStopJukebox={handleStopJukebox}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

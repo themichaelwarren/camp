@@ -30,6 +30,7 @@ export interface Assignment {
   status: 'Open' | 'Closed';
   driveFolderId?: string;
   eventId?: string;
+  createdAt?: string;
   deletedAt?: string;
   deletedBy?: string;
 }
