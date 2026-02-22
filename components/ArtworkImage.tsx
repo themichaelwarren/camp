@@ -28,13 +28,13 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
 
   useEffect(() => {
     let cancelled = false;
+    // Reset immediately when fileId changes so stale artwork doesn't persist
+    const cached = effectiveFileId ? blobUrlCache.get(effectiveFileId) : undefined;
+    setObjectUrl(cached || null);
+    setLoadError(false);
+
     const load = async () => {
-      if (!effectiveFileId || !isVisible) return;
-      const cached = blobUrlCache.get(effectiveFileId);
-      if (cached) {
-        setObjectUrl(cached);
-        return;
-      }
+      if (!effectiveFileId || !isVisible || cached) return;
       try {
         const blob = await googleService.fetchDriveFile(effectiveFileId);
         if (cancelled) return;

@@ -86,9 +86,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       <div className="p-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <span aria-hidden="true" className="text-2xl leading-none">🤘</span>
-            <span className="sr-only">Koi Camp</span>
-            <span>Koi Camp</span>
+            <span aria-hidden="true" className="text-2xl leading-none">⛺️</span>
+            <span className="sr-only">Hatsukoi Camp</span>
+            <span>Hatsukoi Camp</span>
           </h1>
           <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">Toolkit v2.0</p>
         </div>
@@ -270,7 +270,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       )}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-10">
+        <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
           <div className="flex items-center gap-4">
              <button
                className="md:hidden text-indigo-900 text-xl"
@@ -308,11 +308,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           />
         )}
 
-        <div className="p-8 overflow-auto flex-1">
+        <div className="p-5 md:p-6 overflow-auto flex-1">
           {children}
         </div>
 
-        <footer className="border-t border-slate-200 bg-white px-4 md:px-8 py-3 text-[10px] text-slate-400">
+        <footer className="border-t border-slate-200 bg-white px-4 md:px-6 py-2 text-[10px] text-slate-400">
           Build: {import.meta.env.VITE_BUILD_ID || 'dev'}
         </footer>
       </main>

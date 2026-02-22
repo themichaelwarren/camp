@@ -40,8 +40,8 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
   }
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, idx) => (
           <div 
             key={idx} 
@@ -59,7 +59,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -97,9 +97,9 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                <h3 className="font-bold text-slate-800 text-lg">Upcoming Deadlines</h3>
              </div>
              <div className="p-6">
-               {assignments.length > 0 ? (
+               {assignments.filter(a => a.status === 'Open').length > 0 ? (
                   <div className="space-y-4">
-                    {[...assignments].reverse().map(a => (
+                    {[...assignments].filter(a => a.status === 'Open').reverse().map(a => (
                       <div 
                         key={a.id} 
                         className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl bg-slate-50"

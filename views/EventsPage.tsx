@@ -126,7 +126,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
     .sort((a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime());
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Events</h2>

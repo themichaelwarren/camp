@@ -129,7 +129,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   };
   return (
     <>
-      <div className="space-y-8 animate-in fade-in duration-300">
+      <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <button 
@@ -161,8 +161,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8">
-        <div className="space-y-8">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
+        <div className="space-y-6">
           <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-slate-200 overflow-hidden group">
             <ArtworkImage
               fileId={submission.artworkFileId}
@@ -174,22 +174,24 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             {submission.versions[0] && (
               <button
                 onClick={() => loadAudio(submission.versions[0].id)}
-                className="absolute bottom-4 right-4 w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xl hover:bg-black transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                 aria-label="Play song"
               >
-                <i className="fa-solid fa-play text-lg"></i>
+                <div className="w-16 h-16 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
+                  <i className="fa-solid fa-play text-xl ml-1"></i>
+                </div>
               </button>
             )}
           </div>
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-10 font-serif">
-            <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-10">Lyrics</h3>
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 font-serif">
+            <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-8">Lyrics</h3>
             <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">
               {submission.lyrics || "No lyrics provided yet."}
             </div>
           </section>
 
           {submission.details && (
-            <section className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
+            <section className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Production Details</h3>
               <p className="text-slate-700 leading-relaxed italic">
                 {submission.details}
@@ -291,7 +293,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             </div>
           </section>
 
-          <section className="bg-slate-50 p-8 rounded-3xl border border-slate-200 text-slate-800">
+          <section className="bg-slate-50 p-6 rounded-3xl border border-slate-200 text-slate-800">
             <h4 className="font-bold mb-4 flex items-center gap-2">
                <i className="fa-brands fa-google-drive text-green-600"></i>
                Google Drive Export

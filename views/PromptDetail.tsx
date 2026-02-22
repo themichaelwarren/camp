@@ -95,7 +95,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
   return (
     <>
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
@@ -118,9 +118,9 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <section className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Prompt Context</h3>
             <p className="text-lg text-slate-700 leading-relaxed mb-6 italic border-l-4 border-indigo-200 pl-6">
               "{prompt.description}"
@@ -163,8 +163,26 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
           <section>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Songs Inspired by this Prompt</h3>
-              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-bold text-slate-800">Songs Inspired by this Prompt</h3>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+              </div>
+              {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
+                <button
+                  onClick={async () => {
+                    const playable = submissions.map(s => trackFromSubmission(s)).filter((t): t is PlayableTrack => t !== null);
+                    if (playable.length === 0) return;
+                    await onPlayTrack(playable[0]);
+                    for (let i = 1; i < playable.length; i++) {
+                      onAddToQueue(playable[i]);
+                    }
+                  }}
+                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+                >
+                  <i className="fa-solid fa-play"></i>
+                  Play All ({submissions.filter(s => s.versions?.length > 0).length})
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               {submissions.map(s => {

@@ -14,6 +14,13 @@ import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import * as googleService from './services/googleService';
 
+const CAMP_QUOTES = [
+  'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
+  "I've folded my sorrows, makes sense I've been long in that rut",
+  "Bury all the memories with your mother's shovel, do a couple pushups and build up those chest muscles",
+  'Two pieces white bread, horseradish mustard',
+];
+
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -49,8 +56,8 @@ const App: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
   const [visualTheme, setVisualTheme] = useState<'default' | 'notebook' | 'modern'>(() => {
     const stored = window.localStorage.getItem('camp-skin');
-    if (stored === 'notebook' || stored === 'modern') return stored;
-    return 'default';
+    if (stored === 'default' || stored === 'notebook' || stored === 'modern') return stored;
+    return 'modern';
   });
   const previousAudioUrl = useRef<string | null>(null);
   const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>(() => {
@@ -655,35 +662,9 @@ const App: React.FC = () => {
     }
   };
 
+  const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
+
   const renderView = () => {
-    if (!isLoggedIn) {
-      const currentOrigin = window.location.origin;
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 text-center animate-in fade-in duration-1000">
-          <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
-            <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-5xl mb-10 mx-auto shadow-xl shadow-indigo-100 rotate-2 hover:rotate-0 transition-transform duration-500">
-              <span aria-hidden="true">🤘</span>
-              <span className="sr-only">Koi Camp</span>
-            </div>
-            <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Koi Camp Portal</h2>
-            <p className="text-slate-500 text-lg mb-12 leading-relaxed font-medium">
-              Songwriter toolset powered by your own Google Drive. Log in to sync your lyrics, prompts, and audio drafts.
-            </p>
-            
-            <button 
-              onClick={googleService.signIn}
-              className="group relative w-full bg-slate-900 text-white px-10 py-6 rounded-[1.5rem] font-bold text-xl hover:bg-black transition-all flex items-center justify-center gap-5 overflow-hidden active:scale-[0.98]"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-              <i className="fa-brands fa-google text-2xl"></i>
-              Connect with Google
-            </button>
-
-          </div>
-        </div>
-      );
-    }
-
     switch (activeView) {
       case 'dashboard':
         return (
@@ -781,6 +762,7 @@ const App: React.FC = () => {
             onUpdate={handleUpdateAssignment}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onAddSubmission={handleAddSubmission}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
             onAddPrompt={handleAddPrompt}
@@ -845,9 +827,35 @@ const App: React.FC = () => {
     }
   };
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
+        <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
+          <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-5xl mb-10 mx-auto shadow-xl shadow-indigo-100 rotate-2 hover:rotate-0 transition-transform duration-500">
+            <span aria-hidden="true">⛺️</span>
+            <span className="sr-only">Hatsukoi Songwriting Camp</span>
+          </div>
+          <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Hatsukoi Songwriting Camp</h2>
+          <p className="text-slate-500 text-lg mb-12 leading-relaxed font-medium italic">
+            "{heroQuote}"
+          </p>
+
+          <button
+            onClick={googleService.signIn}
+            className="group relative w-full bg-slate-900 text-white px-10 py-6 rounded-[1.5rem] font-bold text-xl hover:bg-black transition-all flex items-center justify-center gap-5 overflow-hidden active:scale-[0.98]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+            <i className="fa-brands fa-google text-2xl"></i>
+            Connect with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Layout 
-      activeView={activeView} 
+    <Layout
+      activeView={activeView}
       onViewChange={(v) => navigateTo(v)}
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}

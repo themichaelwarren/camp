@@ -6,6 +6,7 @@ import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
 import CommentsSection from '../components/CommentsSection';
+import SubmitSongModal from '../components/SubmitSongModal';
 import * as googleService from '../services/googleService';
 
 interface AssignmentDetailProps {
@@ -20,6 +21,7 @@ interface AssignmentDetailProps {
   onAddPrompt: (prompt: Prompt) => Promise<void>;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onAddSubmission: (submission: Submission) => void;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   availableTags: string[];
@@ -30,9 +32,10 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, currentUser, spreadsheetId, availableTags }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, currentUser, spreadsheetId, availableTags }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   // Initialize promptIds from assignment, falling back to single promptId
   const initialPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
@@ -188,7 +191,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
 
   return (
     <>
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
@@ -212,19 +215,28 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setShowEditModal(true)}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
-        >
-          <i className="fa-solid fa-pen"></i>
-          Edit
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200"
+          >
+            <i className="fa-solid fa-cloud-arrow-up"></i>
+            Submit Song
+          </button>
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+          >
+            <i className="fa-solid fa-pen"></i>
+            Edit
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-slate-100">
+            <div className="p-6 border-b border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Instructions</h3>
               <MarkdownPreview content={assignment.instructions} className="text-slate-700" />
             </div>
@@ -284,7 +296,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {submissions.map(s => {
                 const track = trackFromSubmission(s);
                 return (
@@ -343,7 +355,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
         </div>
 
         <div className="space-y-6">
-          <section className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Project Progress</h3>
             <div className="flex flex-col items-center">
                <div className="w-32 h-32 rounded-full border-8 border-slate-50 flex items-center justify-center relative mb-4">
@@ -625,6 +637,16 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </div>
         </div>,
         document.body
+      )}
+      {showSubmitModal && (
+        <SubmitSongModal
+          assignments={[assignment]}
+          defaultAssignmentId={assignment.id}
+          lockAssignment
+          userProfile={currentUser}
+          onAdd={(sub) => { onAddSubmission(sub); setShowSubmitModal(false); }}
+          onClose={() => setShowSubmitModal(false)}
+        />
       )}
     </div>
     </>

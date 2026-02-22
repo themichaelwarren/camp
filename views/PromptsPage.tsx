@@ -104,7 +104,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>

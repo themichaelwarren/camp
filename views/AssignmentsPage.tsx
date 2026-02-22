@@ -122,7 +122,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Assignments</h2>
@@ -285,7 +285,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         </div>
       ) : (
         /* Cards View */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredAssignments.map(a => (
             <div 
               key={a.id} 

@@ -20,7 +20,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button
           onClick={() => onNavigate('campers')}
@@ -53,7 +53,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
         </div>
       </div>
 
-      <section className="bg-white border border-slate-200 rounded-3xl p-8">
+      <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <h3 className="text-lg font-bold text-slate-800">Profile</h3>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div>
@@ -73,7 +73,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
         </div>
       </section>
 
-      <section className="bg-white border border-slate-200 rounded-3xl p-8">
+      <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-slate-800">Prompts Recommended</h3>
           <span className="text-xs font-bold text-slate-400 uppercase">{prompts.length} Total</span>
@@ -95,7 +95,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
         </div>
       </section>
 
-      <section className="bg-white border border-slate-200 rounded-3xl p-8">
+      <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1">
@@ -119,7 +119,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
         </div>
 
         {songsView === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {submissions.map((submission) => {
               const track = trackFromSubmission(submission);
               return (
@@ -140,7 +140,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
-                      <p className="text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</p>
                     </div>
                     {track && (
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -191,7 +191,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                       className="cursor-pointer hover:bg-white transition-colors"
                     >
                       <td className="px-4 py-3 text-sm font-semibold text-slate-700">{submission.title}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.updatedAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">
                           <ArtworkImage
