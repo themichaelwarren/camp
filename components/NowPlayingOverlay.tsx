@@ -6,6 +6,7 @@ interface Track {
   src: string;
   title: string;
   artist: string;
+  camperId?: string;
   submissionId?: string;
   artworkFileId?: string;
   artworkUrl?: string;
@@ -21,6 +22,7 @@ interface NowPlayingOverlayProps {
   onRemoveFromQueue: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
+  onNavigateToCamper?: (camperId: string) => void;
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
 }
@@ -42,6 +44,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onRemoveFromQueue,
   onReorderQueue,
   onNavigateToSong,
+  onNavigateToCamper,
   isJukeboxMode,
   onStopJukebox
 }) => {
@@ -177,7 +180,16 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           ) : (
             <h3 className="text-white font-bold text-xl truncate">{player.title}</h3>
           )}
-          <p className="text-white/50 text-sm font-medium truncate">{player.artist}</p>
+          {player.camperId ? (
+            <button
+              onClick={() => onNavigateToCamper?.(player.camperId!)}
+              className="text-white/50 text-sm font-medium truncate block text-left hover:text-white/70 hover:underline max-w-full"
+            >
+              {player.artist}
+            </button>
+          ) : (
+            <p className="text-white/50 text-sm font-medium truncate">{player.artist}</p>
+          )}
         </div>
 
         {isJukeboxMode && (

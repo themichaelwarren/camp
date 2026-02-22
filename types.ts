@@ -1,8 +1,8 @@
 
 export enum PromptStatus {
-  DRAFT = 'Draft',
+  UNUSED = 'Unused',
   ACTIVE = 'Active',
-  ARCHIVED = 'Archived'
+  CLOSED = 'Closed'
 }
 
 export interface Prompt {
@@ -112,6 +112,7 @@ export interface PlayableTrack {
   versionId: string;
   title: string;
   artist: string;
+  camperId?: string;
   submissionId?: string;
   artworkFileId?: string;
   artworkUrl?: string;

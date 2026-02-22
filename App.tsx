@@ -36,10 +36,28 @@ const App: React.FC = () => {
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [promptsSearch, setPromptsSearch] = useState('');
+  const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
+  const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
+  const [assignmentsViewMode, setAssignmentsViewMode] = useState<'list' | 'cards'>('list');
+  const [assignmentsSearch, setAssignmentsSearch] = useState('');
+  const [assignmentsStatusFilter, setAssignmentsStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
+  const [assignmentsPromptFilter, setAssignmentsPromptFilter] = useState('all');
+  const [assignmentsSortBy, setAssignmentsSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc'>('due-asc');
+  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('list');
+  const [submissionsSearch, setSubmissionsSearch] = useState('');
+  const [submissionsAssignmentFilter, setSubmissionsAssignmentFilter] = useState('all');
+  const [submissionsPromptFilter, setSubmissionsPromptFilter] = useState('all');
+  const [submissionsSortBy, setSubmissionsSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc'>('date-desc');
+  const [campersViewMode, setCampersViewMode] = useState<'list' | 'cards'>('list');
+  const [camperDetailSongsView, setCamperDetailSongsView] = useState<'cards' | 'list'>('list');
+  const [camperDetailSearch, setCamperDetailSearch] = useState('');
+  const [camperDetailSelectedTags, setCamperDetailSelectedTags] = useState<string[]>([]);
   const [player, setPlayer] = useState<{
     src: string;
     title: string;
     artist: string;
+    camperId?: string;
     submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -49,11 +67,12 @@ const App: React.FC = () => {
     src: string;
     title: string;
     artist: string;
+    camperId?: string;
     submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }[]>([]);
-  const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') === '1');
+  const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') !== '0');
   const [visualTheme, setVisualTheme] = useState<'default' | 'notebook' | 'modern'>(() => {
     const stored = window.localStorage.getItem('camp-skin');
     if (stored === 'default' || stored === 'notebook' || stored === 'modern') return stored;
@@ -95,7 +114,7 @@ const App: React.FC = () => {
             handleInitialSync(null);
           });
       });
-      if (window.localStorage.getItem('camp-auth') === '1' && rememberMe) {
+      if (window.localStorage.getItem('camp-auth') === '1') {
         const hint = window.localStorage.getItem('camp-last-email') || undefined;
         googleService.trySilentSignIn(hint);
       }
@@ -536,6 +555,7 @@ const App: React.FC = () => {
     versionId: string;
     title: string;
     artist: string;
+    camperId?: string;
     submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -545,6 +565,7 @@ const App: React.FC = () => {
       src: '',
       title: track.title,
       artist: track.artist,
+      camperId: track.camperId,
       submissionId: track.submissionId,
       artworkFileId: track.artworkFileId,
       artworkUrl: track.artworkUrl
@@ -561,6 +582,7 @@ const App: React.FC = () => {
         src: url,
         title: track.title,
         artist: track.artist,
+        camperId: track.camperId,
         submissionId: track.submissionId,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
@@ -578,6 +600,7 @@ const App: React.FC = () => {
     versionId: string;
     title: string;
     artist: string;
+    camperId?: string;
     submissionId?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -589,6 +612,7 @@ const App: React.FC = () => {
         src: url,
         title: track.title,
         artist: track.artist,
+        camperId: track.camperId,
         submissionId: track.submissionId,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
@@ -719,6 +743,7 @@ const App: React.FC = () => {
         return spreadsheetId ? (
           <PromptsPage
             prompts={prompts.filter((p) => !p.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
             onAdd={handleAddPrompt}
             onUpdate={handleUpdatePrompt}
             onUpvote={handlePromptUpvote}
@@ -726,6 +751,12 @@ const App: React.FC = () => {
             userProfile={userProfile}
             upvotedPromptIds={upvotedPromptIds}
             spreadsheetId={spreadsheetId}
+            searchTerm={promptsSearch}
+            onSearchTermChange={setPromptsSearch}
+            statusFilter={promptsStatusFilter}
+            onStatusFilterChange={setPromptsStatusFilter}
+            sortBy={promptsSortBy}
+            onSortByChange={setPromptsSortBy}
           />
         ) : null;
       case 'assignments':
@@ -740,6 +771,16 @@ const App: React.FC = () => {
             userProfile={userProfile}
             spreadsheetId={spreadsheetId}
             availableTags={availableTags}
+            viewMode={assignmentsViewMode}
+            onViewModeChange={setAssignmentsViewMode}
+            searchTerm={assignmentsSearch}
+            onSearchTermChange={setAssignmentsSearch}
+            statusFilter={assignmentsStatusFilter}
+            onStatusFilterChange={setAssignmentsStatusFilter}
+            promptFilter={assignmentsPromptFilter}
+            onPromptFilterChange={setAssignmentsPromptFilter}
+            sortBy={assignmentsSortBy}
+            onSortByChange={setAssignmentsSortBy}
           />
         ) : null;
       case 'submissions':
@@ -754,6 +795,16 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             onStartJukebox={handleStartJukebox}
             userProfile={userProfile}
+            viewMode={submissionsViewMode}
+            onViewModeChange={setSubmissionsViewMode}
+            searchTerm={submissionsSearch}
+            onSearchTermChange={setSubmissionsSearch}
+            assignmentFilter={submissionsAssignmentFilter}
+            onAssignmentFilterChange={setSubmissionsAssignmentFilter}
+            promptFilter={submissionsPromptFilter}
+            onPromptFilterChange={setSubmissionsPromptFilter}
+            sortBy={submissionsSortBy}
+            onSortByChange={setSubmissionsSortBy}
           />
         );
       case 'events':
@@ -781,6 +832,8 @@ const App: React.FC = () => {
             onUpdate={handleUpdatePrompt}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onUpvote={handlePromptUpvote}
+            upvotedPromptIds={upvotedPromptIds}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
           />
@@ -792,6 +845,7 @@ const App: React.FC = () => {
             assignment={a}
             prompt={prompts.find(pr => pr.id === a.promptId)}
             prompts={prompts.filter((p) => !p.deletedAt)}
+            assignments={assignments.filter((asn) => !asn.deletedAt)}
             submissions={submissions.filter(s => s.assignmentId === a.id && !s.deletedAt)}
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
@@ -835,17 +889,25 @@ const App: React.FC = () => {
           />
         );
       case 'campers':
-        return <CampersPage campers={campers} onNavigate={navigateTo} />;
+        return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} />;
       case 'camper-detail':
         const camper = campers.find((item) => item.id === selectedId || item.email === selectedId);
         return camper ? (
           <CamperDetail
             camper={camper}
             prompts={prompts.filter((prompt) => !prompt.deletedAt && (prompt.createdBy === camper.email || prompt.createdBy === camper.name))}
+            allPrompts={prompts.filter((p) => !p.deletedAt)}
+            assignments={assignments.filter((a) => !a.deletedAt)}
             submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name))}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            songsView={camperDetailSongsView}
+            onSongsViewChange={setCamperDetailSongsView}
+            searchTerm={camperDetailSearch}
+            onSearchTermChange={setCamperDetailSearch}
+            selectedTags={camperDetailSelectedTags}
+            onSelectedTagsChange={setCamperDetailSelectedTags}
           />
         ) : null;
       default:
@@ -904,6 +966,7 @@ const App: React.FC = () => {
       onRemoveFromQueue={handleRemoveFromQueue}
       onReorderQueue={handleReorderQueue}
       onNavigateToSong={(id) => navigateTo('song-detail', id)}
+      onNavigateToCamper={(id) => navigateTo('camper-detail', id)}
       isJukeboxMode={isJukeboxMode}
       onStopJukebox={handleStopJukebox}
       onLogout={() => {

@@ -1,10 +1,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, Assignment, Submission, PlayableTrack, ViewState, PromptStatus } from '../types';
+import { Prompt, Assignment, Submission, PlayableTrack, ViewState } from '../types';
 import TagInput from '../components/TagInput';
+import MarkdownEditor from '../components/MarkdownEditor';
+import MarkdownPreview from '../components/MarkdownPreview';
 import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
+import { getPromptStatus, getPromptStatusStyle } from '../utils';
 
 interface PromptDetailProps {
   prompt: Prompt;
@@ -14,22 +17,23 @@ interface PromptDetailProps {
   onUpdate: (prompt: Prompt) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onUpvote: (prompt: Prompt) => void;
+  upvotedPromptIds: string[];
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, onUpvote, upvotedPromptIds, currentUser, spreadsheetId }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
     description: prompt.description,
-    tags: prompt.tags,
-    status: prompt.status
+    tags: prompt.tags
   });
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 
@@ -39,8 +43,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
       setEditPrompt({
         title: prompt.title,
         description: prompt.description,
-        tags: prompt.tags,
-        status: prompt.status
+        tags: prompt.tags
       });
     }
   }, [prompt, showEditModal]);
@@ -80,8 +83,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
       ...prompt,
       title: editPrompt.title.trim(),
       description: editPrompt.description.trim(),
-      tags: editPrompt.tags,
-      status: editPrompt.status
+      tags: editPrompt.tags
     };
     onUpdate(updatedPrompt);
     setShowEditModal(false);
@@ -122,9 +124,9 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Prompt Context</h3>
-            <p className="text-lg text-slate-700 leading-relaxed mb-6 italic border-l-4 border-indigo-200 pl-6">
-              "{prompt.description}"
-            </p>
+            <div className="text-lg text-slate-700 leading-relaxed mb-6 border-l-4 border-indigo-200 pl-6">
+              <MarkdownPreview content={prompt.description} />
+            </div>
             <div className="flex flex-wrap gap-2">
               {prompt.tags.map(tag => (
                 <span key={tag} className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
@@ -248,17 +250,25 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               </div>
               <div className="py-2 border-b border-slate-50">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Status</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase inline-block ${
-                  prompt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {prompt.status}
-                </span>
+                {(() => {
+                  const cs = getPromptStatus(prompt.id, assignments);
+                  return <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase inline-block ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                })()}
               </div>
               <div className="py-2">
-                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Total Hearts</span>
-                <span className="text-sm text-red-500 font-bold flex items-center gap-1">
-                  <i className="fa-solid fa-heart"></i> {prompt.upvotes}
-                </span>
+                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Hearts</span>
+                <button
+                  onClick={() => onUpvote(prompt)}
+                  disabled={upvotedPromptIds.includes(prompt.id)}
+                  className={`text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
+                    upvotedPromptIds.includes(prompt.id)
+                      ? 'bg-red-50 text-red-400 cursor-default'
+                      : 'bg-red-50 text-red-500 hover:bg-red-100 hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <i className={`fa-${upvotedPromptIds.includes(prompt.id) ? 'solid' : 'regular'} fa-heart`}></i>
+                  {prompt.upvotes}
+                </button>
               </div>
             </div>
           </section>
@@ -276,7 +286,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
       {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-xl text-slate-800">Edit Prompt</h3>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -296,11 +306,12 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24"
+                <MarkdownEditor
                   value={editPrompt.description}
-                  onChange={e => setEditPrompt({ ...editPrompt, description: e.target.value })}
+                  onChange={(description) => setEditPrompt({ ...editPrompt, description })}
+                  placeholder="Describe the challenge..."
+                  required
+                  minHeight="h-24"
                 />
               </div>
               <div>
@@ -312,18 +323,6 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                   onCreateTag={async () => {}} // No-op: tags created on form submit
                   placeholder="Type to add tags..."
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
-                <select
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={editPrompt.status}
-                  onChange={e => setEditPrompt({ ...editPrompt, status: e.target.value as PromptStatus })}
-                >
-                  <option value={PromptStatus.DRAFT}>Draft</option>
-                  <option value={PromptStatus.ACTIVE}>Active</option>
-                  <option value={PromptStatus.ARCHIVED}>Archived</option>
-                </select>
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
                 Save Changes

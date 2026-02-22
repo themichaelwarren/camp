@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Prompt } from '../types';
+import { Prompt, Assignment } from '../types';
+import { getPromptStatus, getPromptStatusStyle } from '../utils';
 
 interface PromptSelectorProps {
   prompts: Prompt[];
+  assignments: Assignment[];
   selectedPromptId: string;
   onChange: (promptId: string) => void;
   placeholder?: string;
@@ -11,6 +13,7 @@ interface PromptSelectorProps {
 
 const PromptSelector: React.FC<PromptSelectorProps> = ({
   prompts,
+  assignments,
   selectedPromptId,
   onChange,
   placeholder = 'Search and select a prompt...',
@@ -151,13 +154,10 @@ const PromptSelector: React.FC<PromptSelectorProps> = ({
                       )}
                     </div>
                   </div>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
-                    prompt.status === 'Active' ? 'bg-green-100 text-green-700' :
-                    prompt.status === 'Draft' ? 'bg-amber-100 text-amber-700' :
-                    'bg-slate-100 text-slate-500'
-                  }`}>
-                    {prompt.status}
-                  </span>
+                  {(() => {
+                    const cs = getPromptStatus(prompt.id, assignments);
+                    return <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                  })()}
                 </div>
               </div>
             ))

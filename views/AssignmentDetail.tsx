@@ -13,6 +13,7 @@ interface AssignmentDetailProps {
   assignment: Assignment;
   prompt?: Prompt;
   prompts: Prompt[];
+  assignments: Assignment[];
   submissions: Submission[];
   events: Event[];
   campersCount: number;
@@ -29,10 +30,10 @@ interface AssignmentDetailProps {
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, currentUser, spreadsheetId, availableTags }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, currentUser, spreadsheetId, availableTags }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -474,6 +475,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
                 <MultiPromptSelector
                   prompts={prompts}
+                  assignments={assignments}
                   selectedPromptIds={editForm.promptIds}
                   onChange={(promptIds) => setEditForm({...editForm, promptIds})}
                   onCreatePrompt={onAddPrompt}

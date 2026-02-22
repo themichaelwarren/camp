@@ -12,18 +12,19 @@ interface LayoutProps {
   isLoggedIn?: boolean;
   isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
-  player?: { src: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string } | null;
-  queue?: { src: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }[];
+  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string } | null;
+  queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
+  onNavigateToCamper?: (camperId: string) => void;
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
   onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, isJukeboxMode, onStopJukebox, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -131,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   fallbackUrl={player.artworkUrl}
                   alt={`${player.title} artwork`}
                   className="w-full h-full object-cover"
-                  containerClassName="w-full h-full"
+                  containerClassName="w-full h-full flex items-center justify-center"
                   fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
                 />
               </div>
@@ -299,6 +300,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onRemoveFromQueue={(i) => onRemoveFromQueue?.(i)}
             onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
             onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); }}
+            onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); }}
             isJukeboxMode={isJukeboxMode}
             onStopJukebox={onStopJukebox}
           />

@@ -1,12 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, PromptStatus } from '../types';
+import { Prompt, Assignment, PromptStatus } from '../types';
 import TagInput from '../components/TagInput';
+import MarkdownEditor from '../components/MarkdownEditor';
+import TagManager from '../components/TagManager';
 import * as googleService from '../services/googleService';
+import { getPromptStatus, getPromptStatusStyle } from '../utils';
 
 interface PromptsPageProps {
   prompts: Prompt[];
+  assignments: Assignment[];
   onAdd: (prompt: Prompt) => void;
   onUpdate: (prompt: Prompt) => void;
   onUpvote: (prompt: Prompt) => void;
@@ -14,14 +18,18 @@ interface PromptsPageProps {
   userProfile?: { name?: string; email?: string } | null;
   upvotedPromptIds: string[];
   spreadsheetId: string;
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  statusFilter: 'all' | PromptStatus;
+  onStatusFilterChange: (value: 'all' | PromptStatus) => void;
+  sortBy: 'newest' | 'oldest' | 'upvotes' | 'title';
+  onSortByChange: (value: 'newest' | 'oldest' | 'upvotes' | 'title') => void;
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showTagManager, setShowTagManager] = useState(false);
   const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: [] as string[] });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | PromptStatus>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   useEffect(() => {
@@ -39,10 +47,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
 
   const handleUpvote = (prompt: Prompt) => {
     onUpvote(prompt);
-  };
-
-  const handleStatusChange = (prompt: Prompt, status: PromptStatus) => {
-    onUpdate({ ...prompt, status });
   };
 
   const handleManualAdd = async (e: React.FormEvent) => {
@@ -69,7 +73,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
       description: newPrompt.description,
       tags: newPrompt.tags,
       upvotes: 0,
-      status: PromptStatus.DRAFT,
+      status: PromptStatus.UNUSED,
       createdAt: new Date().toISOString().split('T')[0],
       createdBy: userProfile?.email || userProfile?.name || 'Admin'
     };
@@ -81,7 +85,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPrompts = prompts
     .filter((prompt) => {
-      if (statusFilter !== 'all' && prompt.status !== statusFilter) return false;
+      if (statusFilter !== 'all' && getPromptStatus(prompt.id, assignments) !== statusFilter) return false;
       if (!normalizedSearch) return true;
       const inTitle = prompt.title.toLowerCase().includes(normalizedSearch);
       const inDescription = prompt.description.toLowerCase().includes(normalizedSearch);
@@ -110,13 +114,22 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
           <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
-        >
-          <i className="fa-solid fa-plus"></i>
-          New Prompt
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowTagManager(true)}
+            className="bg-white text-slate-700 px-5 py-2.5 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2"
+          >
+            <i className="fa-solid fa-tags"></i>
+            Manage Tags
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+          >
+            <i className="fa-solid fa-plus"></i>
+            New Prompt
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
@@ -127,7 +140,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
             className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Search title, description, tags..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchTermChange(e.target.value)}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -136,12 +149,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
             <select
               className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | PromptStatus)}
+              onChange={(e) => onStatusFilterChange(e.target.value as 'all' | PromptStatus)}
             >
               <option value="all">All</option>
-              <option value={PromptStatus.DRAFT}>Draft</option>
+              <option value={PromptStatus.UNUSED}>Unused</option>
               <option value={PromptStatus.ACTIVE}>Active</option>
-              <option value={PromptStatus.ARCHIVED}>Archived</option>
+              <option value={PromptStatus.CLOSED}>Closed</option>
             </select>
           </div>
           <div>
@@ -149,7 +162,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
             <select
               className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'upvotes' | 'title')}
+              onChange={(e) => onSortByChange(e.target.value as 'newest' | 'oldest' | 'upvotes' | 'title')}
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -191,20 +204,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                  <select
-                    value={prompt.status}
-                    onChange={(e) => handleStatusChange(prompt, e.target.value as PromptStatus)}
-                    className={`text-[11px] font-bold px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-200 cursor-pointer ${
-                      prompt.status === PromptStatus.ACTIVE ? 'bg-green-100 text-green-700' :
-                      prompt.status === PromptStatus.DRAFT ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    <option value={PromptStatus.DRAFT}>Draft</option>
-                    <option value={PromptStatus.ACTIVE}>Active</option>
-                    <option value={PromptStatus.ARCHIVED}>Archived</option>
-                  </select>
+                <td className="px-6 py-4">
+                  {(() => {
+                    const cs = getPromptStatus(prompt.id, assignments);
+                    return <span className={`text-[11px] font-bold px-2 py-1 rounded-lg ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                  })()}
                 </td>
                 <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                   <button
@@ -243,21 +247,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <h4 className="font-bold text-slate-800 flex-1">{prompt.title}</h4>
-              <div onClick={e => e.stopPropagation()}>
-                <select
-                  value={prompt.status}
-                  onChange={(e) => handleStatusChange(prompt, e.target.value as PromptStatus)}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-200 cursor-pointer ${
-                    prompt.status === PromptStatus.ACTIVE ? 'bg-green-100 text-green-700' :
-                    prompt.status === PromptStatus.DRAFT ? 'bg-amber-100 text-amber-700' :
-                    'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  <option value={PromptStatus.DRAFT}>Draft</option>
-                  <option value={PromptStatus.ACTIVE}>Active</option>
-                  <option value={PromptStatus.ARCHIVED}>Archived</option>
-                </select>
-              </div>
+              {(() => {
+                const cs = getPromptStatus(prompt.id, assignments);
+                return <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+              })()}
             </div>
             <p className="text-sm text-slate-600 mb-3 line-clamp-2">{prompt.description}</p>
             <div className="flex flex-wrap gap-1 mb-3">
@@ -296,7 +289,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
 
       {showAddModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center rounded-t-3xl overflow-hidden">
               <h3 className="font-bold text-xl text-slate-800">Add New Prompt</h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -317,13 +310,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24"
+                <MarkdownEditor
                   value={newPrompt.description}
-                  onChange={e => setNewPrompt({...newPrompt, description: e.target.value})}
+                  onChange={(description) => setNewPrompt({...newPrompt, description})}
                   placeholder="Describe the challenge..."
-                ></textarea>
+                  required
+                  minHeight="h-24"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags</label>
@@ -344,6 +337,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, onAdd, onUpdate, onU
         document.body
       )}
     </div>
+
+    {showTagManager && (
+      <TagManager
+        spreadsheetId={spreadsheetId}
+        prompts={prompts}
+        onClose={() => setShowTagManager(false)}
+        onTagsChanged={() => loadTags()}
+      />
+    )}
     </>
   );
 };

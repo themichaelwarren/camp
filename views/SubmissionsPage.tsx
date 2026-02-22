@@ -14,22 +14,27 @@ interface SubmissionsPageProps {
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   onStartJukebox: (tracks: PlayableTrack[]) => void;
   userProfile?: { name?: string; email?: string } | null;
+  viewMode: 'cards' | 'list';
+  onViewModeChange: (value: 'cards' | 'list') => void;
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  assignmentFilter: string;
+  onAssignmentFilterChange: (value: string) => void;
+  promptFilter: string;
+  onPromptFilterChange: (value: string) => void;
+  sortBy: SortOption;
+  onSortByChange: (value: SortOption) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange }) => {
   const [showUpload, setShowUpload] = useState(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [assignmentFilter, setAssignmentFilter] = useState('all');
-  const [promptFilter, setPromptFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
   const getSubmissionDate = (sub: Submission): string => {
     return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;
@@ -153,7 +158,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             type="text"
             placeholder="Search by title or camper..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => onSearchTermChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -161,7 +166,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         {/* Assignment filter */}
         <select
           value={assignmentFilter}
-          onChange={e => setAssignmentFilter(e.target.value)}
+          onChange={e => onAssignmentFilterChange(e.target.value)}
           className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="all">All Assignments</option>
@@ -173,7 +178,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         {/* Prompt filter */}
         <select
           value={promptFilter}
-          onChange={e => setPromptFilter(e.target.value)}
+          onChange={e => onPromptFilterChange(e.target.value)}
           className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="all">All Prompts</option>
@@ -185,7 +190,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         {/* Sort */}
         <select
           value={sortBy}
-          onChange={e => setSortBy(e.target.value as SortOption)}
+          onChange={e => onSortByChange(e.target.value as SortOption)}
           className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="date-desc">Newest First</option>
@@ -201,7 +206,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         {/* View toggle */}
         <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-full p-1">
           <button
-            onClick={() => setViewMode('cards')}
+            onClick={() => onViewModeChange('cards')}
             className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
               viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
             }`}
@@ -209,7 +214,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             Cards
           </button>
           <button
-            onClick={() => setViewMode('list')}
+            onClick={() => onViewModeChange('list')}
             className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
               viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
             }`}
@@ -249,7 +254,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           <h3 className="font-bold text-slate-800 text-xl">No songs match your filters</h3>
           <p className="text-slate-500 mt-2 mb-6">Try adjusting your search or filter criteria.</p>
           <button
-            onClick={() => { setSearchTerm(''); setAssignmentFilter('all'); setPromptFilter('all'); }}
+            onClick={() => { onSearchTermChange(''); onAssignmentFilterChange('all'); onPromptFilterChange('all'); }}
             className="text-indigo-600 font-bold hover:underline"
           >
             Clear all filters

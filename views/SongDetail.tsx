@@ -49,6 +49,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         versionId,
         title: submission.title,
         artist: submission.camperName,
+        camperId: submission.camperId,
         submissionId: submission.id,
         artworkFileId: submission.artworkFileId,
         artworkUrl: submission.artworkUrl
@@ -203,37 +204,37 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         <div className="space-y-6">
           <div className="space-y-4">
             {assignment && (
-              <button 
+              <button
                 onClick={() => onNavigate('assignment-detail', assignment.id)}
-                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
+                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between gap-3 group transition-all"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 flex-shrink-0">
                     <i className="fa-solid fa-tasks"></i>
                   </div>
-                  <div className="text-left">
+                  <div className="text-left min-w-0">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Assignment</p>
                     <p className="text-xs font-bold text-slate-800 truncate">{assignment.title}</p>
                   </div>
                 </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
+                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
               </button>
             )}
             {prompt && (
-              <button 
+              <button
                 onClick={() => onNavigate('prompt-detail', prompt.id)}
-                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between group transition-all"
+                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between gap-3 group transition-all"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500 flex-shrink-0">
                     <i className="fa-solid fa-lightbulb"></i>
                   </div>
-                  <div className="text-left">
+                  <div className="text-left min-w-0">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Prompt</p>
                     <p className="text-xs font-bold text-slate-800 truncate">{prompt.title}</p>
                   </div>
                 </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500"></i>
+                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
               </button>
             )}
           </div>

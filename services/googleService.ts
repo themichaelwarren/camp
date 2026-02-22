@@ -370,7 +370,7 @@ export const fetchAllData = async (spreadsheetId: string) => {
     description: row[2] || '',
     tags: (row[3] || '').split(',').filter((t: string) => t),
     upvotes: parseInt(row[4]) || 0,
-    status: (row[5] as PromptStatus) || PromptStatus.DRAFT,
+    status: (row[5] as PromptStatus) || PromptStatus.UNUSED,
     createdAt: row[6] || new Date().toISOString(),
     createdBy: row[7] || 'Admin',
     deletedAt: row[8] || '',
@@ -853,6 +853,39 @@ export const createTag = async (spreadsheetId: string, tagName: string): Promise
   ]];
   await appendSheetRow(spreadsheetId, 'Tags!A1', row);
   return normalized;
+};
+
+export const deleteTag = async (spreadsheetId: string, tagName: string): Promise<void> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Tags!A2:C1000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[1] === tagName);
+  if (rowIndex === -1) throw new Error('Tag not found');
+
+  // Get the Tags sheet numeric ID
+  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
+  const metadata = await callGoogleApi(metadataUrl);
+  const tagsSheet = metadata.sheets.find((s: any) => s.properties.title === 'Tags');
+  const sheetId = tagsSheet.properties.sheetId;
+
+  // Delete the row (rowIndex is 0-based from row 2, so actual sheet row is rowIndex + 1)
+  const sheetRow = rowIndex + 1; // +1 for the header row
+  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  await callGoogleApi(batchUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRow,
+            endIndex: sheetRow + 1
+          }
+        }
+      }]
+    })
+  });
 };
 
 // Calendar API functions

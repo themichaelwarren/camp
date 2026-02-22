@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Prompt, PromptStatus } from '../types';
+import { Prompt, Assignment, PromptStatus } from '../types';
 import TagInput from './TagInput';
+import { getPromptStatus, getPromptStatusStyle } from '../utils';
 
 interface MultiPromptSelectorProps {
   prompts: Prompt[];
+  assignments: Assignment[];
   selectedPromptIds: string[];
   onChange: (promptIds: string[]) => void;
   onCreatePrompt: (prompt: Prompt) => Promise<void>;
@@ -16,6 +18,7 @@ interface MultiPromptSelectorProps {
 
 const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
   prompts,
+  assignments,
   selectedPromptIds,
   onChange,
   onCreatePrompt,
@@ -105,8 +108,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
     }
   };
 
-  const handleCreatePrompt = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreatePrompt = async () => {
     if (!newPrompt.title.trim()) return;
 
     setIsCreating(true);
@@ -117,7 +119,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
         description: newPrompt.description.trim(),
         tags: newPrompt.tags,
         upvotes: 0,
-        status: PromptStatus.DRAFT,
+        status: PromptStatus.UNUSED,
         createdAt: new Date().toISOString().split('T')[0],
         createdBy: userEmail || 'Admin'
       };
@@ -206,13 +208,10 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                           )}
                         </div>
                       </div>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
-                        prompt.status === 'Active' ? 'bg-green-100 text-green-700' :
-                        prompt.status === 'Draft' ? 'bg-amber-100 text-amber-700' :
-                        'bg-slate-100 text-slate-500'
-                      }`}>
-                        {prompt.status}
-                      </span>
+                      {(() => {
+                        const cs = getPromptStatus(prompt.id, assignments);
+                        return <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                      })()}
                     </div>
                   </div>
                 ))
@@ -243,7 +242,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
               </div>
             </>
           ) : (
-            <form onSubmit={handleCreatePrompt} className="p-4 space-y-3">
+            <div className="p-4 space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500 uppercase">New Prompt</span>
                 <button
@@ -264,9 +263,9 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                   placeholder="Prompt title *"
                   value={newPrompt.title}
                   onChange={e => setNewPrompt(prev => ({ ...prev, title: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreatePrompt(); } }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   autoFocus
-                  required
                 />
               </div>
 
@@ -302,7 +301,8 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleCreatePrompt}
                   disabled={!newPrompt.title.trim() || isCreating}
                   className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
@@ -319,7 +319,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           )}
         </div>
       )}

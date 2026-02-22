@@ -6,6 +6,8 @@ import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 
+type AssignmentsSortBy = 'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc';
+
 interface AssignmentsPageProps {
   assignments: Assignment[];
   prompts: Prompt[];
@@ -16,16 +18,21 @@ interface AssignmentsPageProps {
   userProfile?: { name?: string; email?: string } | null;
   spreadsheetId: string | null;
   availableTags: string[];
+  viewMode: 'list' | 'cards';
+  onViewModeChange: (value: 'list' | 'cards') => void;
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  statusFilter: 'all' | 'Open' | 'Closed';
+  onStatusFilterChange: (value: 'all' | 'Open' | 'Closed') => void;
+  promptFilter: string;
+  onPromptFilterChange: (value: string) => void;
+  sortBy: AssignmentsSortBy;
+  onSortByChange: (value: AssignmentsSortBy) => void;
 }
 
-const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags }) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>('cards');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
-  const [promptFilter, setPromptFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc'>('due-asc');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +139,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 w-fit">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => onViewModeChange('list')}
               className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
                 viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
               }`}
@@ -140,7 +147,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               List
             </button>
             <button
-              onClick={() => setViewMode('cards')}
+              onClick={() => onViewModeChange('cards')}
               className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
                 viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
               }`}
@@ -167,7 +174,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Search assignments, prompts, instructions..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchTermChange(e.target.value)}
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -176,7 +183,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <select
               className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Open' | 'Closed')}
+              onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'Open' | 'Closed')}
             >
               <option value="all">All Statuses</option>
               <option value="Open">Open</option>
@@ -188,7 +195,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <select
               className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={promptFilter}
-              onChange={(e) => setPromptFilter(e.target.value)}
+              onChange={(e) => onPromptFilterChange(e.target.value)}
             >
               <option value="all">All Prompts</option>
               {prompts.map(p => (
@@ -201,7 +208,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <select
               className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc')}
+              onChange={(e) => onSortByChange(e.target.value as AssignmentsSortBy)}
             >
               <option value="due-asc">Due Date: Upcoming First</option>
               <option value="due-desc">Due Date: Oldest First</option>
@@ -364,6 +371,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
                 <MultiPromptSelector
                   prompts={prompts}
+                  assignments={assignments}
                   selectedPromptIds={form.promptIds}
                   onChange={(promptIds) => setForm({...form, promptIds})}
                   onCreatePrompt={onAddPrompt}

@@ -1,23 +1,63 @@
-import React, { useState } from 'react';
-import { CamperProfile, Prompt, Submission, PlayableTrack, ViewState } from '../types';
+import React, { useMemo } from 'react';
+import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
   camper: CamperProfile;
   prompts: Prompt[];
+  allPrompts: Prompt[];
+  assignments: Assignment[];
   submissions: Submission[];
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  songsView: 'cards' | 'list';
+  onSongsViewChange: (value: 'cards' | 'list') => void;
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  selectedTags: string[];
+  onSelectedTagsChange: (value: string[] | ((prev: string[]) => string[])) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submissions, onNavigate, onPlayTrack, onAddToQueue }) => {
-  const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
+const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPrompts: Prompt[]): string[] => {
+  const assignment = assignments.find(a => a.id === sub.assignmentId);
+  if (!assignment) return [];
+  const promptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
+  const tags = new Set<string>();
+  for (const pid of promptIds) {
+    const prompt = allPrompts.find(p => p.id === pid);
+    if (prompt) prompt.tags.forEach(t => tags.add(t));
+  }
+  return Array.from(tags);
+};
+
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange }) => {
+
+  const allSubmissionTags = useMemo(() => {
+    const tags = new Set<string>();
+    submissions.forEach(sub => {
+      getTagsForSubmission(sub, assignments, allPrompts).forEach(t => tags.add(t));
+    });
+    return Array.from(tags).sort();
+  }, [submissions, assignments, allPrompts]);
+
+  const filteredSubmissions = useMemo(() => {
+    return submissions.filter(sub => {
+      if (searchTerm.trim()) {
+        if (!sub.title.toLowerCase().includes(searchTerm.trim().toLowerCase())) return false;
+      }
+      if (selectedTags.length > 0) {
+        const subTags = getTagsForSubmission(sub, assignments, allPrompts);
+        if (!selectedTags.every(t => subTags.includes(t))) return false;
+      }
+      return true;
+    });
+  }, [submissions, assignments, allPrompts, searchTerm, selectedTags]);
 
   return (
     <div className="space-y-6">
@@ -97,10 +137,15 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+              {filteredSubmissions.length !== submissions.length ? `${filteredSubmissions.length} / ${submissions.length}` : submissions.length}
+            </span>
+          </div>
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1">
             <button
-              onClick={() => setSongsView('cards')}
+              onClick={() => onSongsViewChange('cards')}
               className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
                 songsView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
               }`}
@@ -108,7 +153,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
               Cards
             </button>
             <button
-              onClick={() => setSongsView('list')}
+              onClick={() => onSongsViewChange('list')}
               className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
                 songsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
               }`}
@@ -118,9 +163,41 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="relative flex-1 max-w-sm">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input
+              type="text"
+              placeholder="Search songs..."
+              value={searchTerm}
+              onChange={e => onSearchTermChange(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          {allSubmissionTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {allSubmissionTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => onSelectedTagsChange(prev =>
+                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                  )}
+                  className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${
+                    selectedTags.includes(tag)
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {songsView === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {submissions.map((submission) => {
+            {filteredSubmissions.map((submission) => {
               const track = trackFromSubmission(submission);
               return (
                 <div
@@ -164,9 +241,14 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                 </div>
               );
             })}
-            {submissions.length === 0 && (
+            {filteredSubmissions.length === 0 && (
               <div className="col-span-full text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl p-10">
-                No songs uploaded yet.
+                {submissions.length > 0 ? (
+                  <>
+                    <p>No songs match your filters.</p>
+                    <button onClick={() => { onSearchTermChange(''); onSelectedTagsChange([]); }} className="text-indigo-600 font-bold hover:underline mt-2">Clear filters</button>
+                  </>
+                ) : 'No songs uploaded yet.'}
               </div>
             )}
           </div>
@@ -182,7 +264,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {submissions.map((submission) => {
+                {filteredSubmissions.map((submission) => {
                   const track = trackFromSubmission(submission);
                   return (
                     <tr
@@ -226,10 +308,15 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, submission
                     </tr>
                   );
                 })}
-                {submissions.length === 0 && (
+                {filteredSubmissions.length === 0 && (
                   <tr>
                     <td className="px-4 py-6 text-center text-slate-400" colSpan={4}>
-                      No songs uploaded yet.
+                      {submissions.length > 0 ? (
+                        <>
+                          <p>No songs match your filters.</p>
+                          <button onClick={() => { onSearchTermChange(''); onSelectedTagsChange([]); }} className="text-indigo-600 font-bold hover:underline mt-2">Clear filters</button>
+                        </>
+                      ) : 'No songs uploaded yet.'}
                     </td>
                   </tr>
                 )}

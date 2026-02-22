@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState } from '../types';
+import { getPromptStatus, getPromptStatusStyle } from '../utils';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -15,12 +16,12 @@ interface DashboardProps {
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack }) => {
   const stats = [
-    { label: 'Active Prompts', value: prompts.filter(p => p.status === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
+    { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
     { label: 'Total Songs', value: submissions.length, icon: 'fa-music', color: 'bg-green-100 text-green-600', view: 'submissions' },
     { label: 'Campers Active', value: campersCount, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'campers' },
@@ -81,11 +82,10 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                     <span className="text-xs font-bold text-indigo-500 flex items-center gap-1">
                       <i className="fa-solid fa-heart"></i> {prompt.upvotes}
                     </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${
-                      prompt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {prompt.status}
-                    </span>
+                    {(() => {
+                      const cs = getPromptStatus(prompt.id, assignments);
+                      return <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                    })()}
                   </div>
                 </div>
               ))}

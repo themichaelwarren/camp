@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { CamperProfile, ViewState } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CampersPageProps {
   campers: CamperProfile[];
   onNavigate: (view: ViewState, id?: string) => void;
+  viewMode: 'list' | 'cards';
+  onViewModeChange: (value: 'list' | 'cards') => void;
 }
 
-const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate }) => {
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode, onViewModeChange }) => {
 
   return (
     <div className="space-y-6">
@@ -19,7 +20,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate }) => {
         </div>
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 w-fit">
           <button
-            onClick={() => setViewMode('list')}
+            onClick={() => onViewModeChange('list')}
             className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
               viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
             }`}
@@ -27,7 +28,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate }) => {
             List
           </button>
           <button
-            onClick={() => setViewMode('cards')}
+            onClick={() => onViewModeChange('cards')}
             className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
               viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
             }`}
