@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState } from '../types';
+import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -8,9 +8,11 @@ interface InboxPageProps {
   prompts: Prompt[];
   assignments: Assignment[];
   submissions: Submission[];
+  campers: CamperProfile[];
   spreadsheetId: string | null;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  bocas?: Boca[];
 }
 
 type ActivityItem =
@@ -18,7 +20,8 @@ type ActivityItem =
   | { type: 'comment'; date: string; comment: CommentType }
   | { type: 'reaction'; date: string; comment: CommentType; emoji: string; users: string[] }
   | { type: 'prompt'; date: string; prompt: Prompt }
-  | { type: 'assignment'; date: string; assignment: Assignment };
+  | { type: 'assignment'; date: string; assignment: Assignment }
+  | { type: 'boca'; date: string; boca: Boca };
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
@@ -47,10 +50,41 @@ const getTimeRangeEnd = (range: TimeRange): Date | null => {
   return null;
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, spreadsheetId, onNavigate, onPlayTrack }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, bocas = [] }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments'>('all');
+  const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas'>('all');
+
+  const findCamper = (emailOrName: string): CamperProfile | undefined => {
+    return campers.find(c => c.email === emailOrName || c.name === emailOrName);
+  };
+
+  const CamperAvatar: React.FC<{ emailOrName: string; size?: string }> = ({ emailOrName, size = 'w-10 h-10' }) => {
+    const camper = findCamper(emailOrName);
+    const photoUrl = camper?.pictureOverrideUrl || camper?.picture;
+    const initial = (camper?.name || emailOrName)?.[0]?.toUpperCase() || '?';
+    if (photoUrl) {
+      return (
+        <ArtworkImage
+          fileId={undefined}
+          fallbackUrl={photoUrl}
+          alt={camper?.name || emailOrName}
+          className={`${size} rounded-xl object-cover`}
+          containerClassName={`${size} rounded-xl flex-shrink-0 overflow-hidden`}
+          fallback={
+            <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold`}>
+              {initial}
+            </div>
+          }
+        />
+      );
+    }
+    return (
+      <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm font-bold`}>
+        {initial}
+      </div>
+    );
+  };
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
 
   useEffect(() => {
@@ -120,6 +154,13 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
       });
     }
 
+    // BOCAs
+    if (filter === 'all' || filter === 'bocas') {
+      bocas.forEach(b => {
+        all.push({ type: 'boca', date: b.awardedAt, boca: b });
+      });
+    }
+
     all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Apply time range filter
@@ -135,7 +176,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     }
 
     return all;
-  }, [submissions, comments, prompts, assignments, filter, timeRange]);
+  }, [submissions, comments, prompts, assignments, bocas, filter, timeRange]);
 
   const filters = [
     { key: 'all', label: 'All', icon: 'fa-stream' },
@@ -143,6 +184,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     { key: 'comments', label: 'Comments', icon: 'fa-comment' },
     { key: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
     { key: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
+    { key: 'bocas', label: 'BOCAs', icon: 'fa-star' },
   ] as const;
 
   const formatRelativeTime = (dateStr: string) => {
@@ -180,12 +222,12 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
           {filters.map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                 filter === f.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -194,7 +236,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
           {([
             { key: 'today', label: 'Today' },
             { key: 'yesterday', label: 'Yesterday' },
@@ -205,7 +247,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
             <button
               key={t.key}
               onClick={() => setTimeRange(t.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
                 timeRange === t.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -222,22 +264,14 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
             const version = sub.versions[item.versionIndex];
             const track = trackFromSubmission(sub);
             const isFirstVersion = item.versionIndex === sub.versions.length - 1;
+            const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
             return (
               <div
                 key={`sv-${sub.id}-${item.versionIndex}`}
                 onClick={() => onNavigate('song-detail', sub.id)}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
-                  <ArtworkImage
-                    fileId={sub.artworkFileId}
-                    fallbackUrl={sub.artworkUrl}
-                    alt={sub.title}
-                    className="w-full h-full object-cover"
-                    containerClassName="w-full h-full flex items-center justify-center"
-                    fallback={<i className="fa-solid fa-music text-green-500 text-sm"></i>}
-                  />
-                </div>
+                <CamperAvatar emailOrName={sub.camperId || sub.camperName} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{sub.camperName}</span>
@@ -245,6 +279,12 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                       ? <> uploaded <span className="font-semibold text-indigo-600">"{sub.title}"</span></>
                       : <> updated <span className="font-semibold text-indigo-600">"{sub.title}"</span> <span className="text-slate-400">(v{sub.versions.length - item.versionIndex})</span></>
                     }
+                    {bocaCount > 0 && (
+                      <span className="ml-1.5 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle">
+                        <i className="fa-solid fa-star text-[8px]"></i>
+                        {bocaCount}
+                      </span>
+                    )}
                   </p>
                   {version.notes && <p className="text-xs text-slate-400 truncate mt-0.5">{version.notes}</p>}
                 </div>
@@ -274,9 +314,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate(entity.view, entity.id)}
                 className="flex items-start gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-comment text-sm"></i>
-                </div>
+                <CamperAvatar emailOrName={c.authorEmail || c.author} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{c.author}</span>
@@ -306,9 +344,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate('prompt-detail', p.id)}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-lightbulb text-sm"></i>
-                </div>
+                <CamperAvatar emailOrName={p.createdBy} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     New prompt: <span className="font-semibold text-indigo-600">"{p.title}"</span>
@@ -343,6 +379,36 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                   <p className="text-xs text-slate-400 mt-0.5">Due {a.dueDate} &middot; {a.status}</p>
                 </div>
                 <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap flex-shrink-0">{formatRelativeTime(item.date)}</span>
+              </div>
+            );
+          }
+
+          if (item.type === 'boca') {
+            const b = item.boca;
+            const sub = submissions.find(s => s.id === b.submissionId);
+            const giverCamper = findCamper(b.fromEmail);
+            const giverName = giverCamper?.name || b.fromEmail;
+            return (
+              <div
+                key={`boca-${b.id}`}
+                onClick={() => sub ? onNavigate('song-detail', sub.id) : undefined}
+                className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-amber-200 cursor-pointer transition-all"
+              >
+                <CamperAvatar emailOrName={b.fromEmail} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-bold text-slate-800">{giverName}</span> gave a BOCA to{' '}
+                    <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
+                  </p>
+                  {sub && <p className="text-xs text-slate-400 mt-0.5">by {sub.camperName}</p>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                    <i className="fa-solid fa-star text-[8px]"></i>
+                    BOCA
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>
+                </div>
               </div>
             );
           }

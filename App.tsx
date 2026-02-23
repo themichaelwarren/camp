@@ -790,6 +790,7 @@ const App: React.FC = () => {
             isSyncing={isSyncing}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            bocas={bocas}
           />
         );
       case 'inbox':
@@ -798,9 +799,11 @@ const App: React.FC = () => {
             prompts={prompts.filter(p => !p.deletedAt)}
             assignments={assignments.filter(a => !a.deletedAt)}
             submissions={submissions.filter(s => !s.deletedAt)}
+            campers={campers}
             spreadsheetId={spreadsheetId}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            bocas={bocas}
           />
         );
       case 'prompts':
@@ -869,6 +872,7 @@ const App: React.FC = () => {
             onPromptFilterChange={setSubmissionsPromptFilter}
             sortBy={submissionsSortBy}
             onSortByChange={setSubmissionsSortBy}
+            bocas={bocas}
           />
         );
       case 'events':
@@ -900,6 +904,7 @@ const App: React.FC = () => {
             upvotedPromptIds={upvotedPromptIds}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
+            bocas={bocas}
           />
         ) : null;
       case 'assignment-detail':
@@ -923,6 +928,7 @@ const App: React.FC = () => {
             spreadsheetId={spreadsheetId}
             onAddPrompt={handleAddPrompt}
             availableTags={availableTags}
+            bocas={bocas}
           />
         ) : null;
       case 'song-detail':
@@ -987,6 +993,7 @@ const App: React.FC = () => {
             onSearchTermChange={setCamperDetailSearch}
             selectedTags={camperDetailSelectedTags}
             onSelectedTagsChange={setCamperDetailSelectedTags}
+            bocas={bocas}
           />
         ) : null;
       default:
@@ -1000,6 +1007,7 @@ const App: React.FC = () => {
             isSyncing={isSyncing}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            bocas={bocas}
           />
         );
     }

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState } from '../types';
+import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -17,6 +17,7 @@ interface CamperDetailProps {
   onSearchTermChange: (value: string) => void;
   selectedTags: string[];
   onSelectedTagsChange: (value: string[] | ((prev: string[]) => string[])) => void;
+  bocas?: Boca[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -36,7 +37,7 @@ const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPro
   return Array.from(tags);
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [] }) => {
 
   const allSubmissionTags = useMemo(() => {
     const tags = new Set<string>();
@@ -201,13 +202,14 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredSubmissions.map((submission) => {
               const track = trackFromSubmission(submission);
+              const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
               return (
                 <div
                   key={submission.id}
                   onClick={() => onNavigate('song-detail', submission.id)}
                   className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer"
                 >
-                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4">
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4 relative">
                     <ArtworkImage
                       fileId={submission.artworkFileId}
                       fallbackUrl={submission.artworkUrl}
@@ -215,6 +217,12 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                       className="w-full h-full object-cover"
                       fallback={<i className="fa-solid fa-compact-disc"></i>}
                     />
+                    {bocaCount > 0 && (
+                      <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 shadow-md z-10">
+                        <i className="fa-solid fa-star text-[8px]"></i>
+                        {bocaCount} BOCA{bocaCount !== 1 ? 's' : ''}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -268,13 +276,24 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
               <tbody className="divide-y divide-slate-200">
                 {filteredSubmissions.map((submission) => {
                   const track = trackFromSubmission(submission);
+                  const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
                   return (
                     <tr
                       key={submission.id}
                       onClick={() => onNavigate('song-detail', submission.id)}
                       className="cursor-pointer hover:bg-white transition-colors"
                     >
-                      <td className="px-4 py-3 text-sm font-semibold text-slate-700">{submission.title}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700">{submission.title}</span>
+                          {bocaCount > 0 && (
+                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                              <i className="fa-solid fa-star text-[8px]"></i>
+                              {bocaCount}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, Assignment, Submission, PlayableTrack, ViewState } from '../types';
+import { Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
 import TagInput from '../components/TagInput';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
@@ -21,6 +21,7 @@ interface PromptDetailProps {
   upvotedPromptIds: string[];
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
+  bocas?: Boca[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -28,7 +29,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, onUpvote, upvotedPromptIds, currentUser, spreadsheetId }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -189,6 +190,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
             <div className="space-y-4">
               {submissions.map(s => {
                 const track = trackFromSubmission(s);
+                const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
                 return (
                   <div
                     key={s.id}
@@ -199,7 +201,15 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                       <i className="fa-solid fa-music"></i>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-slate-800">{s.title}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-slate-800">{s.title}</h4>
+                        {bocaCount > 0 && (
+                          <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                            <i className="fa-solid fa-star text-[8px]"></i>
+                            {bocaCount}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500">by {s.camperName}</p>
                     </div>
                     {track && (

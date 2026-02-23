@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Submission, Assignment, Prompt, PlayableTrack } from '../types';
+import { Submission, Assignment, Prompt, PlayableTrack, Boca } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
 
@@ -24,6 +24,7 @@ interface SubmissionsPageProps {
   onPromptFilterChange: (value: string) => void;
   sortBy: SortOption;
   onSortByChange: (value: SortOption) => void;
+  bocas: Boca[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -33,7 +34,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, bocas }) => {
   const [showUpload, setShowUpload] = useState(false);
 
   const getSubmissionDate = (sub: Submission): string => {
@@ -268,6 +269,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           {filteredSubmissions.map(sub => {
             const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
             const track = trackFromSubmission(sub);
+            const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
             return (
               <div
                 key={sub.id}
@@ -282,6 +284,12 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                     className="w-full h-full object-contain bg-slate-100"
                     fallback={<i className="fa-solid fa-compact-disc text-4xl text-indigo-400"></i>}
                   />
+                  {bocaCount > 0 && (
+                    <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 shadow-md z-10">
+                      <i className="fa-solid fa-star text-[8px]"></i>
+                      {bocaCount} BOCA{bocaCount !== 1 ? 's' : ''}
+                    </div>
+                  )}
                   {track && (
                     <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                       <button
@@ -337,6 +345,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
                 const promptTitle = getPromptForSubmission(sub)?.title || '—';
                 const track = trackFromSubmission(sub);
+                const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                 return (
                   <tr
                     key={sub.id}
@@ -355,9 +364,17 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                             fallback={<i className="fa-solid fa-compact-disc text-indigo-400 text-sm"></i>}
                           />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-                          <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+                        <div className="min-w-0 flex items-center gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
+                            <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+                          </div>
+                          {bocaCount > 0 && (
+                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                              <i className="fa-solid fa-star text-[8px]"></i>
+                              {bocaCount}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>

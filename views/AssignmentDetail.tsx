@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event } from '../types';
+import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca } from '../types';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -27,6 +27,7 @@ interface AssignmentDetailProps {
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   availableTags: string[];
+  bocas?: Boca[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -34,7 +35,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -302,6 +303,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {submissions.map(s => {
                 const track = trackFromSubmission(s);
+                const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
                 return (
                   <div
                     key={s.id}
@@ -313,7 +315,15 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                         <i className="fa-solid fa-music"></i>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{s.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{s.title}</h4>
+                          {bocaCount > 0 && (
+                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                              <i className="fa-solid fa-star text-[8px]"></i>
+                              {bocaCount}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
                       </div>
                       {track && (
