@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -13,6 +13,7 @@ import SettingsPage from './views/SettingsPage';
 import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import InboxPage from './views/InboxPage';
+import BOCAsPage from './views/BOCAsPage';
 import * as googleService from './services/googleService';
 
 const CAMP_QUOTES = [
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [bocas, setBocas] = useState<Boca[]>([]);
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
@@ -261,6 +263,8 @@ const App: React.FC = () => {
       } else {
         setUpvotedPromptIds([]);
       }
+      const bocasData = await googleService.fetchBocas(sId);
+      setBocas(bocasData);
     } catch (e) {
       console.error('Initial sync failed', e);
     } finally {
@@ -319,9 +323,21 @@ const App: React.FC = () => {
         const upvoted = await googleService.fetchUserUpvotes(spreadsheetId, userProfile.email);
         setUpvotedPromptIds(upvoted);
       }
+
+      const bocasData = await googleService.fetchBocas(spreadsheetId);
+      setBocas(bocasData);
     } catch (e) {
       console.error('Background sync failed', e);
     }
+  };
+
+  const handleGiveBoca = async (submissionId: string) => {
+    if (!userProfile?.email || !spreadsheetId) return;
+    const boca = await googleService.createBoca(spreadsheetId, {
+      fromEmail: userProfile.email,
+      submissionId
+    });
+    setBocas(prev => [...prev, boca]);
   };
 
   const navigateTo = (view: ViewState, id: string | null = null, { replace = false } = {}) => {
@@ -922,8 +938,22 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             currentUser={{ name: userProfile.name || 'Anonymous', email: userProfile.email || '' }}
             spreadsheetId={spreadsheetId}
+            bocas={bocas}
+            currentUserEmail={userProfile.email || ''}
+            onGiveBoca={handleGiveBoca}
           />
         ) : null;
+      case 'bocas':
+        return (
+          <BOCAsPage
+            bocas={bocas}
+            submissions={submissions.filter(sub => !sub.deletedAt)}
+            currentUserEmail={userProfile?.email || ''}
+            onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
+            onGiveBoca={handleGiveBoca}
+          />
+        );
       case 'settings':
         return (
           <SettingsPage

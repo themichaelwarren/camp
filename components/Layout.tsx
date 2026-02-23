@@ -52,6 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     { id: 'submissions', label: 'Songs', icon: 'fa-music' },
     { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
     { id: 'campers', label: 'Campers', icon: 'fa-users' },
+    { id: 'bocas', label: 'BOCAs', icon: 'fa-star' },
   ];
 
   const handleNavigate = (view: ViewState) => {
@@ -366,7 +367,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </button>
              <h2 className="text-lg font-semibold text-slate-800 capitalize">
                {(() => {
-                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', settings: 'Settings' };
+                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', settings: 'Settings' };
                  return labels[activeView] || activeView.split('-').join(' ');
                })()}
              </h2>

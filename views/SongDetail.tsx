@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Submission, Assignment, Prompt, ViewState } from '../types';
+import { Submission, Assignment, Prompt, ViewState, Boca } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -15,9 +15,12 @@ interface SongDetailProps {
   onAddToQueue?: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
+  bocas?: Boca[];
+  currentUserEmail?: string;
+  onGiveBoca?: (submissionId: string) => Promise<void>;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
   const [queueLoadingVersionId, setQueueLoadingVersionId] = useState<string | null>(null);
@@ -29,6 +32,16 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   });
   const [newArtwork, setNewArtwork] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGivingBoca, setIsGivingBoca] = useState(false);
+
+  const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
+  const isOwnSong = currentUserEmail === submission.camperId;
+  const alreadyBocad = bocas.some(b => b.submissionId === submission.id && b.fromEmail === currentUserEmail);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const monthlyUsed = bocas.filter(b => b.fromEmail === currentUserEmail && new Date(b.awardedAt) >= monthStart && new Date(b.awardedAt) < monthEnd).length;
+  const poolExhausted = monthlyUsed >= 3;
 
   React.useEffect(() => {
     // Only sync form state when modal is closed to avoid overwriting user's edits
@@ -172,6 +185,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               className="w-full h-full object-contain bg-indigo-100"
               fallback={<i className="fa-solid fa-compact-disc text-4xl"></i>}
             />
+            {bocaCount > 0 && (
+              <div className="absolute top-4 right-4 bg-amber-400 text-amber-900 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg z-10">
+                <i className="fa-solid fa-star"></i>
+                {bocaCount} {bocaCount === 1 ? 'BOCA' : 'BOCAs'}
+              </div>
+            )}
             {submission.versions[0] && (
               <button
                 onClick={() => loadAudio(submission.versions[0].id)}
@@ -184,6 +203,38 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               </button>
             )}
           </div>
+          {currentUserEmail && onGiveBoca && (
+            <div>
+              {alreadyBocad ? (
+                <div className="w-full bg-amber-50 text-amber-700 border border-amber-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2">
+                  <i className="fa-solid fa-star"></i>
+                  You BOCA'd this
+                </div>
+              ) : isOwnSong ? (
+                <button disabled className="w-full bg-slate-50 text-slate-400 border border-slate-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                  <i className="fa-solid fa-star"></i>
+                  Can't BOCA your own song
+                </button>
+              ) : poolExhausted ? (
+                <button disabled className="w-full bg-slate-50 text-slate-400 border border-slate-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                  <i className="fa-solid fa-star"></i>
+                  No BOCAs left this month
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setIsGivingBoca(true);
+                    try { await onGiveBoca(submission.id); } finally { setIsGivingBoca(false); }
+                  }}
+                  disabled={isGivingBoca}
+                  className="w-full bg-amber-400 hover:bg-amber-500 text-amber-900 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+                >
+                  <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : 'fa-star'}`}></i>
+                  Give a BOCA
+                </button>
+              )}
+            </div>
+          )}
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 font-serif">
             <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-8">Lyrics</h3>
             <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">

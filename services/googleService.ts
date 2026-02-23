@@ -92,7 +92,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -115,7 +115,8 @@ export const findOrCreateDatabase = async () => {
     'PromptUpvotes!A1:E1',
     'Comments!A1:I1',
     'Tags!A1:C1',
-    'Events!A1:M1'
+    'Events!A1:M1',
+    'BOCAs!A1:D1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -243,6 +244,16 @@ export const findOrCreateDatabase = async () => {
       'updatedAt',
       'deletedAt',
       'deletedBy'
+    ]]);
+  }
+
+  const bocasHeader = headerValues[8]?.values?.[0] || [];
+  if (bocasHeader.length < 4) {
+    await updateSheetRows(SPREADSHEET_ID, 'BOCAs!A1', [[
+      'id',
+      'fromEmail',
+      'submissionId',
+      'awardedAt'
     ]]);
   }
 
@@ -1164,4 +1175,33 @@ export const syncEventFromCalendar = async (spreadsheetId: string, event: Event)
   // Update the sheet
   await updateEventRow(spreadsheetId, updatedEvent);
   return updatedEvent;
+};
+
+// BOCAs
+export const fetchBocas = async (spreadsheetId: string): Promise<{ id: string; fromEmail: string; submissionId: string; awardedAt: string }[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/BOCAs!A2:D5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows.map((row: any[]) => ({
+    id: row[0] || '',
+    fromEmail: row[1] || '',
+    submissionId: row[2] || '',
+    awardedAt: row[3] || ''
+  }));
+};
+
+export const createBoca = async (
+  spreadsheetId: string,
+  data: { fromEmail: string; submissionId: string }
+): Promise<{ id: string; fromEmail: string; submissionId: string; awardedAt: string }> => {
+  const boca = {
+    id: Math.random().toString(36).substr(2, 9),
+    fromEmail: data.fromEmail,
+    submissionId: data.submissionId,
+    awardedAt: new Date().toISOString()
+  };
+  await appendSheetRow(spreadsheetId, 'BOCAs!A1', [[
+    boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt
+  ]]);
+  return boca;
 };

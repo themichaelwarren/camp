@@ -108,6 +108,13 @@ export interface Event {
   deletedBy?: string;
 }
 
+export interface Boca {
+  id: string;
+  fromEmail: string;
+  submissionId: string;
+  awardedAt: string;
+}
+
 export interface PlayableTrack {
   versionId: string;
   title: string;
@@ -131,4 +138,5 @@ export type ViewState =
   | 'assignment-detail'
   | 'song-detail'
   | 'event-detail'
-  | 'camper-detail';
+  | 'camper-detail'
+  | 'bocas';
