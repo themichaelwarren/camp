@@ -23,6 +23,7 @@ interface AssignmentDetailProps {
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   onAddSubmission: (submission: Submission) => void;
+  onCreateEvent: (assignmentId: string) => Promise<void>;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   availableTags: string[];
@@ -33,10 +34,11 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, currentUser, spreadsheetId, availableTags }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   // Initialize promptIds from assignment, falling back to single promptId
   const initialPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
@@ -368,7 +370,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </section>
 
-          {assignmentEvent && (
+          {assignmentEvent ? (
             <section className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-3xl border border-green-200 shadow-sm">
               <h3 className="text-xs font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <i className="fa-solid fa-calendar-days"></i>
@@ -436,6 +438,38 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   </button>
                 </div>
               </div>
+            </section>
+          ) : (
+            <section className="bg-white p-6 rounded-3xl border-2 border-dashed border-slate-200 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i className="fa-solid fa-calendar-days"></i>
+                Listening Party
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">No listening party event has been created for this assignment yet.</p>
+              <button
+                onClick={async () => {
+                  setIsCreatingEvent(true);
+                  try {
+                    await onCreateEvent(assignment.id);
+                  } finally {
+                    setIsCreatingEvent(false);
+                  }
+                }}
+                disabled={isCreatingEvent}
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreatingEvent ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    Creating Event...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-calendar-plus"></i>
+                    Create Listening Party
+                  </>
+                )}
+              </button>
             </section>
           )}
 

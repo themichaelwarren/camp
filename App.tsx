@@ -501,6 +501,41 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCreateEventForAssignment = async (assignmentId: string) => {
+    if (!spreadsheetId || !userProfile?.email) return;
+
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (!assignment) return;
+
+    const dueDate = new Date(assignment.dueDate);
+    const eventStart = new Date(dueDate);
+    eventStart.setHours(19, 0, 0, 0); // 7:00 PM
+    const eventEnd = new Date(eventStart);
+    eventEnd.setHours(21, 0, 0, 0); // 9:00 PM (2 hour event)
+
+    const event = await googleService.createEvent(spreadsheetId, {
+      assignmentId: assignment.id,
+      title: `${assignment.title} - Listening Party`,
+      description: assignment.instructions,
+      startDateTime: eventStart.toISOString(),
+      endDateTime: eventEnd.toISOString(),
+      attendees: campers.map(c => c.email),
+      location: 'Virtual (Google Meet)',
+      createdBy: userProfile.email
+    });
+
+    setEvents(prev => [event, ...prev]);
+
+    const updatedAssignment = { ...assignment, eventId: event.id };
+    setAssignments(prev => prev.map(a => a.id === assignmentId ? updatedAssignment : a));
+
+    try {
+      await googleService.updateAssignmentRow(spreadsheetId, updatedAssignment);
+    } catch (error) {
+      console.error('Failed to update assignment with event ID', error);
+    }
+  };
+
   const handleUpdateAssignment = async (updatedAssignment: Assignment) => {
     setAssignments(prev => prev.map(a => a.id === updatedAssignment.id ? updatedAssignment : a));
     if (spreadsheetId) {
@@ -854,6 +889,7 @@ const App: React.FC = () => {
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
             onAddSubmission={handleAddSubmission}
+            onCreateEvent={handleCreateEventForAssignment}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
             onAddPrompt={handleAddPrompt}
