@@ -115,8 +115,10 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-800">Prompts Recommended</h3>
-          <span className="text-xs font-bold text-slate-400 uppercase">{prompts.length} Total</span>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-800">Prompts Recommended</h3>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{prompts.length}</span>
+          </div>
         </div>
         <div className="space-y-3">
           {prompts.map((prompt) => (

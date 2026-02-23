@@ -15,7 +15,10 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Campers</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-800">Campers</h2>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{campers.length}</span>
+          </div>
           <p className="text-slate-500 text-sm">Meet the artists shaping this camp.</p>
         </div>
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 w-fit">

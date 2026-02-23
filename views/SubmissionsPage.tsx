@@ -123,7 +123,10 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Song Vault</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-800">Song Vault</h2>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length}</span>
+          </div>
           <p className="text-slate-500 text-sm">Review, track versions, and refine your camp songs.</p>
         </div>
         <div className="flex items-center gap-3 self-start md:self-auto">
@@ -365,7 +368,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                     </td>
                     <td className="px-4 py-3">
                       {track && (
-                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1.5">
                           <button
                             onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
                             className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"

@@ -111,7 +111,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-800">Prompt Library</h2>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{prompts.length}</span>
+          </div>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
         </div>
         <div className="flex items-center gap-3">

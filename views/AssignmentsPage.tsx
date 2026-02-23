@@ -133,7 +133,10 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Assignments</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-800">Assignments</h2>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{assignments.length}</span>
+          </div>
           <p className="text-slate-500 text-sm">Turn prompts into focused creative projects.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -249,12 +252,12 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                       <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{a.title}</h4>
                       <p className="text-xs text-slate-500 line-clamp-1">{a.instructions.substring(0, 60)}...</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-[200px]">
                       <div className="flex flex-wrap gap-1">
                         {assignmentPrompts.length > 0 ? (
                           <>
                             {assignmentPrompts.slice(0, 2).map(p => (
-                              <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                              <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]">
                                 {p!.title}
                               </span>
                             ))}

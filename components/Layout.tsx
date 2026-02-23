@@ -154,41 +154,43 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 />
               </div>
               <div className="flex-1 min-w-0">
-                {player.submissionId ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onNavigateToSong?.(player.submissionId!); setShowNowPlaying(false); }}
-                    className="text-sm font-semibold text-white truncate block hover:underline text-left w-full"
-                  >
-                    {player.title}
-                  </button>
-                ) : (
-                  <p className="text-sm font-semibold text-white truncate">{player.title}</p>
-                )}
+                <p className="text-sm font-semibold text-white truncate">{player.title}</p>
                 <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
               </div>
-              {isPlayerLoading ? (
-                <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-spinner fa-spin text-xs"></i>
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!audioRef.current) return;
-                    if (audioRef.current.paused) {
-                      audioRef.current.play().catch(() => undefined);
-                      setIsPlaying(true);
-                    } else {
-                      audioRef.current.pause();
-                      setIsPlaying(false);
-                    }
-                  }}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center flex-shrink-0"
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
-                </button>
-              )}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {isPlayerLoading ? (
+                  <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <i className="fa-solid fa-spinner fa-spin text-xs"></i>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!audioRef.current) return;
+                      if (audioRef.current.paused) {
+                        audioRef.current.play().catch(() => undefined);
+                        setIsPlaying(true);
+                      } else {
+                        audioRef.current.pause();
+                        setIsPlaying(false);
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                  >
+                    <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
+                  </button>
+                )}
+                {queue.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                    aria-label="Next track"
+                  >
+                    <i className="fa-solid fa-forward-step text-xs"></i>
+                  </button>
+                )}
+              </div>
             </div>
             {queue.length > 0 && (
               <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>

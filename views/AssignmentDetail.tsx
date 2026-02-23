@@ -195,17 +195,17 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   return (
     <>
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex items-center justify-between gap-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-4">
           <button
             onClick={() => onNavigate('assignments')}
-            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors shrink-0"
           >
             <i className="fa-solid fa-arrow-left"></i>
           </button>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-800">{assignment.title}</h2>
-            <div className="flex items-center gap-2 mt-1">
+          <div className="min-w-0">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 truncate">{assignment.title}</h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                 assignment.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
               }`}>
@@ -221,14 +221,14 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowSubmitModal(true)}
-            className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200"
+            className="flex-1 md:flex-none bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
           >
             <i className="fa-solid fa-cloud-arrow-up"></i>
             Submit Song
           </button>
           <button
             onClick={() => setShowEditModal(true)}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+            className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
           >
             <i className="fa-solid fa-pen"></i>
             Edit
