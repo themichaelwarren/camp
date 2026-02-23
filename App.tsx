@@ -12,6 +12,7 @@ import SongDetail from './views/SongDetail';
 import SettingsPage from './views/SettingsPage';
 import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
+import InboxPage from './views/InboxPage';
 import * as googleService from './services/googleService';
 
 const CAMP_QUOTES = [
@@ -771,6 +772,17 @@ const App: React.FC = () => {
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
+            onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
+          />
+        );
+      case 'inbox':
+        return (
+          <InboxPage
+            prompts={prompts.filter(p => !p.deletedAt)}
+            assignments={assignments.filter(a => !a.deletedAt)}
+            submissions={submissions.filter(s => !s.deletedAt)}
+            spreadsheetId={spreadsheetId}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
           />

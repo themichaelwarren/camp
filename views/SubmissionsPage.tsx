@@ -137,14 +137,14 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 .filter((t): t is PlayableTrack => t !== null);
               if (tracks.length > 0) onStartJukebox(tracks);
             }}
-            className="bg-amber-500 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg shadow-amber-100"
+            className="bg-amber-500 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-amber-600 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-shuffle"></i>
             Jukebox
           </button>
           <button
             onClick={() => setShowUpload(true)}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+            className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-cloud-arrow-up"></i>
             Submit New Song

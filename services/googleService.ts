@@ -715,6 +715,26 @@ export const fetchComments = async (
     }));
 };
 
+export const fetchAllComments = async (
+  spreadsheetId: string
+): Promise<Comment[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+
+  return rows.map((row: any[]) => ({
+    id: row[0] || '',
+    entityType: row[1] as 'song' | 'prompt' | 'assignment',
+    entityId: row[2] || '',
+    parentId: row[3] || null,
+    author: row[4] || 'Anonymous',
+    authorEmail: row[5] || '',
+    text: row[6] || '',
+    timestamp: row[7] || new Date().toISOString(),
+    reactions: row[8] ? JSON.parse(row[8]) : {}
+  }));
+};
+
 export const createComment = async (
   spreadsheetId: string,
   data: {

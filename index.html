@@ -353,17 +353,61 @@
             background-color: #27272a !important;
         }
 
-        /* Modern: Sidebar - always dark like Linear */
-        :root[data-skin="modern"] .bg-indigo-900 {
+        /* Modern Light: Sidebar - light gray */
+        :root[data-skin="modern"][data-theme="light"] .bg-indigo-900 {
+            background-color: #f3f4f6 !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .bg-indigo-800,
+        :root[data-skin="modern"][data-theme="light"] .hover\:bg-indigo-800:hover {
+            background-color: #e5e7eb !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .bg-indigo-700 {
+            background-color: #e5e7eb !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .bg-indigo-950 {
+            background-color: #eaecf0 !important;
+        }
+        /* Modern Light: Sidebar text - dark on light */
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar,
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar .text-white {
+            color: #1f2937 !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar [class*="bg-indigo-950"] {
+            background-color: #eaecf0 !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar [class*="border-indigo-800"] {
+            border-color: #d1d5db !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar .text-rose-200 {
+            color: #e11d48 !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar .hover\:bg-indigo-900\/60:hover {
+            background-color: #e5e7eb !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar .hover\:bg-rose-500\/10:hover {
+            background-color: rgba(225, 29, 72, 0.08) !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar [class*="bg-white/"] {
+            background-color: rgba(0, 0, 0, 0.06) !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar [class*="hover:bg-white/"]:hover {
+            background-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .camp-sidebar .border-white\/30 {
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Modern Dark: Sidebar */
+        :root[data-skin="modern"][data-theme="dark"] .bg-indigo-900 {
             background-color: #0d0d0f !important;
         }
-        :root[data-skin="modern"] .bg-indigo-800 {
+        :root[data-skin="modern"][data-theme="dark"] .bg-indigo-800 {
             background-color: #18181b !important;
         }
-        :root[data-skin="modern"] .bg-indigo-700 {
+        :root[data-skin="modern"][data-theme="dark"] .bg-indigo-700 {
             background-color: #27272a !important;
         }
-        :root[data-skin="modern"] .bg-indigo-950 {
+        :root[data-skin="modern"][data-theme="dark"] .bg-indigo-950 {
             background-color: #09090b !important;
         }
 
@@ -393,17 +437,31 @@
             color: #1f2937 !important;
         }
 
-        /* Modern: Navigation text colors */
-        :root[data-skin="modern"] .text-indigo-100 {
+        /* Modern Light: Navigation text colors - darker for light sidebar */
+        :root[data-skin="modern"][data-theme="light"] .text-indigo-100 {
+            color: #6b7280 !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .text-indigo-200 {
+            color: #9ca3af !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .text-indigo-300 {
+            color: #9ca3af !important;
+        }
+        :root[data-skin="modern"][data-theme="light"] .text-indigo-400 {
+            color: #9ca3af !important;
+        }
+
+        /* Modern Dark: Navigation text colors */
+        :root[data-skin="modern"][data-theme="dark"] .text-indigo-100 {
             color: #a1a1aa !important;
         }
-        :root[data-skin="modern"] .text-indigo-200 {
+        :root[data-skin="modern"][data-theme="dark"] .text-indigo-200 {
             color: #d4d4d8 !important;
         }
-        :root[data-skin="modern"] .text-indigo-300 {
+        :root[data-skin="modern"][data-theme="dark"] .text-indigo-300 {
             color: #a1a1aa !important;
         }
-        :root[data-skin="modern"] .text-indigo-400 {
+        :root[data-skin="modern"][data-theme="dark"] .text-indigo-400 {
             color: #71717a !important;
         }
 

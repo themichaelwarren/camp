@@ -164,13 +164,13 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="block w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors shadow-lg text-center"
+                    className="block w-full bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors text-center"
                   >
                     <i className="fa-solid fa-video mr-2"></i>
                     Join Meet
                   </a>
                 ) : (
-                  <button className="w-full bg-white text-indigo-900 font-bold py-3 rounded-xl hover:bg-indigo-50 transition-colors shadow-lg">
+                  <button className="w-full bg-white text-indigo-900 font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-50 transition-colors">
                     View Details
                   </button>
                 )}
@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                 </p>
                 <button
                   onClick={() => onNavigate('events')}
-                  className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors"
+                  className="w-full bg-indigo-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-700 transition-colors"
                 >
                   View All Events
                 </button>

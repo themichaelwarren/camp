@@ -113,7 +113,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         </div>
         <button
           onClick={() => setShowEditModal(true)}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+          className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
         >
           <i className="fa-solid fa-pen"></i>
           Edit
@@ -179,9 +179,9 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                       onAddToQueue(playable[i]);
                     }
                   }}
-                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
                 >
-                  <i className="fa-solid fa-play"></i>
+                  <i className="fa-solid fa-play text-xs"></i>
                   Play All ({submissions.filter(s => s.versions?.length > 0).length})
                 </button>
               )}

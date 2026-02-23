@@ -120,6 +120,7 @@ export interface PlayableTrack {
 
 export type ViewState =
   | 'dashboard'
+  | 'inbox'
   | 'prompts'
   | 'assignments'
   | 'submissions'

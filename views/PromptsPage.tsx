@@ -120,14 +120,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowTagManager(true)}
-            className="bg-white text-slate-700 px-5 py-2.5 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="bg-white text-slate-700 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-tags"></i>
             Manage Tags
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+            className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-plus"></i>
             New Prompt

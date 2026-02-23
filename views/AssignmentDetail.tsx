@@ -218,17 +218,17 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowSubmitModal(true)}
-            className="flex-1 md:flex-none bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+            className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-cloud-arrow-up"></i>
             Submit Song
           </button>
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+            className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-pen"></i>
             Edit
@@ -278,9 +278,9 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
 
           <section>
             <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} Submissions</span>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length}</span>
               </div>
               {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
                 <button
@@ -292,9 +292,9 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       onAddToQueue(playable[i]);
                     }
                   }}
-                  className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200"
+                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
                 >
-                  <i className="fa-solid fa-play"></i>
+                  <i className="fa-solid fa-play text-xs"></i>
                   Play All ({submissions.filter(s => s.versions?.length > 0).length})
                 </button>
               )}
@@ -406,7 +406,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       href={assignmentEvent.meetLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors"
                     >
                       <i className="fa-solid fa-video"></i>
                       Join Google Meet
@@ -456,7 +456,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   }
                 }}
                 disabled={isCreatingEvent}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreatingEvent ? (
                   <>

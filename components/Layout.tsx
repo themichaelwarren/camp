@@ -35,11 +35,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const toastTimeoutRef = useRef<number | null>(null);
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
+  const hadPlayerRef = useRef(false);
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
-    { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
+    { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
+    { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
+    { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
     { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
-    { id: 'submissions', label: 'Song Submissions', icon: 'fa-music' },
+    { id: 'submissions', label: 'Songs', icon: 'fa-music' },
     { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
     { id: 'campers', label: 'Campers', icon: 'fa-users' },
   ];
@@ -50,20 +52,30 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     setIsUserMenuOpen(false);
   };
 
-  // Auto-open overlay when a track starts loading/playing
-  // In jukebox mode, show a toast instead of the full overlay
+  // Auto-open overlay on first play; show toast for subsequent song changes
   useEffect(() => {
-    if (!player) return;
-
-    if (isJukeboxMode && !showNowPlaying) {
-      setNowPlayingToast({ title: player.title, artist: player.artist });
-      if (nowPlayingToastRef.current) clearTimeout(nowPlayingToastRef.current);
-      nowPlayingToastRef.current = window.setTimeout(() => {
-        setNowPlayingToast(null);
-      }, 4000);
-    } else {
-      setShowNowPlaying(true);
+    if (!player) {
+      hadPlayerRef.current = false;
+      return;
     }
+
+    if (!hadPlayerRef.current) {
+      // First play action — open the full overlay
+      hadPlayerRef.current = true;
+      setShowNowPlaying(true);
+      return;
+    }
+
+    // Song changed (queue advance, jukebox, play-all, etc.)
+    // If overlay is already open, it updates naturally — do nothing
+    if (showNowPlaying) return;
+
+    // Overlay is closed — show a non-intrusive toast
+    setNowPlayingToast({ title: player.title, artist: player.artist });
+    if (nowPlayingToastRef.current) clearTimeout(nowPlayingToastRef.current);
+    nowPlayingToastRef.current = window.setTimeout(() => {
+      setNowPlayingToast(null);
+    }, 4000);
   }, [player?.title, player?.artist]);
 
   useEffect(() => {
@@ -266,7 +278,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="w-64 bg-indigo-900 text-white flex flex-col hidden md:flex shrink-0 h-screen sticky top-0">
+      <aside className="camp-sidebar w-64 bg-indigo-900 text-white flex flex-col hidden md:flex shrink-0 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 
@@ -277,7 +289,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onClick={() => setIsMobileNavOpen(false)}
             aria-label="Close navigation overlay"
           />
-          <aside className="relative z-10 w-72 bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
+          <aside className="camp-sidebar relative z-10 w-72 bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
             {sidebarContent}
           </aside>
         </div>
@@ -294,7 +306,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                <i className="fa-solid fa-bars"></i>
              </button>
              <h2 className="text-lg font-semibold text-slate-800 capitalize">
-               {activeView.split('-').join(' ')}
+               {(() => {
+                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', settings: 'Settings' };
+                 return labels[activeView] || activeView.split('-').join(' ');
+               })()}
              </h2>
           </div>
           {player && (
