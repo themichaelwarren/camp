@@ -979,11 +979,10 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
         <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
-          <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-5xl mb-10 mx-auto shadow-xl shadow-indigo-100 rotate-2 hover:rotate-0 transition-transform duration-500">
-            <span aria-hidden="true">⛺️</span>
-            <span className="sr-only">Hatsukoi Songwriting Camp</span>
+          <div className="mb-10 mx-auto text-center">
+            <i className="fa-solid fa-campground text-[6rem] text-indigo-600 rotate-2 hover:rotate-0 transition-transform duration-500"></i>
           </div>
-          <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Hatsukoi Songwriting Camp</h2>
+          <h2 className="text-5xl font-black text-slate-900 mb-6 tracking-tight">Camp</h2>
           <p className="text-slate-500 text-lg mb-12 leading-relaxed font-medium italic">
             "{heroQuote}"
           </p>

@@ -36,6 +36,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
   const hadPlayerRef = useRef(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed)); } catch {}
+  }, [isSidebarCollapsed]);
+
   const menuItems = [
     { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
     { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
@@ -113,138 +121,187 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     };
   }, []);
 
-  const sidebarContent = (
+  const renderSidebarContent = (collapsed: boolean) => (
     <>
-      <div className="p-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <span aria-hidden="true" className="text-2xl leading-none">⛺️</span>
-            <span className="sr-only">Hatsukoi Camp</span>
-            <span>Hatsukoi Camp</span>
-          </h1>
-          <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">Toolkit v2.0</p>
-        </div>
-        <button
-          onClick={() => setIsMobileNavOpen(false)}
-          className="md:hidden text-indigo-200 hover:text-white"
-          aria-label="Close navigation"
-        >
-          <i className="fa-solid fa-xmark text-lg"></i>
-        </button>
+      {/* Header */}
+      <div className={`flex items-center ${collapsed ? 'flex-col gap-1 px-2 py-4' : 'justify-between p-6'}`}>
+        {!collapsed ? (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <span aria-hidden="true" className="text-2xl leading-none">⛺️</span>
+                <span>Camp</span>
+              </h1>
+              <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">V2.0</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="hidden md:flex w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 items-center justify-center text-indigo-200 hover:text-white transition-colors"
+                aria-label="Collapse sidebar"
+              >
+                <i className="fa-solid fa-angles-left text-xs"></i>
+              </button>
+              <button
+                onClick={() => setIsMobileNavOpen(false)}
+                className="md:hidden text-indigo-200 hover:text-white"
+                aria-label="Close navigation"
+              >
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span aria-hidden="true" className="text-xl leading-none">⛺️</span>
+            <button
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="w-6 h-6 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-center text-indigo-200 hover:text-white transition-colors"
+              aria-label="Expand sidebar"
+            >
+              <i className="fa-solid fa-angles-right text-[10px]"></i>
+            </button>
+          </>
+        )}
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      {/* Navigation */}
+      <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-4 space-y-1`}>
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => handleNavigate(item.id as ViewState)}
             disabled={!isLoggedIn && item.id !== 'dashboard'}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              activeView === item.id 
-                ? 'bg-indigo-700 text-white shadow-lg' 
+            title={collapsed ? item.label : undefined}
+            className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
+              activeView === item.id
+                ? 'bg-indigo-700 text-white shadow-lg'
                 : 'text-indigo-100 hover:bg-indigo-800'
             } ${!isLoggedIn && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
           >
-            <i className={`fa-solid ${item.icon} w-5`}></i>
-            <span className="font-medium">{item.label}</span>
+            <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+            {!collapsed && <span className="font-medium">{item.label}</span>}
           </button>
         ))}
       </nav>
 
-      <div className="p-4 bg-indigo-950/50 mt-auto relative space-y-4">
+      {/* Bottom panel */}
+      <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto relative ${collapsed ? 'space-y-3 flex flex-col items-center' : 'space-y-4'}`}>
         {player && (
-          <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => setShowNowPlaying(true)}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-                <ArtworkImage
-                  fileId={player.artworkFileId}
-                  fallbackUrl={player.artworkUrl}
-                  alt={`${player.title} artwork`}
-                  className="w-full h-full object-cover"
-                  containerClassName="w-full h-full flex items-center justify-center"
-                  fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
-                />
+          collapsed ? (
+            <button
+              onClick={() => setShowNowPlaying(true)}
+              className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+              title={`${player.title} — ${player.artist}`}
+            >
+              <ArtworkImage
+                fileId={player.artworkFileId}
+                fallbackUrl={player.artworkUrl}
+                alt={`${player.title} artwork`}
+                className="w-full h-full object-cover"
+                containerClassName="w-full h-full flex items-center justify-center bg-indigo-100"
+                fallback={<i className="fa-solid fa-compact-disc text-sm text-indigo-400"></i>}
+              />
+            </button>
+          ) : (
+            <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => setShowNowPlaying(true)}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <ArtworkImage
+                    fileId={player.artworkFileId}
+                    fallbackUrl={player.artworkUrl}
+                    alt={`${player.title} artwork`}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full flex items-center justify-center"
+                    fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{player.title}</p>
+                  <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {isPlayerLoading ? (
+                    <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                      <i className="fa-solid fa-spinner fa-spin text-xs"></i>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!audioRef.current) return;
+                        if (audioRef.current.paused) {
+                          audioRef.current.play().catch(() => undefined);
+                          setIsPlaying(true);
+                        } else {
+                          audioRef.current.pause();
+                          setIsPlaying(false);
+                        }
+                      }}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                    >
+                      <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
+                    </button>
+                  )}
+                  {queue.length > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      aria-label="Next track"
+                    >
+                      <i className="fa-solid fa-forward-step text-xs"></i>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{player.title}</p>
-                <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {isPlayerLoading ? (
-                  <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                    <i className="fa-solid fa-spinner fa-spin text-xs"></i>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!audioRef.current) return;
-                      if (audioRef.current.paused) {
-                        audioRef.current.play().catch(() => undefined);
-                        setIsPlaying(true);
-                      } else {
-                        audioRef.current.pause();
-                        setIsPlaying(false);
-                      }
-                    }}
-                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                    aria-label={isPlaying ? 'Pause' : 'Play'}
-                  >
-                    <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
-                  </button>
-                )}
-                {queue.length > 0 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
-                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-                    aria-label="Next track"
-                  >
-                    <i className="fa-solid fa-forward-step text-xs"></i>
-                  </button>
-                )}
-              </div>
+              {queue.length > 0 && (
+                <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
+              )}
             </div>
-            {queue.length > 0 && (
-              <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
-            )}
-          </div>
+          )
         )}
         {isLoggedIn ? (
           <>
             <button
               onClick={() => setIsUserMenuOpen((open) => !open)}
-              className="w-full flex items-center gap-3 text-left"
+              className={`${collapsed ? '' : 'w-full'} flex items-center ${collapsed ? 'justify-center' : 'gap-3 text-left'}`}
               aria-expanded={isUserMenuOpen}
               aria-haspopup="menu"
+              title={collapsed ? (userProfile?.name || 'User menu') : undefined}
             >
             {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
               <ArtworkImage
                 fileId={undefined}
                 fallbackUrl={userProfile.pictureOverrideUrl || userProfile.picture}
                 alt={userProfile.name || 'User profile'}
-                className="w-10 h-10 rounded-full object-cover border border-white/30"
+                className={`${collapsed ? 'w-8 h-8' : 'w-10 h-10'} rounded-full object-cover border border-white/30`}
                 fallback={
-                  <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+                  <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
                     KC
                   </div>
                 }
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold">
+              <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
                 KC
               </div>
             )}
-              <div className="overflow-hidden flex-1">
-                <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
-                <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
-                  {isSyncing ? 'Syncing...' : 'Connected'}
-                </p>
-              </div>
-              <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
+              {!collapsed && (
+                <>
+                  <div className="overflow-hidden flex-1">
+                    <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                      {isSyncing ? 'Syncing...' : 'Connected'}
+                    </p>
+                  </div>
+                  <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
+                </>
+              )}
             </button>
             {isUserMenuOpen && (
-              <div className="absolute bottom-full mb-3 left-4 right-4 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden">
+              <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-4 right-4'}`}>
                 <button
                   onClick={() => handleNavigate('settings')}
                   className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
@@ -265,12 +322,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             )}
           </>
         ) : (
-          <div className="text-center p-2">
-            <p className="text-[10px] text-indigo-400 font-bold uppercase mb-2">Offline Mode</p>
-            <button className="text-xs bg-indigo-800 hover:bg-indigo-700 w-full py-2 rounded-lg font-bold transition-colors">
-              Waiting for Auth
-            </button>
-          </div>
+          !collapsed && (
+            <div className="text-center p-2">
+              <p className="text-[10px] text-indigo-400 font-bold uppercase mb-2">Offline Mode</p>
+              <button className="text-xs bg-indigo-800 hover:bg-indigo-700 w-full py-2 rounded-lg font-bold transition-colors">
+                Waiting for Auth
+              </button>
+            </div>
+          )
         )}
       </div>
     </>
@@ -278,8 +337,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="camp-sidebar w-64 bg-indigo-900 text-white flex flex-col hidden md:flex shrink-0 h-screen sticky top-0">
-        {sidebarContent}
+      <aside className={`camp-sidebar ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'} bg-indigo-900 text-white flex-col hidden md:flex shrink-0 h-screen sticky top-0 transition-[width] duration-200`}>
+        {renderSidebarContent(isSidebarCollapsed)}
       </aside>
 
       {isMobileNavOpen && (
@@ -290,7 +349,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             aria-label="Close navigation overlay"
           />
           <aside className="camp-sidebar relative z-10 w-72 bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
-            {sidebarContent}
+            {renderSidebarContent(false)}
           </aside>
         </div>
       )}

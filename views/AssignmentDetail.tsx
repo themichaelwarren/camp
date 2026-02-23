@@ -371,75 +371,101 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </section>
 
           {assignmentEvent ? (
-            <section className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-3xl border border-green-200 shadow-sm">
-              <h3 className="text-xs font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-calendar-days"></i>
-                Listening Party
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-green-600 font-bold mb-1">Date & Time</p>
-                  <p className="text-sm text-green-900 font-semibold">
-                    {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
-                  </p>
-                  <p className="text-sm text-green-800">
-                    {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
-                  </p>
-                </div>
-                {assignmentEvent.location && (
+            assignment.status === 'Closed' ? (
+              <section className="bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <i className="fa-solid fa-calendar-days"></i>
+                  Listening Party
+                </h3>
+                <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-green-600 font-bold mb-1">Location</p>
-                    <p className="text-sm text-green-900">{assignmentEvent.location}</p>
-                  </div>
-                )}
-                {assignmentEvent.attendees.length > 0 && (
-                  <div>
-                    <p className="text-xs text-green-600 font-bold mb-1">Attendees</p>
-                    <p className="text-sm text-green-900">
-                      {assignmentEvent.attendees.length} invited
+                    <p className="text-xs text-slate-400 font-bold mb-1">Date & Time</p>
+                    <p className="text-sm text-slate-700 font-semibold">
+                      {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
                     </p>
                   </div>
-                )}
-                <div className="pt-3 space-y-2">
-                  {assignmentEvent.meetLink && (
-                    <a
-                      href={assignmentEvent.meetLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors"
-                    >
-                      <i className="fa-solid fa-video"></i>
-                      Join Google Meet
-                    </a>
+                  {assignmentEvent.location && (
+                    <div>
+                      <p className="text-xs text-slate-400 font-bold mb-1">Location</p>
+                      <p className="text-sm text-slate-700">{assignmentEvent.location}</p>
+                    </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
+                </div>
+              </section>
+            ) : (
+              <section className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-3xl border border-green-200 shadow-sm">
+                <h3 className="text-xs font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <i className="fa-solid fa-calendar-days"></i>
+                  Listening Party
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-green-600 font-bold mb-1">Date & Time</p>
+                    <p className="text-sm text-green-900 font-semibold">
+                      {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
+                    </p>
+                    <p className="text-sm text-green-800">
+                      {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
+                    </p>
+                  </div>
+                  {assignmentEvent.location && (
+                    <div>
+                      <p className="text-xs text-green-600 font-bold mb-1">Location</p>
+                      <p className="text-sm text-green-900">{assignmentEvent.location}</p>
+                    </div>
+                  )}
+                  {assignmentEvent.attendees.length > 0 && (
+                    <div>
+                      <p className="text-xs text-green-600 font-bold mb-1">Attendees</p>
+                      <p className="text-sm text-green-900">
+                        {assignmentEvent.attendees.length} invited
+                      </p>
+                    </div>
+                  )}
+                  <div className="pt-3 space-y-2">
+                    {assignmentEvent.meetLink && (
+                      <a
+                        href={assignmentEvent.meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors"
+                      >
+                        <i className="fa-solid fa-video"></i>
+                        Join Google Meet
+                      </a>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleEditEvent}
+                        className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                      >
+                        <i className="fa-solid fa-pen"></i>
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleSyncFromCalendar}
+                        className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                        title="Sync changes from Google Calendar"
+                      >
+                        <i className="fa-solid fa-rotate"></i>
+                        Sync
+                      </button>
+                    </div>
                     <button
-                      onClick={handleEditEvent}
-                      className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                      onClick={() => onNavigate('events')}
+                      className="w-full flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
                     >
-                      <i className="fa-solid fa-pen"></i>
-                      Edit
-                    </button>
-                    <button
-                      onClick={handleSyncFromCalendar}
-                      className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
-                      title="Sync changes from Google Calendar"
-                    >
-                      <i className="fa-solid fa-rotate"></i>
-                      Sync
+                      <i className="fa-solid fa-calendar"></i>
+                      View All Events
                     </button>
                   </div>
-                  <button
-                    onClick={() => onNavigate('events')}
-                    className="w-full flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
-                  >
-                    <i className="fa-solid fa-calendar"></i>
-                    View All Events
-                  </button>
                 </div>
-              </div>
-            </section>
-          ) : (
+              </section>
+            )
+          ) : assignment.status !== 'Closed' ? (
             <section className="bg-white p-6 rounded-3xl border-2 border-dashed border-slate-200 shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <i className="fa-solid fa-calendar-days"></i>
@@ -471,7 +497,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 )}
               </button>
             </section>
-          )}
+          ) : null}
 
         </div>
       </div>
