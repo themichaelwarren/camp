@@ -420,11 +420,9 @@ const App: React.FC = () => {
 
       // Auto-create calendar event (7pm on due date)
       try {
-        const dueDate = new Date(newAssignment.dueDate);
-        const eventStart = new Date(dueDate);
-        eventStart.setHours(19, 0, 0, 0); // 7:00 PM
-        const eventEnd = new Date(eventStart);
-        eventEnd.setHours(21, 0, 0, 0); // 9:00 PM (2 hour event)
+        const [y, m, d] = newAssignment.dueDate.split('-').map(Number);
+        const eventStart = new Date(y, m - 1, d, 19, 0, 0, 0); // 7:00 PM local
+        const eventEnd = new Date(y, m - 1, d, 21, 0, 0, 0); // 9:00 PM local
 
         const event = await googleService.createEvent(spreadsheetId, {
           assignmentId: newAssignment.id,
@@ -432,7 +430,7 @@ const App: React.FC = () => {
           description: newAssignment.instructions,
           startDateTime: eventStart.toISOString(),
           endDateTime: eventEnd.toISOString(),
-          attendees: campers.map(c => c.email),
+          attendees: campers.map(c => c.email.trim()).filter(e => e && e.includes('@')),
           location: 'Virtual (Google Meet)',
           createdBy: userProfile.email
         });
@@ -507,32 +505,35 @@ const App: React.FC = () => {
     const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
 
-    const dueDate = new Date(assignment.dueDate);
-    const eventStart = new Date(dueDate);
-    eventStart.setHours(19, 0, 0, 0); // 7:00 PM
-    const eventEnd = new Date(eventStart);
-    eventEnd.setHours(21, 0, 0, 0); // 9:00 PM (2 hour event)
-
-    const event = await googleService.createEvent(spreadsheetId, {
-      assignmentId: assignment.id,
-      title: `${assignment.title} - Listening Party`,
-      description: assignment.instructions,
-      startDateTime: eventStart.toISOString(),
-      endDateTime: eventEnd.toISOString(),
-      attendees: campers.map(c => c.email),
-      location: 'Virtual (Google Meet)',
-      createdBy: userProfile.email
-    });
-
-    setEvents(prev => [event, ...prev]);
-
-    const updatedAssignment = { ...assignment, eventId: event.id };
-    setAssignments(prev => prev.map(a => a.id === assignmentId ? updatedAssignment : a));
-
     try {
-      await googleService.updateAssignmentRow(spreadsheetId, updatedAssignment);
-    } catch (error) {
-      console.error('Failed to update assignment with event ID', error);
+      const [y, m, d] = assignment.dueDate.split('-').map(Number);
+      const eventStart = new Date(y, m - 1, d, 19, 0, 0, 0); // 7:00 PM local
+      const eventEnd = new Date(y, m - 1, d, 21, 0, 0, 0); // 9:00 PM local
+
+      const event = await googleService.createEvent(spreadsheetId, {
+        assignmentId: assignment.id,
+        title: `${assignment.title} - Listening Party`,
+        description: assignment.instructions,
+        startDateTime: eventStart.toISOString(),
+        endDateTime: eventEnd.toISOString(),
+        attendees: campers.map(c => c.email.trim()).filter(e => e && e.includes('@')),
+        location: 'Virtual (Google Meet)',
+        createdBy: userProfile.email
+      });
+
+      setEvents(prev => [event, ...prev]);
+
+      const updatedAssignment = { ...assignment, eventId: event.id };
+      setAssignments(prev => prev.map(a => a.id === assignmentId ? updatedAssignment : a));
+
+      try {
+        await googleService.updateAssignmentRow(spreadsheetId, updatedAssignment);
+      } catch (error) {
+        console.error('Failed to update assignment with event ID', error);
+      }
+    } catch (error: any) {
+      console.error('Failed to create calendar event', error);
+      alert(`Failed to create calendar event: ${error?.message || error}\n\nCheck the browser console for more details.`);
     }
   };
 

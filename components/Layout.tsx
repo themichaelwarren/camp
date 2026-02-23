@@ -33,6 +33,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastTimeoutRef = useRef<number | null>(null);
+  const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
+  const nowPlayingToastRef = useRef<number | null>(null);
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
     { id: 'prompts', label: 'Prompt Library', icon: 'fa-lightbulb' },
@@ -49,8 +51,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   };
 
   // Auto-open overlay when a track starts loading/playing
+  // In jukebox mode, show a toast instead of the full overlay
   useEffect(() => {
-    if (player) {
+    if (!player) return;
+
+    if (isJukeboxMode && !showNowPlaying) {
+      setNowPlayingToast({ title: player.title, artist: player.artist });
+      if (nowPlayingToastRef.current) clearTimeout(nowPlayingToastRef.current);
+      nowPlayingToastRef.current = window.setTimeout(() => {
+        setNowPlayingToast(null);
+      }, 4000);
+    } else {
       setShowNowPlaying(true);
     }
   }, [player?.title, player?.artist]);
@@ -83,6 +94,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       }
     };
   }, [isSyncing]);
+
+  useEffect(() => {
+    return () => {
+      if (nowPlayingToastRef.current) clearTimeout(nowPlayingToastRef.current);
+    };
+  }, []);
 
   const sidebarContent = (
     <>
@@ -328,6 +345,24 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             {toastMessage}
           </div>
         </div>
+      )}
+
+      {nowPlayingToast && (
+        <button
+          onClick={() => { setNowPlayingToast(null); setShowNowPlaying(true); }}
+          className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom fade-in duration-300 max-w-xs"
+        >
+          <div className="flex items-center gap-3 bg-slate-900 text-white pl-3 pr-4 py-3 rounded-2xl shadow-2xl border border-white/10">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600/30 flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-music text-indigo-400 text-sm"></i>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Now Playing</p>
+              <p className="text-sm font-semibold truncate">{nowPlayingToast.title}</p>
+              <p className="text-xs text-white/50 truncate">{nowPlayingToast.artist}</p>
+            </div>
+          </div>
+        </button>
       )}
 
       {player && (

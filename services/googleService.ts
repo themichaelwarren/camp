@@ -904,11 +904,11 @@ export const createCalendarEvent = async (eventData: {
     description: eventData.description,
     start: {
       dateTime: eventData.startDateTime,
-      timeZone: 'America/New_York'
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     },
     end: {
       dateTime: eventData.endDateTime,
-      timeZone: 'America/New_York'
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     },
     attendees: eventData.attendees || [],
     location: eventData.location || '',
@@ -949,11 +949,11 @@ export const updateCalendarEvent = async (
     description: eventData.description,
     start: {
       dateTime: eventData.startDateTime,
-      timeZone: 'America/New_York'
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     },
     end: {
       dateTime: eventData.endDateTime,
-      timeZone: 'America/New_York'
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
     },
     attendees: eventData.attendees || [],
     location: eventData.location || ''
