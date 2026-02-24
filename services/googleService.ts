@@ -6,7 +6,7 @@ declare var google: any;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const APP_ID = import.meta.env.VITE_GOOGLE_APP_ID;
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events';
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
 const ASSIGNMENTS_PARENT_FOLDER_ID = import.meta.env.VITE_ASSIGNMENTS_PARENT_FOLDER_ID;
 
@@ -93,28 +93,12 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
 
 export const ensureSpreadsheetAccess = async (): Promise<void> => {
   if (!accessToken) throw new Error('Not authenticated');
-  // Quick check: can we access the master spreadsheet?
   const testUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=spreadsheetId`;
   const response = await fetch(testUrl, {
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
   });
-  if (response.ok) return; // Already authorized
-
-  // Not authorized — ask user to select the camp spreadsheet via Picker
-  const files = await openDrivePicker({
-    mimeTypes: 'application/vnd.google-apps.spreadsheet',
-    multiSelect: false,
-    title: 'Select the Camp spreadsheet to connect',
-  });
-
-  if (files.length === 0) {
-    throw new Error('Camp spreadsheet not authorized. Please select the spreadsheet to continue.');
-  }
-
-  if (files[0].id !== SPREADSHEET_ID) {
-    throw new Error('That\'s not the Camp spreadsheet. Please select the correct one and try again.');
-  }
-  // Picker granted drive.file access to this spreadsheet — proceed
+  if (response.ok) return;
+  throw new Error('Cannot access Camp spreadsheet. Make sure it has been shared with your account.');
 };
 
 export const findOrCreateDatabase = async () => {
@@ -787,48 +771,41 @@ export const fetchDriveFile = async (fileId: string) => {
 };
 
 // Comments functions
+const parseCommentRow = (row: any[]): Comment => ({
+  id: row[0] || '',
+  entityType: row[1] as 'song' | 'prompt' | 'assignment',
+  entityId: row[2] || '',
+  parentId: row[3] || null,
+  author: row[4] || 'Anonymous',
+  authorEmail: row[5] || '',
+  text: row[6] || '',
+  timestamp: row[7] || new Date().toISOString(),
+  reactions: row[8] ? JSON.parse(row[8]) : {},
+  editedAt: row[9] || undefined,
+});
+
 export const fetchComments = async (
   spreadsheetId: string,
   entityType: 'song' | 'prompt' | 'assignment',
   entityId: string
 ): Promise<Comment[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
 
   return rows
     .filter((row: any[]) => row[1] === entityType && row[2] === entityId)
-    .map((row: any[]) => ({
-      id: row[0] || '',
-      entityType: row[1] as 'song' | 'prompt' | 'assignment',
-      entityId: row[2] || '',
-      parentId: row[3] || null,
-      author: row[4] || 'Anonymous',
-      authorEmail: row[5] || '',
-      text: row[6] || '',
-      timestamp: row[7] || new Date().toISOString(),
-      reactions: row[8] ? JSON.parse(row[8]) : {}
-    }));
+    .map(parseCommentRow);
 };
 
 export const fetchAllComments = async (
   spreadsheetId: string
 ): Promise<Comment[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
 
-  return rows.map((row: any[]) => ({
-    id: row[0] || '',
-    entityType: row[1] as 'song' | 'prompt' | 'assignment',
-    entityId: row[2] || '',
-    parentId: row[3] || null,
-    author: row[4] || 'Anonymous',
-    authorEmail: row[5] || '',
-    text: row[6] || '',
-    timestamp: row[7] || new Date().toISOString(),
-    reactions: row[8] ? JSON.parse(row[8]) : {}
-  }));
+  return rows.map(parseCommentRow);
 };
 
 export const createComment = async (
@@ -863,7 +840,8 @@ export const createComment = async (
     comment.authorEmail,
     comment.text,
     comment.timestamp,
-    JSON.stringify(comment.reactions)
+    JSON.stringify(comment.reactions),
+    comment.editedAt || '',
   ]];
 
   await appendSheetRow(spreadsheetId, 'Comments!A1', rowValues);
@@ -871,7 +849,7 @@ export const createComment = async (
 };
 
 export const updateCommentRow = async (spreadsheetId: string, comment: Comment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === comment.id);
@@ -889,11 +867,12 @@ export const updateCommentRow = async (spreadsheetId: string, comment: Comment) 
     comment.authorEmail,
     comment.text,
     comment.timestamp,
-    JSON.stringify(comment.reactions)
+    JSON.stringify(comment.reactions),
+    comment.editedAt || '',
   ]];
 
   const sheetRow = rowIndex + 2;
-  const range = `Comments!A${sheetRow}:I${sheetRow}`;
+  const range = `Comments!A${sheetRow}:J${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 

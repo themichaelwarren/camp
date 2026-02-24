@@ -1118,6 +1118,7 @@ const App: React.FC = () => {
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
             bocas={bocas}
+            campers={campers}
           />
         ) : null;
       case 'assignment-detail':
@@ -1144,6 +1145,7 @@ const App: React.FC = () => {
             onAddPrompt={handleAddPrompt}
             availableTags={availableTags}
             bocas={bocas}
+            campers={campers}
           />
         ) : null;
       case 'song-detail':
@@ -1164,6 +1166,7 @@ const App: React.FC = () => {
             bocas={bocas}
             currentUserEmail={userProfile.email || ''}
             onGiveBoca={handleGiveBoca}
+            campers={campers}
           />
         ) : null;
       case 'bocas':

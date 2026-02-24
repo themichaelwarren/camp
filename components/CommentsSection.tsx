@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Comment as CommentType } from '../types';
+import { Comment as CommentType, CamperProfile } from '../types';
 import * as googleService from '../services/googleService';
 import Comment from './Comment';
 import CommentForm from './CommentForm';
@@ -9,13 +10,15 @@ interface CommentsSectionProps {
   entityId: string;
   spreadsheetId: string;
   currentUser: { name: string; email: string };
+  campers?: CamperProfile[];
 }
 
 const CommentsSection: React.FC<CommentsSectionProps> = ({
   entityType,
   entityId,
   spreadsheetId,
-  currentUser
+  currentUser,
+  campers = [],
 }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,6 +118,20 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     }
   };
 
+  const handleEditComment = async (commentId: string, newText: string) => {
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+    const updated = { ...comment, text: newText, editedAt: new Date().toISOString() };
+    setComments(comments.map(c => c.id === commentId ? updated : c));
+    try {
+      await googleService.updateCommentRow(spreadsheetId, updated);
+    } catch (error) {
+      console.error('Failed to edit comment', error);
+      setComments(comments);
+      alert('Failed to save edit. Please try again.');
+    }
+  };
+
   // Organize comments into a tree structure
   const topLevelComments = comments.filter((c) => !c.parentId);
   const getReplies = (parentId: string) => {
@@ -156,6 +173,8 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
                 currentUserEmail={currentUser.email}
                 onReply={handleReply}
                 onToggleReaction={handleToggleReaction}
+                onEditComment={handleEditComment}
+                campers={campers}
               />
             ))}
           </div>

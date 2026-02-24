@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca } from '../types';
+import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile } from '../types';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -30,6 +30,7 @@ interface AssignmentDetailProps {
   spreadsheetId: string;
   availableTags: string[];
   bocas?: Boca[];
+  campers?: CamperProfile[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -37,7 +38,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [] }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -523,6 +524,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           entityId={assignment.id}
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
+          campers={campers}
         />
       )}
 

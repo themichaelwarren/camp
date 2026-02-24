@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
+import { Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, CamperProfile } from '../types';
 import TagInput from '../components/TagInput';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
@@ -24,6 +24,7 @@ interface PromptDetailProps {
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   bocas?: Boca[];
+  campers?: CamperProfile[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -31,7 +32,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [] }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -296,6 +297,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           entityId={prompt.id}
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
+          campers={campers}
         />
       )}
 

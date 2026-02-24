@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { CamperProfile } from '../types';
 
 interface ReactionPickerProps {
   reactions: Record<string, string[]>;
   currentUserEmail: string;
   onToggleReaction: (emoji: string) => void;
+  campers?: CamperProfile[];
 }
 
 const EMOJI_CATEGORIES = {
@@ -17,14 +19,19 @@ const EMOJI_CATEGORIES = {
   'Food & Drink': ['🍕', '🌮', '🍔', '🍰', '🍪', '☕', '🥤', '🍺', '🍷', '🥂']
 };
 
-const AVAILABLE_EMOJIS = Object.values(EMOJI_CATEGORIES).flat();
-
-const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserEmail, onToggleReaction }) => {
+const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserEmail, onToggleReaction, campers = [] }) => {
   const [showPicker, setShowPicker] = useState(false);
 
   const handleEmojiClick = (emoji: string) => {
     onToggleReaction(emoji);
     setShowPicker(false);
+  };
+
+  const resolveNames = (emails: string[]): string => {
+    return emails.map(email => {
+      const c = campers.find(p => p.email === email);
+      return c?.name || email.split('@')[0];
+    }).join(', ');
   };
 
   return (
@@ -41,6 +48,7 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserE
                   ? 'bg-indigo-100 border border-indigo-300 text-indigo-700'
                   : 'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200'
               }`}
+              title={resolveNames(users)}
             >
               <span>{emoji}</span>
               <span className="font-bold">{users.length}</span>

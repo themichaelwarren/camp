@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Submission, Assignment, Prompt, ViewState, Boca } from '../types';
+import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -20,9 +20,10 @@ interface SongDetailProps {
   bocas?: Boca[];
   currentUserEmail?: string;
   onGiveBoca?: (submissionId: string) => Promise<void>;
+  campers?: CamperProfile[];
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [] }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -374,6 +375,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           entityId={submission.id}
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
+          campers={campers}
         />
       )}
       </div>

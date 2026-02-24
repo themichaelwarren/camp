@@ -83,6 +83,7 @@ export interface Comment {
   text: string;
   timestamp: string;
   reactions: Record<string, string[]>; // emoji -> array of user emails who reacted
+  editedAt?: string;
 }
 
 export interface EventAttendee {
