@@ -1,5 +1,12 @@
 import { ViewState } from './types';
 
+// --- Base Path ---
+
+// Vite injects BASE_URL from the `base` config: '/camp/' in production, '/' in dev.
+const RAW_BASE = import.meta.env.BASE_URL || '/';
+export const BASE_PATH = RAW_BASE.endsWith('/') ? RAW_BASE.slice(0, -1) : RAW_BASE;
+// production: '/camp', dev: ''
+
 // --- Slug Utilities ---
 
 export function slugify(text: string): string {
@@ -66,7 +73,7 @@ const SEGMENT_TO_DETAIL_VIEW: Record<string, ViewState> = {
 
 // --- Building URLs ---
 
-export function buildHashPath(
+export function buildPath(
   view: ViewState,
   id: string | null = null,
   title: string | null = null
@@ -74,15 +81,15 @@ export function buildHashPath(
   const detailSegment = DETAIL_VIEW_TO_SEGMENT[view];
   if (detailSegment && id) {
     const slug = title ? makeSlug(title, id) : id.slice(-6);
-    return `#/${detailSegment}/${slug}`;
+    return `${BASE_PATH}/${detailSegment}/${slug}`;
   }
 
   const segment = VIEW_TO_SEGMENT[view];
   if (segment !== undefined) {
-    return segment ? `#/${segment}` : '#/';
+    return segment ? `${BASE_PATH}/${segment}` : `${BASE_PATH}/`;
   }
 
-  return '#/';
+  return `${BASE_PATH}/`;
 }
 
 // --- Parsing URLs ---
@@ -92,10 +99,7 @@ export interface RouteInfo {
   id: string | null;
 }
 
-export function parseHash(hash: string): RouteInfo {
-  const path = hash.replace(/^#\/?/, '');
-  const segments = path.split('/').filter(Boolean);
-
+function parseSegments(segments: string[]): RouteInfo {
   if (segments.length === 0) {
     return { view: 'dashboard', id: null };
   }
@@ -116,6 +120,22 @@ export function parseHash(hash: string): RouteInfo {
   }
 
   return { view: 'dashboard', id: null };
+}
+
+export function parsePath(pathname: string): RouteInfo {
+  let path = pathname;
+  if (BASE_PATH && path.startsWith(BASE_PATH)) {
+    path = path.slice(BASE_PATH.length);
+  }
+  const segments = path.split('/').filter(Boolean);
+  return parseSegments(segments);
+}
+
+// Legacy: parse hash URLs for backwards-compatible redirect
+export function parseHash(hash: string): RouteInfo {
+  const path = hash.replace(/^#\/?/, '');
+  const segments = path.split('/').filter(Boolean);
+  return parseSegments(segments);
 }
 
 // --- Resolving short IDs ---

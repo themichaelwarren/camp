@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate } from './types';
-import { buildHashPath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
+import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -425,31 +425,42 @@ const App: React.FC = () => {
     setSelectedId(id);
     window.scrollTo(0, 0);
     const title = getTitleForEntity(view, id);
-    const hashPath = buildHashPath(view, id, title);
+    const urlPath = buildPath(view, id, title);
     const state = { view, id };
     if (replace) {
-      window.history.replaceState(state, '', hashPath);
+      window.history.replaceState(state, '', urlPath);
     } else {
-      window.history.pushState(state, '', hashPath);
+      window.history.pushState(state, '', urlPath);
     }
     updateMetaTags(getPageMeta(view, id));
   };
 
-  // Handle URL hash routing: initialize from hash on mount + browser back/forward
+  // Handle URL routing: initialize from pathname on mount + browser back/forward
   useEffect(() => {
+    // Legacy hash redirect: convert old /#/songs/... URLs to path URLs
     const hash = window.location.hash;
     if (hash && hash !== '#/' && hash !== '#') {
       const parsed = parseHash(hash);
+      const title = getTitleForEntity(parsed.view, parsed.id);
+      const newPath = buildPath(parsed.view, parsed.id, title);
       setActiveView(parsed.view);
       setSelectedId(parsed.id);
-      window.history.replaceState({ view: parsed.view, id: parsed.id }, '', hash);
+      window.history.replaceState({ view: parsed.view, id: parsed.id }, '', newPath);
     } else {
-      window.history.replaceState({ view: activeView, id: selectedId }, '', '#/');
+      // Normal path-based routing
+      const parsed = parsePath(window.location.pathname);
+      if (parsed.view !== 'dashboard' || parsed.id) {
+        setActiveView(parsed.view);
+        setSelectedId(parsed.id);
+        window.history.replaceState({ view: parsed.view, id: parsed.id }, '', window.location.pathname);
+      } else {
+        window.history.replaceState({ view: activeView, id: selectedId }, '', window.location.pathname);
+      }
     }
 
     const handlePopState = (e: PopStateEvent) => {
-      const view = e.state?.view || parseHash(window.location.hash).view;
-      const id = e.state?.id || parseHash(window.location.hash).id;
+      const view = e.state?.view || parsePath(window.location.pathname).view;
+      const id = e.state?.id || parsePath(window.location.pathname).id;
       setActiveView(view);
       setSelectedId(id || null);
       window.scrollTo(0, 0);
@@ -465,10 +476,7 @@ const App: React.FC = () => {
     if (hasResolvedUrl.current) return;
     if (prompts.length === 0 && assignments.length === 0 && submissions.length === 0 && campers.length === 0) return;
 
-    const hash = window.location.hash;
-    if (!hash || hash === '#/' || hash === '#') return;
-
-    const parsed = parseHash(hash);
+    const parsed = parsePath(window.location.pathname);
     if (!parsed.id) return;
 
     hasResolvedUrl.current = true;
@@ -498,7 +506,7 @@ const App: React.FC = () => {
     if (resolvedId) {
       setActiveView(parsed.view);
       setSelectedId(resolvedId);
-      window.history.replaceState({ view: parsed.view, id: resolvedId }, '', hash);
+      window.history.replaceState({ view: parsed.view, id: resolvedId }, '', window.location.pathname);
       updateMetaTags(getPageMeta(parsed.view, resolvedId));
     }
   }, [prompts, assignments, submissions, campers, events]);
