@@ -149,4 +149,6 @@ export type ViewState =
   | 'song-detail'
   | 'event-detail'
   | 'camper-detail'
-  | 'bocas';
+  | 'bocas'
+  | 'semesters'
+  | 'semester-detail';

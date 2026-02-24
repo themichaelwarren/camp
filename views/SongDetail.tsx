@@ -199,7 +199,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
 
         {/* Metadata */}
-        <div className="flex-1 min-w-0 space-y-4">
+        <div className="flex-1 min-w-0 w-full space-y-4 overflow-hidden">
           <div>
             <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
             <p className="text-sm mt-1">
@@ -215,11 +215,11 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
           {/* Assignment & Prompt chips */}
           {(assignment || prompt) && (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               {assignment && (
                 <button
                   onClick={() => onNavigate('assignment-detail', assignment.id)}
-                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all"
+                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all w-full sm:w-auto overflow-hidden"
                 >
                   <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-indigo-600 flex-shrink-0">
                     <i className="fa-solid fa-tasks text-sm"></i>
@@ -234,7 +234,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               {prompt && (
                 <button
                   onClick={() => onNavigate('prompt-detail', prompt.id)}
-                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all"
+                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all w-full sm:w-auto overflow-hidden"
                 >
                   <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-amber-500 flex-shrink-0">
                     <i className="fa-solid fa-lightbulb text-sm"></i>

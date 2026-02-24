@@ -24,9 +24,11 @@ interface PromptsPageProps {
   onStatusFilterChange: (value: 'all' | PromptStatus) => void;
   sortBy: 'newest' | 'oldest' | 'upvotes' | 'title';
   onSortByChange: (value: 'newest' | 'oldest' | 'upvotes' | 'title') => void;
+  viewMode: 'cards' | 'list';
+  onViewModeChange: (value: 'cards' | 'list') => void;
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange, viewMode, onViewModeChange }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -189,8 +191,33 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
         </div>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* View toggle + results count */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
+          <button
+            onClick={() => onViewModeChange('cards')}
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Cards
+          </button>
+          <button
+            onClick={() => onViewModeChange('list')}
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            List
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 font-medium">
+          {filteredPrompts.length} prompt{filteredPrompts.length !== 1 ? 's' : ''}
+        </p>
+      </div>
+
+      {/* List View */}
+      {viewMode === 'list' && <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
             <tr>
@@ -251,10 +278,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      {/* Card View */}
+      {viewMode === 'cards' && <div className="space-y-3">
         {filteredPrompts.map(prompt => (
           <div
             key={prompt.id}
@@ -301,7 +328,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
             No prompts match your filters.
           </div>
         )}
-      </div>
+      </div>}
 
       {showAddModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">

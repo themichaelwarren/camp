@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
 import Layout from './components/Layout';
@@ -15,7 +15,10 @@ import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import InboxPage from './views/InboxPage';
 import BOCAsPage from './views/BOCAsPage';
+import SemestersPage from './views/SemestersPage';
+import SemesterDetail from './views/SemesterDetail';
 import * as googleService from './services/googleService';
+import { getTerm, getTermSortKey } from './utils';
 
 const CAMP_QUOTES = [
   'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
@@ -45,20 +48,27 @@ const App: React.FC = () => {
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
+  const [promptsViewMode, setPromptsViewMode] = useState<'cards' | 'list'>('list');
   const [assignmentsViewMode, setAssignmentsViewMode] = useState<'list' | 'cards'>('list');
   const [assignmentsSearch, setAssignmentsSearch] = useState('');
   const [assignmentsStatusFilter, setAssignmentsStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
   const [assignmentsPromptFilter, setAssignmentsPromptFilter] = useState('all');
-  const [assignmentsSortBy, setAssignmentsSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc'>('due-asc');
+  const [assignmentsSortBy, setAssignmentsSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc'>('due-asc');
+  const [assignmentsSemesterFilter, setAssignmentsSemesterFilter] = useState('all');
   const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('list');
   const [submissionsSearch, setSubmissionsSearch] = useState('');
   const [submissionsAssignmentFilter, setSubmissionsAssignmentFilter] = useState('all');
   const [submissionsPromptFilter, setSubmissionsPromptFilter] = useState('all');
-  const [submissionsSortBy, setSubmissionsSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc'>('date-desc');
+  const [submissionsSortBy, setSubmissionsSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc'>('date-desc');
+  const [submissionsSemesterFilter, setSubmissionsSemesterFilter] = useState('all');
   const [campersViewMode, setCampersViewMode] = useState<'list' | 'cards'>('list');
   const [camperDetailSongsView, setCamperDetailSongsView] = useState<'cards' | 'list'>('list');
   const [camperDetailSearch, setCamperDetailSearch] = useState('');
   const [camperDetailSelectedTags, setCamperDetailSelectedTags] = useState<string[]>([]);
+  const [bocasViewMode, setBocasViewMode] = useState<'cards' | 'list'>('cards');
+  const [bocasSearch, setBocasSearch] = useState('');
+  const [semestersViewMode, setSemestersViewMode] = useState<'cards' | 'list'>('cards');
+  const [bocasSortBy, setBocasSortBy] = useState<'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent'>('count-desc');
   const [player, setPlayer] = useState<{
     src: string;
     title: string;
@@ -362,6 +372,8 @@ const App: React.FC = () => {
         const camper = campers.find(c => c.id === id || c.email === id);
         return camper?.name || null;
       }
+      case 'semester-detail':
+        return id;
       default:
         return null;
     }
@@ -418,6 +430,8 @@ const App: React.FC = () => {
           description: camper.status ? `"${camper.status}"${camper.location ? ` · ${camper.location}` : ''}` : camper.location || undefined,
         };
       }
+      case 'semester-detail':
+        return { title: id || 'Semester' };
       default:
         return getDefaultPageMeta(view);
     }
@@ -982,6 +996,16 @@ const App: React.FC = () => {
 
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
+  const allSemesters = useMemo(() => {
+    const terms = new Set<string>();
+    assignments.filter(a => !a.deletedAt).forEach(a => terms.add(getTerm(a.dueDate)));
+    submissions.filter(s => !s.deletedAt).forEach(s => {
+      const date = s.versions?.length ? s.versions[0].timestamp : s.updatedAt;
+      terms.add(getTerm(date));
+    });
+    return Array.from(terms).sort((a, b) => getTermSortKey(b) - getTermSortKey(a));
+  }, [assignments, submissions]);
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -1034,6 +1058,8 @@ const App: React.FC = () => {
             onStatusFilterChange={setPromptsStatusFilter}
             sortBy={promptsSortBy}
             onSortByChange={setPromptsSortBy}
+            viewMode={promptsViewMode}
+            onViewModeChange={setPromptsViewMode}
           />
         ) : null;
       case 'assignments':
@@ -1058,6 +1084,8 @@ const App: React.FC = () => {
             onPromptFilterChange={setAssignmentsPromptFilter}
             sortBy={assignmentsSortBy}
             onSortByChange={setAssignmentsSortBy}
+            semesterFilter={assignmentsSemesterFilter}
+            onSemesterFilterChange={setAssignmentsSemesterFilter}
           />
         ) : null;
       case 'submissions':
@@ -1084,6 +1112,8 @@ const App: React.FC = () => {
             onPromptFilterChange={setSubmissionsPromptFilter}
             sortBy={submissionsSortBy}
             onSortByChange={setSubmissionsSortBy}
+            semesterFilter={submissionsSemesterFilter}
+            onSemesterFilterChange={setSubmissionsSemesterFilter}
             bocas={bocas}
           />
         );
@@ -1180,8 +1210,49 @@ const App: React.FC = () => {
             onPlayTrack={handlePlayTrack}
             playingTrackId={playingTrackId}
             onGiveBoca={handleGiveBoca}
+            viewMode={bocasViewMode}
+            onViewModeChange={setBocasViewMode}
+            searchTerm={bocasSearch}
+            onSearchTermChange={setBocasSearch}
+            sortBy={bocasSortBy}
+            onSortByChange={setBocasSortBy}
           />
         );
+      case 'semesters':
+        return (
+          <SemestersPage
+            semesters={allSemesters}
+            assignments={assignments.filter(a => !a.deletedAt)}
+            submissions={submissions.filter(s => !s.deletedAt)}
+            prompts={prompts.filter(p => !p.deletedAt)}
+            onViewDetail={(semester) => navigateTo('semester-detail', semester)}
+            viewMode={semestersViewMode}
+            onViewModeChange={setSemestersViewMode}
+          />
+        );
+      case 'semester-detail': {
+        const semesterName = selectedId;
+        const semAssignments = assignments.filter(a => !a.deletedAt && getTerm(a.dueDate) === semesterName);
+        const semSubmissions = submissions.filter(s => {
+          if (s.deletedAt) return false;
+          const date = s.versions?.length ? s.versions[0].timestamp : s.updatedAt;
+          return getTerm(date) === semesterName;
+        });
+        return semesterName ? (
+          <SemesterDetail
+            semester={semesterName}
+            assignments={semAssignments}
+            submissions={semSubmissions}
+            prompts={prompts.filter(p => !p.deletedAt)}
+            bocas={bocas}
+            onNavigate={navigateTo}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
+          />
+        ) : null;
+      }
       case 'settings':
         return (
           <SettingsPage

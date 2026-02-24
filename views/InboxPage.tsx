@@ -283,8 +283,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     )}
                   </p>
                   {version.notes && <p className="text-xs text-slate-400 truncate mt-0.5">{version.notes}</p>}
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-music text-[8px]"></i>
+                      Song
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   {track && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
@@ -331,8 +338,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                       ))}
                     </div>
                   )}
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-comment text-[8px]"></i>
+                      Comment
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-comment text-[8px]"></i>
                     Comment
@@ -357,8 +371,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     New prompt: <span className="font-semibold text-indigo-600">"{p.title}"</span>
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5 truncate">{p.description}</p>
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-lightbulb text-[8px]"></i>
+                      Prompt
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs font-bold text-indigo-500 flex items-center gap-1">
                     <i className="fa-solid fa-heart"></i> {p.upvotes}
                   </span>
@@ -388,8 +409,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     New assignment: <span className="font-semibold text-indigo-600">"{a.title}"</span>
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">Due {a.dueDate} &middot; {a.status}</p>
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-tasks text-[8px]"></i>
+                      Assignment
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-tasks text-[8px]"></i>
                     Assignment
@@ -418,8 +446,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
                   </p>
                   {sub && <p className="text-xs text-slate-400 mt-0.5">by {sub.camperName}</p>}
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-star text-[8px]"></i>
+                      BOCA
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-star text-[8px]"></i>
                     BOCA
@@ -444,8 +479,15 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-bold text-slate-800">{su.camperName}</span> updated their status
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5 italic">"{su.status}"</p>
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-circle-info text-[8px]"></i>
+                      Status
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-circle-info text-[8px]"></i>
                     Status

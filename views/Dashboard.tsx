@@ -79,8 +79,8 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                         className="flex items-center gap-4 p-4 border border-slate-100 rounded-xl bg-slate-50"
                       >
                         <div className="text-center bg-white p-2 rounded-lg border border-slate-200 min-w-[60px]">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(a.dueDate).toLocaleString('default', { month: 'short' })}</p>
-                          <p className="text-xl font-bold text-indigo-600">{new Date(a.dueDate).getDate()}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(a.dueDate + 'T00:00:00').toLocaleString('default', { month: 'short' })}</p>
+                          <p className="text-xl font-bold text-indigo-600">{new Date(a.dueDate + 'T00:00:00').getDate()}</p>
                         </div>
                         <div>
                           <p className="font-semibold text-slate-800">{a.title}</p>

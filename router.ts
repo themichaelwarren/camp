@@ -41,6 +41,7 @@ const VIEW_TO_SEGMENT: Record<string, string> = {
   campers: 'campers',
   settings: 'settings',
   bocas: 'bocas',
+  semesters: 'semesters',
 };
 
 const DETAIL_VIEW_TO_SEGMENT: Record<string, string> = {
@@ -49,6 +50,7 @@ const DETAIL_VIEW_TO_SEGMENT: Record<string, string> = {
   'song-detail': 'songs',
   'event-detail': 'events',
   'camper-detail': 'campers',
+  'semester-detail': 'semesters',
 };
 
 const SEGMENT_TO_VIEW: Record<string, ViewState> = {
@@ -61,6 +63,7 @@ const SEGMENT_TO_VIEW: Record<string, ViewState> = {
   campers: 'campers',
   settings: 'settings',
   bocas: 'bocas',
+  semesters: 'semesters',
 };
 
 const SEGMENT_TO_DETAIL_VIEW: Record<string, ViewState> = {
@@ -69,6 +72,7 @@ const SEGMENT_TO_DETAIL_VIEW: Record<string, ViewState> = {
   songs: 'song-detail',
   events: 'event-detail',
   campers: 'camper-detail',
+  semesters: 'semester-detail',
 };
 
 // --- Building URLs ---
@@ -80,7 +84,8 @@ export function buildPath(
 ): string {
   const detailSegment = DETAIL_VIEW_TO_SEGMENT[view];
   if (detailSegment && id) {
-    const slug = title ? makeSlug(title, id) : id.slice(-6);
+    // Semester IDs are term strings ("Winter 2026"), not entity IDs
+    const slug = view === 'semester-detail' ? slugify(id) : (title ? makeSlug(title, id) : id.slice(-6));
     return `${BASE_PATH}/${detailSegment}/${slug}`;
   }
 
@@ -107,6 +112,13 @@ function parseSegments(segments: string[]): RouteInfo {
   const firstSegment = segments[0];
 
   if (segments.length >= 2) {
+    // Semester slugs are term strings ("winter-2026"), not entity short IDs
+    if (firstSegment === 'semesters') {
+      const parts = segments[1].split('-');
+      const season = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      const year = parts[1];
+      return { view: 'semester-detail', id: `${season} ${year}` };
+    }
     const detailView = SEGMENT_TO_DETAIL_VIEW[firstSegment];
     if (detailView) {
       const shortId = extractIdFromSlug(segments[1]);
@@ -162,6 +174,7 @@ const VIEW_TITLES: Record<string, string> = {
   campers: 'Campers',
   settings: 'Settings',
   bocas: 'BOCAs',
+  semesters: 'Semesters',
 };
 
 export function getDefaultPageMeta(view: ViewState): PageMeta {

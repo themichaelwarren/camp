@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
+import { getTerm, getTermSortKey } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 
-type AssignmentsSortBy = 'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc';
+type AssignmentsSortBy = 'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 
 interface AssignmentsPageProps {
   assignments: Assignment[];
@@ -28,9 +29,11 @@ interface AssignmentsPageProps {
   onPromptFilterChange: (value: string) => void;
   sortBy: AssignmentsSortBy;
   onSortByChange: (value: AssignmentsSortBy) => void;
+  semesterFilter: string;
+  onSemesterFilterChange: (value: string) => void;
 }
 
-const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange }) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
@@ -54,10 +57,18 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     setForm({ title: '', promptIds: [], startDate: '', dueDate: '', instructions: '' });
   };
 
+  const availableSemesters = useMemo(() => {
+    const terms = new Set<string>(assignments.map(a => getTerm(a.dueDate)));
+    return Array.from(terms).sort((a, b) => getTermSortKey(b) - getTermSortKey(a));
+  }, [assignments]);
+
   // Filter and sort assignments
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredAssignments = assignments
     .filter((assignment) => {
+      // Term filter
+      if (semesterFilter !== 'all' && getTerm(assignment.dueDate) !== semesterFilter) return false;
+
       // Status filter
       if (statusFilter !== 'all' && assignment.status !== statusFilter) return false;
 
@@ -125,10 +136,129 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           const bPrompt = prompts.find(p => p.id === b.promptId)?.title || '';
           return bPrompt.localeCompare(aPrompt);
         }
+        case 'semester-desc':
+        case 'semester-asc': {
+          const aKey = getTermSortKey(getTerm(a.dueDate));
+          const bKey = getTermSortKey(getTerm(b.dueDate));
+          const termCmp = sortBy === 'semester-desc' ? bKey - aKey : aKey - bKey;
+          if (termCmp !== 0) return termCmp;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        }
         default:
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
     });
+
+  const isSemesterSort = sortBy === 'semester-desc' || sortBy === 'semester-asc';
+  const groupedBySemester: [string, Assignment[]][] = useMemo(() => {
+    if (!isSemesterSort) return [];
+    const groups: Record<string, Assignment[]> = {};
+    filteredAssignments.forEach(a => {
+      const term = getTerm(a.dueDate);
+      if (!groups[term]) groups[term] = [];
+      groups[term].push(a);
+    });
+    return Object.entries(groups);
+  }, [filteredAssignments, isSemesterSort]);
+
+  const renderRow = (a: Assignment) => {
+    const assignmentPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
+    const assignmentPrompts = assignmentPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
+    return (
+      <tr
+        key={a.id}
+        className="hover:bg-slate-50 transition-colors cursor-pointer group"
+        onClick={() => onViewDetail(a.id)}
+      >
+        <td className="px-6 py-4 max-w-xs">
+          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{a.title}</h4>
+          <p className="text-xs text-slate-500 line-clamp-1">{a.instructions.substring(0, 60)}...</p>
+        </td>
+        <td className="px-6 py-4 max-w-[200px]">
+          <div className="flex flex-wrap gap-1">
+            {assignmentPrompts.length > 0 ? (
+              <>
+                {assignmentPrompts.slice(0, 2).map(p => (
+                  <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]">
+                    {p!.title}
+                  </span>
+                ))}
+                {assignmentPrompts.length > 2 && (
+                  <span className="text-xs text-slate-400">+{assignmentPrompts.length - 2}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-sm text-slate-400">No Prompt</span>
+            )}
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="text-sm text-slate-700">{a.dueDate}</div>
+          <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(a.dueDate)}</span>
+        </td>
+        <td className="px-6 py-4">
+          <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${
+            a.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+          }`}>
+            {a.status}
+          </span>
+        </td>
+      </tr>
+    );
+  };
+
+  const renderCard = (a: Assignment) => {
+    const cardPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
+    const cardPrompts = cardPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
+    return (
+      <div
+        key={a.id}
+        onClick={() => onViewDetail(a.id)}
+        className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ${
+              a.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {a.status}
+            </span>
+            <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-semibold">{getTerm(a.dueDate)}</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-bold uppercase">Due {a.dueDate}</span>
+        </div>
+        <h3 className="font-bold text-lg text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{a.title}</h3>
+        <div className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 line-clamp-3 overflow-hidden">
+          <MarkdownPreview content={a.instructions} className="text-xs" />
+        </div>
+        {cardPrompts.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {cardPrompts.slice(0, 2).map(p => (
+              <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                {p!.title}
+              </span>
+            ))}
+            {cardPrompts.length > 2 && (
+              <span className="text-xs text-slate-400">+{cardPrompts.length - 2}</span>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100">
+          <div className="flex -space-x-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
+                <img src={`https://picsum.photos/seed/${i + 20}/32`} alt="avatar" />
+              </div>
+            ))}
+            <div className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 text-[10px] font-bold text-indigo-600 flex items-center justify-center">
+              {campersCount > 0 ? `+${campersCount}` : '0'}
+            </div>
+          </div>
+          <span className="text-xs text-slate-400 font-medium">Assigned to {campersCount || 0} campers</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -174,7 +304,20 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           </button>
         </div>
         <div className={`${showFilters ? 'block' : 'hidden'}`}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Semester</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={semesterFilter}
+                onChange={(e) => onSemesterFilterChange(e.target.value)}
+              >
+                <option value="all">All Semesters</option>
+                {availableSemesters.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
               <select
@@ -215,6 +358,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                 <option value="title-desc">Title: Z-A</option>
                 <option value="prompt-asc">Prompt: A-Z</option>
                 <option value="prompt-desc">Prompt: Z-A</option>
+                <option value="term-desc">Semester: Newest</option>
+                <option value="term-asc">Semester: Oldest</option>
               </select>
             </div>
           </div>
@@ -243,124 +388,62 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       </div>
 
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4">Assignment</th>
-                <th className="px-6 py-4">Prompt</th>
-                <th className="px-6 py-4">Due Date</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredAssignments.map(a => {
-                const assignmentPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
-                const assignmentPrompts = assignmentPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
-                return (
-                  <tr
-                    key={a.id}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer group"
-                    onClick={() => onViewDetail(a.id)}
-                  >
-                    <td className="px-6 py-4 max-w-xs">
-                      <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{a.title}</h4>
-                      <p className="text-xs text-slate-500 line-clamp-1">{a.instructions.substring(0, 60)}...</p>
-                    </td>
-                    <td className="px-6 py-4 max-w-[200px]">
-                      <div className="flex flex-wrap gap-1">
-                        {assignmentPrompts.length > 0 ? (
-                          <>
-                            {assignmentPrompts.slice(0, 2).map(p => (
-                              <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium truncate max-w-[160px]">
-                                {p!.title}
-                              </span>
-                            ))}
-                            {assignmentPrompts.length > 2 && (
-                              <span className="text-xs text-slate-400">+{assignmentPrompts.length - 2}</span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-sm text-slate-400">No Prompt</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-slate-700">{a.dueDate}</div>
-                      {a.startDate && <div className="text-xs text-slate-400">Started {a.startDate}</div>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${
-                        a.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {a.status}
-                      </span>
-                    </td>
+        <div className="space-y-2">
+          {isSemesterSort ? (
+            groupedBySemester.map(([term, items]) => (
+              <React.Fragment key={term}>
+                <div className="text-sm font-bold text-slate-400 uppercase tracking-widest pt-4 first:pt-0">{term}</div>
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <table className="w-full text-left">
+                    <tbody className="divide-y divide-slate-100">
+                      {items.map(a => renderRow(a))}
+                    </tbody>
+                  </table>
+                </div>
+              </React.Fragment>
+            ))
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-4">Assignment</th>
+                    <th className="px-6 py-4">Prompt</th>
+                    <th className="px-6 py-4">Due Date</th>
+                    <th className="px-6 py-4">Status</th>
                   </tr>
-                );
-              })}
-              {filteredAssignments.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
-                    No assignments match your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredAssignments.map(a => renderRow(a))}
+                  {filteredAssignments.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
+                        No assignments match your filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
         /* Cards View */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredAssignments.map(a => (
-            <div 
-              key={a.id} 
-              onClick={() => onViewDetail(a.id)}
-              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tight ${
-                  a.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {a.status}
-                </span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Due {a.dueDate}</span>
-              </div>
-              <h3 className="font-bold text-lg text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{a.title}</h3>
-              <div className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 line-clamp-3 overflow-hidden">
-                <MarkdownPreview content={a.instructions} className="text-xs" />
-              </div>
-              {(() => {
-                const cardPromptIds = a.promptIds?.length ? a.promptIds : [a.promptId].filter(Boolean);
-                const cardPrompts = cardPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
-                return cardPrompts.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {cardPrompts.slice(0, 2).map(p => (
-                      <span key={p!.id} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
-                        {p!.title}
-                      </span>
-                    ))}
-                    {cardPrompts.length > 2 && (
-                      <span className="text-xs text-slate-400">+{cardPrompts.length - 2}</span>
-                    )}
-                  </div>
-                ) : null;
-              })()}
-              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
-                      <img src={`https://picsum.photos/seed/${i + 20}/32`} alt="avatar" />
-                    </div>
-                  ))}
-                  <div className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 text-[10px] font-bold text-indigo-600 flex items-center justify-center">
-                    {campersCount > 0 ? `+${campersCount}` : '0'}
-                  </div>
+        <div className="space-y-2">
+          {isSemesterSort ? (
+            groupedBySemester.map(([term, items]) => (
+              <React.Fragment key={term}>
+                <div className="text-sm font-bold text-slate-400 uppercase tracking-widest pt-4 first:pt-0">{term}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {items.map(a => renderCard(a))}
                 </div>
-                <span className="text-xs text-slate-400 font-medium">Assigned to {campersCount || 0} campers</span>
-              </div>
+              </React.Fragment>
+            ))
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredAssignments.map(a => renderCard(a))}
             </div>
-          ))}
+          )}
         </div>
       )}
 

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { ViewState } from '../types';
+import { getTerm } from '../utils';
 import ArtworkImage from './ArtworkImage';
 import NowPlayingOverlay from './NowPlayingOverlay';
 import * as googleService from '../services/googleService';
@@ -49,12 +50,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const menuItems = [
     { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
     { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
-    { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
-    { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { id: 'submissions', label: 'Songs', icon: 'fa-music' },
+    { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
+    { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
     { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
-    { id: 'campers', label: 'Campers', icon: 'fa-users' },
+    { id: 'semesters', label: 'Semesters', icon: 'fa-graduation-cap' },
     { id: 'bocas', label: 'BOCAs', icon: 'fa-star' },
+    { id: 'campers', label: 'Campers', icon: 'fa-users' },
   ];
 
   const handleNavigate = (view: ViewState) => {
@@ -185,7 +187,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <span aria-hidden="true" className="text-2xl leading-none">⛺️</span>
                 <span>Camp</span>
               </h1>
-              <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">V2.0</p>
+              <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">{getTerm(new Date().toISOString())}</p>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -424,7 +426,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onClick={() => setIsMobileNavOpen(false)}
             aria-label="Close navigation overlay"
           />
-          <aside className="camp-sidebar relative z-10 w-72 bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
+          <aside className="camp-sidebar relative z-10 w-full bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
             {renderSidebarContent(false)}
           </aside>
         </div>
@@ -442,7 +444,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </button>
              <h2 className="text-lg font-semibold text-slate-800 capitalize">
                {(() => {
-                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', settings: 'Settings' };
+                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings' };
                  return labels[activeView] || activeView.split('-').join(' ');
                })()}
              </h2>
