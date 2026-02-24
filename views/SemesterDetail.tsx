@@ -73,7 +73,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{semester}</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              {assignments.length} assignment{assignments.length !== 1 ? 's' : ''} · {submissions.length} song{submissions.length !== 1 ? 's' : ''} · {semesterPrompts.length} prompt{semesterPrompts.length !== 1 ? 's' : ''}
+              {new Set(submissions.map(s => s.camperId || s.camperName)).size} camper{new Set(submissions.map(s => s.camperId || s.camperName)).size !== 1 ? 's' : ''} · {assignments.length} assignment{assignments.length !== 1 ? 's' : ''} · {submissions.length} song{submissions.length !== 1 ? 's' : ''} · {semesterPrompts.length} prompt{semesterPrompts.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>

@@ -28,10 +28,12 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
       if (a.promptIds) a.promptIds.forEach(id => promptIds.add(id));
       if (a.promptId) promptIds.add(a.promptId);
     });
+    const camperIds = new Set<string>(semSubmissions.map(s => s.camperId || s.camperName));
     return {
       assignments: semAssignments.length,
       songs: semSubmissions.length,
       prompts: promptIds.size,
+      campers: camperIds.size,
     };
   };
 
@@ -55,7 +57,11 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
             <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Current</span>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
+          <div className="text-center">
+            <p className="text-xl font-bold text-slate-900">{stats.campers}</p>
+            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Campers</p>
+          </div>
           <div className="text-center">
             <p className="text-xl font-bold text-slate-900">{stats.assignments}</p>
             <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Assignments</p>
@@ -93,6 +99,7 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
             )}
           </div>
         </td>
+        <td className="px-6 py-4 text-sm text-slate-600">{stats.campers}</td>
         <td className="px-6 py-4 text-sm text-slate-600">{stats.assignments}</td>
         <td className="px-6 py-4 text-sm text-slate-600">{stats.songs}</td>
         <td className="px-6 py-4 text-sm text-slate-600">{stats.prompts}</td>
@@ -136,6 +143,7 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4">Semester</th>
+                  <th className="px-6 py-4">Campers</th>
                   <th className="px-6 py-4">Assignments</th>
                   <th className="px-6 py-4">Songs</th>
                   <th className="px-6 py-4">Prompts</th>
