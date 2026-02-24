@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkImage from './ArtworkImage';
 
@@ -25,6 +25,7 @@ interface NowPlayingOverlayProps {
   onNavigateToCamper?: (camperId: string) => void;
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
+  bocaCount?: number;
 }
 
 const formatTime = (seconds: number) => {
@@ -46,7 +47,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onNavigateToSong,
   onNavigateToCamper,
   isJukeboxMode,
-  onStopJukebox
+  onStopJukebox,
+  bocaCount
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -120,9 +122,40 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
   const seekPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // Pull-down-to-dismiss gesture
+  const dragStartY = useRef<number | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const isDragging = dragStartY.current !== null;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+    setDragOffsetY(0);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const delta = e.touches[0].clientY - dragStartY.current;
+    // Only allow dragging downward
+    setDragOffsetY(Math.max(0, delta));
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (dragOffsetY > 120) {
+      onClose();
+    }
+    dragStartY.current = null;
+    setDragOffsetY(0);
+  }, [dragOffsetY, onClose]);
+
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] bg-slate-100 flex flex-col animate-in slide-in-from-bottom duration-300"
+      style={{
+        transform: dragOffsetY > 0 ? `translateY(${dragOffsetY}px)` : undefined,
+        transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+        opacity: dragOffsetY > 0 ? Math.max(0.3, 1 - dragOffsetY / 400) : 1,
+        borderRadius: dragOffsetY > 0 ? `${Math.min(24, dragOffsetY / 5)}px ${Math.min(24, dragOffsetY / 5)}px 0 0` : undefined,
+      }}
       onClick={onClose}
     >
       {/* Full-bleed container */}
@@ -130,8 +163,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         className="flex-1 flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-6 pt-4 pb-2 flex-shrink-0">
+        {/* Top bar — swipe-down handle on mobile */}
+        <div
+          className="flex items-center justify-between px-6 pt-4 pb-2 flex-shrink-0 touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Mobile pull-down indicator */}
           <div className="md:hidden flex-1 flex justify-center">
             <div className="w-10 h-1 rounded-full bg-slate-300" />
@@ -198,6 +236,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                   </button>
                 ) : (
                   <p className="text-slate-500 text-sm xl:text-base font-medium truncate mt-0.5">{player.artist}</p>
+                )}
+                {!!bocaCount && bocaCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5 mt-2 text-amber-500">
+                    {Array.from({ length: bocaCount }, (_, i) => (
+                      <i key={i} className="fa-solid fa-star text-sm"></i>
+                    ))}
+                  </span>
                 )}
               </div>
 

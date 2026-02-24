@@ -11,9 +11,11 @@ interface EventsPageProps {
   onUpdateEvent: (event: Event) => void;
   spreadsheetId?: string;
   currentUser?: { name?: string; email?: string } | null;
+  viewMode: 'cards' | 'list';
+  onViewModeChange: (value: 'cards' | 'list') => void;
 }
 
-const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate, onUpdateEvent, spreadsheetId, currentUser }) => {
+const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate, onUpdateEvent, spreadsheetId, currentUser, viewMode, onViewModeChange }) => {
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editEventForm, setEditEventForm] = useState({
@@ -134,6 +136,26 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
         </div>
       </div>
 
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
+        <button
+          onClick={() => onViewModeChange('cards')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Cards
+        </button>
+        <button
+          onClick={() => onViewModeChange('list')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          List
+        </button>
+      </div>
+
       {/* Upcoming Events */}
       <section>
         <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -151,6 +173,70 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
             </div>
             <h3 className="font-bold text-slate-800 text-xl">No upcoming events</h3>
             <p className="text-slate-500 mt-2">Events will appear here when assignments are created</p>
+          </div>
+        ) : viewMode === 'list' ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4">Event</th>
+                  <th className="px-6 py-4">Date & Time</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Location</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Attendees</th>
+                  <th className="px-6 py-4"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {upcomingEvents.map(event => {
+                  const { dateStr, timeStr } = formatEventDateTime(event.startDateTime);
+                  const assignment = getAssignmentForEvent(event);
+                  return (
+                    <tr
+                      key={event.id}
+                      onClick={() => handleEditEvent(event)}
+                      className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex flex-col items-center justify-center flex-shrink-0">
+                            <p className="text-[8px] font-bold uppercase leading-none">{new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}</p>
+                            <p className="text-sm font-bold leading-tight">{new Date(event.startDateTime).getDate()}</p>
+                          </div>
+                          <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{event.title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{dateStr} at {timeStr}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{event.attendees.length || '—'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                          {event.meetLink && (
+                            <a
+                              href={event.meetLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-green-700 transition-colors"
+                            >
+                              <i className="fa-solid fa-video"></i>
+                              Join
+                            </a>
+                          )}
+                          {assignment && (
+                            <button
+                              onClick={() => onNavigate('assignment-detail', assignment.id)}
+                              className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                            >
+                              <i className="fa-solid fa-tasks"></i>
+                              Assignment
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -236,50 +322,101 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
             </span>
           </h3>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {pastEvents.map(event => {
-              const { dateStr, timeStr } = formatEventDateTime(event.startDateTime);
-              const assignment = getAssignmentForEvent(event);
+          {viewMode === 'list' ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-4">Event</th>
+                    <th className="px-6 py-4">Date & Time</th>
+                    <th className="px-6 py-4 hidden md:table-cell">Location</th>
+                    <th className="px-6 py-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pastEvents.map(event => {
+                    const { dateStr, timeStr } = formatEventDateTime(event.startDateTime);
+                    const assignment = getAssignmentForEvent(event);
+                    return (
+                      <tr
+                        key={event.id}
+                        onClick={() => handleEditEvent(event)}
+                        className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-slate-200 text-slate-500 flex flex-col items-center justify-center flex-shrink-0">
+                              <p className="text-[8px] font-bold uppercase leading-none">{new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}</p>
+                              <p className="text-sm font-bold leading-tight">{new Date(event.startDateTime).getDate()}</p>
+                            </div>
+                            <span className="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors truncate">{event.title}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{dateStr} at {timeStr}</td>
+                        <td className="px-6 py-4 text-sm text-slate-500 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
+                        <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                          {assignment && (
+                            <button
+                              onClick={() => onNavigate('assignment-detail', assignment.id)}
+                              className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                            >
+                              <i className="fa-solid fa-tasks"></i>
+                              Assignment
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pastEvents.map(event => {
+                const { dateStr, timeStr } = formatEventDateTime(event.startDateTime);
+                const assignment = getAssignmentForEvent(event);
 
-              return (
-                <div
-                  key={event.id}
-                  onClick={() => handleEditEvent(event)}
-                  className="bg-slate-50 border border-slate-200 rounded-2xl p-6 opacity-75 cursor-pointer hover:opacity-100 transition-opacity"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-16 h-16 bg-slate-200 rounded-xl flex flex-col items-center justify-center">
-                      <p className="text-xs font-bold text-slate-500 uppercase">
-                        {new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}
-                      </p>
-                      <p className="text-2xl font-bold text-slate-600">
-                        {new Date(event.startDateTime).getDate()}
-                      </p>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-slate-700 text-lg mb-1">{event.title}</h4>
-                      <div className="space-y-2 text-sm text-slate-600">
-                        <p className="flex items-center gap-2">
-                          <i className="fa-solid fa-clock text-slate-400 w-4"></i>
-                          {dateStr} at {timeStr}
+                return (
+                  <div
+                    key={event.id}
+                    onClick={() => handleEditEvent(event)}
+                    className="bg-slate-50 border border-slate-200 rounded-2xl p-6 opacity-75 cursor-pointer hover:opacity-100 transition-opacity"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-16 h-16 bg-slate-200 rounded-xl flex flex-col items-center justify-center">
+                        <p className="text-xs font-bold text-slate-500 uppercase">
+                          {new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}
                         </p>
-                        {assignment && (
-                          <button
-                            onClick={() => onNavigate('assignment-detail', assignment.id)}
-                            className="inline-flex items-center gap-2 bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 transition-colors mt-2"
-                          >
-                            <i className="fa-solid fa-tasks"></i>
-                            View Assignment
-                          </button>
-                        )}
+                        <p className="text-2xl font-bold text-slate-600">
+                          {new Date(event.startDateTime).getDate()}
+                        </p>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-slate-700 text-lg mb-1">{event.title}</h4>
+                        <div className="space-y-2 text-sm text-slate-600">
+                          <p className="flex items-center gap-2">
+                            <i className="fa-solid fa-clock text-slate-400 w-4"></i>
+                            {dateStr} at {timeStr}
+                          </p>
+                          {assignment && (
+                            <button
+                              onClick={() => onNavigate('assignment-detail', assignment.id)}
+                              className="inline-flex items-center gap-2 bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 transition-colors mt-2"
+                            >
+                              <i className="fa-solid fa-tasks"></i>
+                              View Assignment
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 

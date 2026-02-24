@@ -25,9 +25,10 @@ interface LayoutProps {
   onStopJukebox?: () => void;
   onLogout?: () => void;
   onStartJukebox?: () => void;
+  currentTrackBocaCount?: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -73,9 +74,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     }
 
     if (!hadPlayerRef.current) {
-      // First play action — open the full overlay
       hadPlayerRef.current = true;
-      setShowNowPlaying(true);
+      if (isJukeboxMode) {
+        // Jukebox start — show toast + mini player, don't open full overlay
+        setNowPlayingToast({ title: player.title, artist: player.artist });
+        if (nowPlayingToastRef.current) clearTimeout(nowPlayingToastRef.current);
+        nowPlayingToastRef.current = window.setTimeout(() => {
+          setNowPlayingToast(null);
+        }, 4000);
+      } else {
+        // Normal play — open the full overlay
+        setShowNowPlaying(true);
+      }
       return;
     }
 
@@ -276,6 +286,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                {!!currentTrackBocaCount && currentTrackBocaCount > 0 && (
+                  <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>
+                )}
                   {isPlayerLoading ? (
                     <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
                       <i className="fa-solid fa-spinner fa-spin text-xs"></i>
@@ -485,6 +498,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); }}
             isJukeboxMode={isJukeboxMode}
             onStopJukebox={onStopJukebox}
+            bocaCount={currentTrackBocaCount}
           />
         )}
 

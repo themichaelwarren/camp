@@ -67,7 +67,8 @@ const App: React.FC = () => {
   const [camperDetailSelectedTags, setCamperDetailSelectedTags] = useState<string[]>([]);
   const [bocasViewMode, setBocasViewMode] = useState<'cards' | 'list'>('cards');
   const [bocasSearch, setBocasSearch] = useState('');
-  const [semestersViewMode, setSemestersViewMode] = useState<'cards' | 'list'>('cards');
+  const [semestersViewMode, setSemestersViewMode] = useState<'cards' | 'list'>('list');
+  const [eventsViewMode, setEventsViewMode] = useState<'cards' | 'list'>('list');
   const [bocasSortBy, setBocasSortBy] = useState<'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent'>('count-desc');
   const [player, setPlayer] = useState<{
     src: string;
@@ -1126,6 +1127,8 @@ const App: React.FC = () => {
             onUpdateEvent={handleUpdateEvent}
             spreadsheetId={spreadsheetId || undefined}
             currentUser={userProfile}
+            viewMode={eventsViewMode}
+            onViewModeChange={setEventsViewMode}
           />
         );
       case 'prompt-detail':
@@ -1366,6 +1369,7 @@ const App: React.FC = () => {
           } as PlayableTrack));
         if (tracks.length > 0) handleStartJukebox(tracks);
       }}
+      currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {
