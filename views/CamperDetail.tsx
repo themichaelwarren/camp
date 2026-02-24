@@ -115,30 +115,6 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       </section>
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-slate-800">Prompts Recommended</h3>
-            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{prompts.length}</span>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {prompts.map((prompt) => (
-            <button
-              key={prompt.id}
-              onClick={() => onNavigate('prompt-detail', prompt.id)}
-              className="w-full text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:border-indigo-200 hover:bg-white transition-all"
-            >
-              <p className="text-sm font-semibold text-slate-800">{prompt.title}</p>
-              <p className="text-xs text-slate-500 line-clamp-1">{prompt.description}</p>
-            </button>
-          ))}
-          {prompts.length === 0 && (
-            <p className="text-slate-400 text-sm italic">No prompts yet.</p>
-          )}
-        </div>
-      </section>
-
-      <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
@@ -209,13 +185,15 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                   onClick={() => onNavigate('song-detail', submission.id)}
                   className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer"
                 >
-                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl mb-4 relative">
+                  <div className={`w-full aspect-square rounded-2xl overflow-hidden flex items-center justify-center text-2xl mb-4 relative ${
+                    bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'
+                  }`}>
                     <ArtworkImage
                       fileId={submission.artworkFileId}
                       fallbackUrl={submission.artworkUrl}
                       alt={`${submission.title} artwork`}
                       className="w-full h-full object-cover"
-                      fallback={<i className="fa-solid fa-compact-disc"></i>}
+                      fallback={<i className={`fa-solid fa-compact-disc ${bocaCount > 0 ? 'text-amber-500' : ''}`}></i>}
                     />
                     {bocaCount > 0 && (
                       <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 shadow-md z-10">
@@ -296,13 +274,15 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <div className={`w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center ${
+                          bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'
+                        }`}>
                           <ArtworkImage
                             fileId={submission.artworkFileId}
                             fallbackUrl={submission.artworkUrl}
                             alt={`${submission.title} artwork`}
                             className="w-full h-full object-cover"
-                            fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                            fallback={<i className={`fa-solid fa-compact-disc text-sm ${bocaCount > 0 ? 'text-amber-500' : ''}`}></i>}
                           />
                         </div>
                       </td>
@@ -345,6 +325,30 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             </table>
           </div>
         )}
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-800">Prompts Recommended</h3>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{prompts.length}</span>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {prompts.map((prompt) => (
+            <button
+              key={prompt.id}
+              onClick={() => onNavigate('prompt-detail', prompt.id)}
+              className="w-full text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:border-indigo-200 hover:bg-white transition-all"
+            >
+              <p className="text-sm font-semibold text-slate-800">{prompt.title}</p>
+              <p className="text-xs text-slate-500 line-clamp-1">{prompt.description}</p>
+            </button>
+          ))}
+          {prompts.length === 0 && (
+            <p className="text-slate-400 text-sm italic">No prompts yet.</p>
+          )}
+        </div>
       </section>
     </div>
   );

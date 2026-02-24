@@ -287,6 +287,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     )}
                   </p>
                   {version.notes && <p className="text-xs text-slate-400 truncate mt-0.5">{version.notes}</p>}
+                  {(() => { const c = findCamper(sub.camperId || sub.camperName); return c?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{c.status}</p> : null; })()}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {track && (
@@ -321,6 +322,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     {c.parentId ? ' replied' : ' commented'} on <span className="font-semibold text-indigo-600">{entity.label}</span>
                   </p>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.text}</p>
+                  {(() => { const camper = findCamper(c.authorEmail || c.author); return camper?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{camper.status}</p> : null; })()}
                   {reactionEntries.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-2">
                       {reactionEntries.map(([emoji, users]) => (
@@ -401,6 +403,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
                   </p>
                   {sub && <p className="text-xs text-slate-400 mt-0.5">by {sub.camperName}</p>}
+                  {(() => { const camper = findCamper(b.fromEmail); return camper?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{camper.status}</p> : null; })()}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">

@@ -3,12 +3,12 @@ import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAtte
 // Global declaration for the Google Identity Services script
 declare var google: any;
 
-const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyAZYocVaPe2Umt7t9S6EWk6ixCtjm4Rq_0';  // Google Picker API key from Cloud Console
-const APP_ID = '663447130691';  // Cloud project number
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const APP_ID = import.meta.env.VITE_GOOGLE_APP_ID;
 const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events';
-const SPREADSHEET_ID = '1ihYCXKBQKTS7Jz4XgybQONAnDfbmkBiCwnAam3td2Vg';
-const ASSIGNMENTS_PARENT_FOLDER_ID = '1Lifl1lByscTeluVSfZWSXNuCTh7JSppQ';
+const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
+const ASSIGNMENTS_PARENT_FOLDER_ID = import.meta.env.VITE_ASSIGNMENTS_PARENT_FOLDER_ID;
 
 let accessToken: string | null = null;
 let tokenClient: any = null;

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca } from '../types';
-import { getPromptStatus, getPromptStatusStyle } from '../utils';
+import { getPromptStatus } from '../utils';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -64,36 +64,6 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-lg">Recent Prompts</h3>
-              <button onClick={() => onNavigate('prompts')} className="text-indigo-600 text-sm font-semibold hover:underline">View All</button>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {prompts.slice(0, 3).map((prompt) => (
-                <div 
-                  key={prompt.id} 
-                  onClick={() => onNavigate('prompt-detail', prompt.id)}
-                  className="p-4 hover:bg-slate-50 transition-colors flex justify-between items-center cursor-pointer"
-                >
-                  <div>
-                    <h4 className="font-semibold text-slate-700">{prompt.title}</h4>
-                    <p className="text-xs text-slate-500 truncate max-w-md">{prompt.description}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-indigo-500 flex items-center gap-1">
-                      <i className="fa-solid fa-heart"></i> {prompt.upvotes}
-                    </span>
-                    {(() => {
-                      const cs = getPromptStatus(prompt.id, assignments);
-                      return <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${getPromptStatusStyle(cs)}`}>{cs}</span>;
-                    })()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
              <div className="p-6 border-b border-slate-100">
                <h3 className="font-bold text-slate-800 text-lg">Upcoming Deadlines</h3>
              </div>
@@ -127,74 +97,6 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                )}
              </div>
           </section>
-        </div>
-
-        <div className="space-y-6">
-          {(() => {
-            const now = new Date();
-            const upcomingEvent = events
-              .filter(e => !e.deletedAt && new Date(e.startDateTime) >= now)
-              .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())[0];
-
-            return upcomingEvent ? (
-              <section
-                className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl cursor-pointer hover:bg-indigo-800 transition-colors"
-                onClick={() => onNavigate('events')}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <i className="fa-solid fa-calendar-days text-amber-400 text-xl"></i>
-                  <h3 className="font-bold text-lg">Next Live Session</h3>
-                </div>
-                <p className="text-indigo-200 text-sm mb-2 font-semibold">
-                  {upcomingEvent.title}
-                </p>
-                <p className="text-indigo-300 text-xs mb-4">
-                  {new Date(upcomingEvent.startDateTime).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric'
-                  })} at {new Date(upcomingEvent.startDateTime).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                  })}
-                </p>
-                {upcomingEvent.meetLink ? (
-                  <a
-                    href={upcomingEvent.meetLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="block w-full bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors text-center"
-                  >
-                    <i className="fa-solid fa-video mr-2"></i>
-                    Join Meet
-                  </a>
-                ) : (
-                  <button className="w-full bg-white text-indigo-900 font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-50 transition-colors">
-                    View Details
-                  </button>
-                )}
-              </section>
-            ) : (
-              <section className="bg-slate-100 rounded-2xl p-6 border-2 border-dashed border-slate-300">
-                <div className="flex items-center gap-3 mb-4">
-                  <i className="fa-solid fa-calendar-days text-slate-400 text-xl"></i>
-                  <h3 className="font-bold text-lg text-slate-600">Next Live Session</h3>
-                </div>
-                <p className="text-slate-500 text-sm mb-6">
-                  No upcoming events scheduled. Check back soon!
-                </p>
-                <button
-                  onClick={() => onNavigate('events')}
-                  className="w-full bg-indigo-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-700 transition-colors"
-                >
-                  View All Events
-                </button>
-              </section>
-            );
-          })()}
-
 
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
              <h3 className="font-bold text-slate-800 text-lg mb-4">Camp Activity</h3>
@@ -215,7 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                     return tb - ta;
                   });
 
-                  return items.slice(0, 6).map((item) => {
+                  return items.slice(0, 8).map((item) => {
                     if (item.type === 'song') {
                       const sub = item.data as typeof submissions[0];
                       const track = trackFromSubmission(sub);
@@ -283,6 +185,73 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                 })()}
              </div>
           </section>
+        </div>
+
+        <div className="space-y-6">
+          {(() => {
+            const now = new Date();
+            const upcomingEvent = events
+              .filter(e => !e.deletedAt && new Date(e.startDateTime) >= now)
+              .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())[0];
+
+            return upcomingEvent ? (
+              <section
+                className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl cursor-pointer hover:bg-indigo-800 transition-colors"
+                onClick={() => onNavigate('events')}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <i className="fa-solid fa-calendar-days text-amber-400 text-xl"></i>
+                  <h3 className="font-bold text-lg">Next Live Session</h3>
+                </div>
+                <p className="text-white text-sm mb-2 font-semibold">
+                  {upcomingEvent.title}
+                </p>
+                <p className="text-white/60 text-xs mb-4">
+                  {new Date(upcomingEvent.startDateTime).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric'
+                  })} at {new Date(upcomingEvent.startDateTime).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </p>
+                {upcomingEvent.meetLink ? (
+                  <a
+                    href={upcomingEvent.meetLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="block w-full bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors text-center"
+                  >
+                    <i className="fa-solid fa-video mr-2"></i>
+                    Join Meet
+                  </a>
+                ) : (
+                  <button className="w-full bg-white text-indigo-900 font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-50 transition-colors">
+                    View Details
+                  </button>
+                )}
+              </section>
+            ) : (
+              <section className="bg-slate-100 rounded-2xl p-6 border-2 border-dashed border-slate-300">
+                <div className="flex items-center gap-3 mb-4">
+                  <i className="fa-solid fa-calendar-days text-slate-400 text-xl"></i>
+                  <h3 className="font-bold text-lg text-slate-600">Next Live Session</h3>
+                </div>
+                <p className="text-slate-500 text-sm mb-6">
+                  No upcoming events scheduled. Check back soon!
+                </p>
+                <button
+                  onClick={() => onNavigate('events')}
+                  className="w-full bg-indigo-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  View All Events
+                </button>
+              </section>
+            );
+          })()}
         </div>
       </div>
     </div>
