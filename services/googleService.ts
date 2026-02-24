@@ -749,17 +749,21 @@ export class DriveAccessError extends Error {
 
 export const fetchDriveFile = async (fileId: string) => {
   if (!accessToken) throw new Error('Not authenticated');
+  // Try OAuth token first (works for files the app created/opened)
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
-  if (!response.ok) {
-    if (response.status === 403 || response.status === 404) {
-      throw new DriveAccessError(fileId, response.status);
-    }
-    throw new Error('Failed to fetch Drive file');
+  if (response.ok) return response.blob();
+
+  // Fallback: try API key for publicly shared files
+  if (response.status === 403 || response.status === 404) {
+    const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+    const publicResponse = await fetch(publicUrl);
+    if (publicResponse.ok) return publicResponse.blob();
+    throw new DriveAccessError(fileId, response.status);
   }
-  return response.blob();
+  throw new Error('Failed to fetch Drive file');
 };
 
 // Comments functions
