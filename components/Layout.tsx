@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ViewState } from '../types';
 import ArtworkImage from './ArtworkImage';
 import NowPlayingOverlay from './NowPlayingOverlay';
+import * as googleService from '../services/googleService';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -95,13 +96,27 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   }, [player?.src]);
 
   // Media Session API — system media controls (lock screen, notification area, etc.)
+  const [mediaSessionArtwork, setMediaSessionArtwork] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!player?.artworkFileId) { setMediaSessionArtwork(null); return; }
+    let cancelled = false;
+    googleService.fetchDriveFile(player.artworkFileId)
+      .then(blob => {
+        if (cancelled) return;
+        setMediaSessionArtwork(URL.createObjectURL(blob));
+      })
+      .catch(() => setMediaSessionArtwork(null));
+    return () => { cancelled = true; };
+  }, [player?.artworkFileId]);
+
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
 
     if (player) {
       const artwork: MediaImage[] = [];
-      if (player.artworkFileId) {
-        artwork.push({ src: `https://drive.google.com/thumbnail?id=${player.artworkFileId}&sz=w512`, sizes: '512x512', type: 'image/jpeg' });
+      if (mediaSessionArtwork) {
+        artwork.push({ src: mediaSessionArtwork, sizes: '512x512', type: 'image/jpeg' });
       }
       navigator.mediaSession.metadata = new MediaMetadata({
         title: player.title,
@@ -112,7 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     } else {
       navigator.mediaSession.metadata = null;
     }
-  }, [player?.title, player?.artist, player?.artworkFileId]);
+  }, [player?.title, player?.artist, mediaSessionArtwork]);
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
