@@ -997,6 +997,7 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
+            spreadsheetId={spreadsheetId}
           />
         );
       case 'inbox':
@@ -1228,6 +1229,7 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
+            spreadsheetId={spreadsheetId}
           />
         );
     }

@@ -1,7 +1,8 @@
 
-import React from 'react';
-import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment } from '../types';
 import { getPromptStatus } from '../utils';
+import * as googleService from '../services/googleService';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -15,6 +16,7 @@ interface DashboardProps {
   playingTrackId?: string | null;
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
+  spreadsheetId?: string;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -22,7 +24,13 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], spreadsheetId }) => {
+  const [comments, setComments] = useState<Comment[]>([]);
+
+  useEffect(() => {
+    if (!spreadsheetId) return;
+    googleService.fetchAllComments(spreadsheetId).then(setComments).catch(() => {});
+  }, [spreadsheetId]);
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -116,13 +124,15 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                   type ActivityItem = { type: 'song'; date: string; data: typeof submissions[0] }
                     | { type: 'prompt'; date: string; data: typeof prompts[0] }
                     | { type: 'assignment'; date: string; data: typeof assignments[0] }
-                    | { type: 'status'; date: string; data: StatusUpdate };
+                    | { type: 'status'; date: string; data: StatusUpdate }
+                    | { type: 'comment'; date: string; data: Comment };
 
                   const items: ActivityItem[] = [
                     ...submissions.map(s => ({ type: 'song' as const, date: s.versions?.length ? s.versions[0].timestamp : s.updatedAt, data: s })),
                     ...prompts.map(p => ({ type: 'prompt' as const, date: p.createdAt, data: p })),
                     ...assignments.map(a => ({ type: 'assignment' as const, date: a.createdAt || a.startDate || a.dueDate, data: a })),
                     ...statusUpdates.map(su => ({ type: 'status' as const, date: su.timestamp, data: su })),
+                    ...comments.map(c => ({ type: 'comment' as const, date: c.timestamp, data: c })),
                   ];
                   items.sort((a, b) => {
                     const ta = new Date(a.date).getTime() || 0;
@@ -193,6 +203,29 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                               <span className="font-bold">{su.camperName}</span> updated their status
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5 italic truncate">"{su.status}"</p>
+                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (item.type === 'comment') {
+                      const c = item.data as Comment;
+                      const entityLabel = c.entityType === 'song'
+                        ? (submissions.find(s => s.id === c.entityId)?.title || 'a song')
+                        : c.entityType === 'prompt'
+                        ? (prompts.find(p => p.id === c.entityId)?.title || 'a prompt')
+                        : (assignments.find(a => a.id === c.entityId)?.title || 'an assignment');
+                      const targetView = c.entityType === 'song' ? 'song-detail' : c.entityType === 'prompt' ? 'prompt-detail' : 'assignment-detail';
+                      return (
+                        <div key={`comment-${c.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate(targetView as ViewState, c.entityId)}>
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 z-10 group-hover:bg-blue-100">
+                            <i className="fa-solid fa-comment text-xs"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-700">
+                              <span className="font-bold">{c.author}</span> {c.parentId ? 'replied on' : 'commented on'} <span className="text-indigo-600 font-semibold">"{entityLabel}"</span>
+                            </p>
+                            <p className="text-xs text-slate-500 mt-0.5 truncate italic">"{c.text}"</p>
                             <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
                           </div>
                         </div>
