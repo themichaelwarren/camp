@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate } from './types';
+import { buildHashPath, parseHash, resolveShortId } from './router';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -348,33 +349,110 @@ const App: React.FC = () => {
     setBocas(prev => [...prev, boca]);
   };
 
+  const getTitleForEntity = (view: ViewState, id: string | null): string | null => {
+    if (!id) return null;
+    switch (view) {
+      case 'prompt-detail':
+        return prompts.find(p => p.id === id)?.title || null;
+      case 'assignment-detail':
+        return assignments.find(a => a.id === id)?.title || null;
+      case 'song-detail':
+        return submissions.find(s => s.id === id)?.title || null;
+      case 'event-detail':
+        return events.find(e => e.id === id)?.title || null;
+      case 'camper-detail': {
+        const camper = campers.find(c => c.id === id || c.email === id);
+        return camper?.name || null;
+      }
+      default:
+        return null;
+    }
+  };
+
   const navigateTo = (view: ViewState, id: string | null = null, { replace = false } = {}) => {
     setActiveView(view);
     setSelectedId(id);
     window.scrollTo(0, 0);
+    const title = getTitleForEntity(view, id);
+    const hashPath = buildHashPath(view, id, title);
     const state = { view, id };
     if (replace) {
-      window.history.replaceState(state, '', '');
+      window.history.replaceState(state, '', hashPath);
     } else {
-      window.history.pushState(state, '', '');
+      window.history.pushState(state, '', hashPath);
     }
   };
 
-  // Handle browser back/forward buttons
+  // Handle URL hash routing: initialize from hash on mount + browser back/forward
   useEffect(() => {
-    // Set initial state
-    window.history.replaceState({ view: activeView, id: selectedId }, '', '');
+    const hash = window.location.hash;
+    if (hash && hash !== '#/' && hash !== '#') {
+      const parsed = parseHash(hash);
+      setActiveView(parsed.view);
+      setSelectedId(parsed.id);
+      window.history.replaceState({ view: parsed.view, id: parsed.id }, '', hash);
+    } else {
+      window.history.replaceState({ view: activeView, id: selectedId }, '', '#/');
+    }
 
     const handlePopState = (e: PopStateEvent) => {
       if (e.state?.view) {
         setActiveView(e.state.view);
         setSelectedId(e.state.id || null);
         window.scrollTo(0, 0);
+      } else {
+        const parsed = parseHash(window.location.hash);
+        setActiveView(parsed.view);
+        setSelectedId(parsed.id);
+        window.scrollTo(0, 0);
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-resolve URL after data loads (handles shared links opened in new tab)
+  const hasResolvedUrl = useRef(false);
+  useEffect(() => {
+    if (hasResolvedUrl.current) return;
+    if (prompts.length === 0 && assignments.length === 0 && submissions.length === 0 && campers.length === 0) return;
+
+    const hash = window.location.hash;
+    if (!hash || hash === '#/' || hash === '#') return;
+
+    const parsed = parseHash(hash);
+    if (!parsed.id) return;
+
+    hasResolvedUrl.current = true;
+
+    let resolvedId: string | null = parsed.id;
+    switch (parsed.view) {
+      case 'prompt-detail':
+        resolvedId = resolveShortId(parsed.id, prompts.map(p => p.id));
+        break;
+      case 'assignment-detail':
+        resolvedId = resolveShortId(parsed.id, assignments.map(a => a.id));
+        break;
+      case 'song-detail':
+        resolvedId = resolveShortId(parsed.id, submissions.map(s => s.id));
+        break;
+      case 'event-detail':
+        resolvedId = resolveShortId(parsed.id, events.map(e => e.id));
+        break;
+      case 'camper-detail':
+        resolvedId = resolveShortId(parsed.id, [
+          ...campers.map(c => c.id),
+          ...campers.map(c => c.email)
+        ]);
+        break;
+    }
+
+    if (resolvedId) {
+      setActiveView(parsed.view);
+      setSelectedId(resolvedId);
+      window.history.replaceState({ view: parsed.view, id: resolvedId }, '', hash);
+    }
+  }, [prompts, assignments, submissions, campers, events]);
 
   const handleAddPrompt = async (newPrompt: Prompt) => {
     setPrompts(prev => [newPrompt, ...prev]);
