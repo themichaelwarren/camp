@@ -32,6 +32,7 @@ interface AssignmentsPageProps {
 
 const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,94 +140,108 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           </div>
           <p className="text-slate-500 text-sm">Turn prompts into focused creative projects.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 w-fit">
-            <button
-              onClick={() => onViewModeChange('list')}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              List
-            </button>
-            <button
-              onClick={() => onViewModeChange('cards')}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Cards
-            </button>
-          </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-          >
-            <i className="fa-solid fa-calendar-plus"></i>
-            Create Assignment
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="self-start md:self-auto bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+        >
+          <i className="fa-solid fa-calendar-plus"></i>
+          Create Assignment
+        </button>
       </div>
 
       {/* Search and Filters */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
-        <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</label>
-          <input
-            type="text"
-            className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Search assignments, prompts, instructions..."
-            value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input
+              type="text"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Search assignments, prompts, instructions..."
+              value={searchTerm}
+              onChange={(e) => onSearchTermChange(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors flex-shrink-0 ${
+              showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-slate-200 text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <i className="fa-solid fa-sliders"></i>
+            Filters
+            <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
-            <select
-              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={statusFilter}
-              onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'Open' | 'Closed')}
-            >
-              <option value="all">All Statuses</option>
-              <option value="Open">Open</option>
-              <option value="Closed">Closed</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Prompt</label>
-            <select
-              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={promptFilter}
-              onChange={(e) => onPromptFilterChange(e.target.value)}
-            >
-              <option value="all">All Prompts</option>
-              {prompts.map(p => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort By</label>
-            <select
-              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={sortBy}
-              onChange={(e) => onSortByChange(e.target.value as AssignmentsSortBy)}
-            >
-              <option value="due-asc">Due Date: Upcoming First</option>
-              <option value="due-desc">Due Date: Oldest First</option>
-              <option value="start-asc">Start Date: Oldest First</option>
-              <option value="start-desc">Start Date: Newest First</option>
-              <option value="title-asc">Title: A-Z</option>
-              <option value="title-desc">Title: Z-A</option>
-              <option value="prompt-asc">Prompt: A-Z</option>
-              <option value="prompt-desc">Prompt: Z-A</option>
-            </select>
+        <div className={`${showFilters ? 'block' : 'hidden'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={statusFilter}
+                onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'Open' | 'Closed')}
+              >
+                <option value="all">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Prompt</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={promptFilter}
+                onChange={(e) => onPromptFilterChange(e.target.value)}
+              >
+                <option value="all">All Prompts</option>
+                {prompts.map(p => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort By</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={sortBy}
+                onChange={(e) => onSortByChange(e.target.value as AssignmentsSortBy)}
+              >
+                <option value="due-asc">Due Date: Upcoming First</option>
+                <option value="due-desc">Due Date: Oldest First</option>
+                <option value="start-asc">Start Date: Oldest First</option>
+                <option value="start-desc">Start Date: Newest First</option>
+                <option value="title-asc">Title: A-Z</option>
+                <option value="title-desc">Title: Z-A</option>
+                <option value="prompt-asc">Prompt: A-Z</option>
+                <option value="prompt-desc">Prompt: Z-A</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* List View */}
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
+        <button
+          onClick={() => onViewModeChange('cards')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Cards
+        </button>
+        <button
+          onClick={() => onViewModeChange('list')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          List
+        </button>
+      </div>
+
       {viewMode === 'list' ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full text-left">

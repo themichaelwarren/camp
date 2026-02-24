@@ -21,29 +21,31 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
           </div>
           <p className="text-slate-500 text-sm">Meet the artists shaping this camp.</p>
         </div>
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full p-1 w-fit">
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
-            }`}
-          >
-            List
-          </button>
-          <button
-            onClick={() => onViewModeChange('cards')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-              viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
-            }`}
-          >
-            Cards
-          </button>
-        </div>
+      </div>
+
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
+        <button
+          onClick={() => onViewModeChange('cards')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Cards
+        </button>
+        <button
+          onClick={() => onViewModeChange('list')}
+          className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+            viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          List
+        </button>
       </div>
 
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left min-w-[600px]">
             <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4">Camper</th>

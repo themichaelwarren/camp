@@ -51,6 +51,7 @@ const getFirstVersionDate = (sub: Submission): number => {
 
 const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [] }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [showFilters, setShowFilters] = useState(false);
 
   const allSubmissionTags = useMemo(() => {
     const tags = new Set<string>();
@@ -138,73 +139,92 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       </section>
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
+          <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+            {filteredSubmissions.length !== submissions.length ? `${filteredSubmissions.length} / ${submissions.length}` : submissions.length}
+          </span>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4 mb-5">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
-            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-              {filteredSubmissions.length !== submissions.length ? `${filteredSubmissions.length} / ${submissions.length}` : submissions.length}
-            </span>
+            <div className="relative flex-1">
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input
+                type="text"
+                placeholder="Search songs..."
+                value={searchTerm}
+                onChange={e => onSearchTermChange(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors flex-shrink-0 ${
+                showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-slate-200 text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <i className="fa-solid fa-sliders"></i>
+              Filters
+              <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
+            </button>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1">
-            <button
-              onClick={() => onSongsViewChange('cards')}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-                songsView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
-              }`}
-            >
-              Cards
-            </button>
-            <button
-              onClick={() => onSongsViewChange('list')}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-                songsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
-              }`}
-            >
-              List
-            </button>
+          <div className={`${showFilters ? 'block' : 'hidden'} space-y-3`}>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as SortOption)}
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="title-asc">Title A–Z</option>
+                <option value="title-desc">Title Z–A</option>
+              </select>
+            </div>
+            {allSubmissionTags.length > 0 && (
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tags</label>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {allSubmissionTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => onSelectedTagsChange(prev =>
+                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )}
+                      className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${
+                        selectedTags.includes(tag)
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-            <input
-              type="text"
-              placeholder="Search songs..."
-              value={searchTerm}
-              onChange={e => onSearchTermChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as SortOption)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit mb-5">
+          <button
+            onClick={() => onSongsViewChange('cards')}
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              songsView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-            <option value="date-desc">Newest First</option>
-            <option value="date-asc">Oldest First</option>
-            <option value="title-asc">Title A–Z</option>
-            <option value="title-desc">Title Z–A</option>
-          </select>
-          {allSubmissionTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {allSubmissionTags.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => onSelectedTagsChange(prev =>
-                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                  )}
-                  className={`text-xs px-3 py-1 rounded-full font-semibold transition-colors ${
-                    selectedTags.includes(tag)
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
+            Cards
+          </button>
+          <button
+            onClick={() => onSongsViewChange('list')}
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              songsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            List
+          </button>
         </div>
 
         {songsView === 'cards' ? (

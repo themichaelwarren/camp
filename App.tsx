@@ -1280,6 +1280,20 @@ const App: React.FC = () => {
       onNavigateToCamper={(id) => navigateTo('camper-detail', id)}
       isJukeboxMode={isJukeboxMode}
       onStopJukebox={handleStopJukebox}
+      onStartJukebox={() => {
+        const tracks = submissions
+          .filter(s => s.versions?.length && s.versions[0].id)
+          .map(s => ({
+            versionId: s.versions[0].id,
+            title: s.title,
+            artist: s.camperName,
+            camperId: s.camperId,
+            submissionId: s.id,
+            artworkFileId: s.artworkFileId,
+            artworkUrl: s.artworkUrl,
+          } as PlayableTrack));
+        if (tracks.length > 0) handleStartJukebox(tracks);
+      }}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

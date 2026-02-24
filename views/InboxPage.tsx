@@ -89,6 +89,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (!spreadsheetId) { setIsLoading(false); return; }
@@ -232,39 +233,54 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
-          {filters.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-                filter === f.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <i className={`fa-solid ${f.icon}`}></i>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
-          {([
-            { key: 'today', label: 'Today' },
-            { key: 'yesterday', label: 'Yesterday' },
-            { key: 'week', label: 'Last 7 Days' },
-            { key: 'month', label: 'Last 30 Days' },
-            { key: 'all-time', label: 'All Time' },
-          ] as const).map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTimeRange(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
-                timeRange === t.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+      <div className="space-y-3">
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${
+            showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <i className="fa-solid fa-sliders"></i>
+          Filters
+          {(filter !== 'all' || timeRange !== 'all-time') && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
+          <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
+        </button>
+
+        <div className={`${showFilters ? 'flex' : 'hidden'} flex-wrap items-center gap-3`}>
+          <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+            {filters.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+                  filter === f.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <i className={`fa-solid ${f.icon}`}></i>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+            {([
+              { key: 'today', label: 'Today' },
+              { key: 'yesterday', label: 'Yesterday' },
+              { key: 'week', label: 'Last 7 Days' },
+              { key: 'month', label: 'Last 30 Days' },
+              { key: 'all-time', label: 'All Time' },
+            ] as const).map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTimeRange(t.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
+                  timeRange === t.key ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -38,6 +38,7 @@ type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assig
 
 const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, bocas }) => {
   const [showUpload, setShowUpload] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const getSubmissionDate = (sub: Submission): string => {
     return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;
@@ -156,86 +157,104 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-          <input
-            type="text"
-            placeholder="Search by title or camper..."
-            value={searchTerm}
-            onChange={e => onSearchTermChange(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input
+              type="text"
+              placeholder="Search by title or camper..."
+              value={searchTerm}
+              onChange={e => onSearchTermChange(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors flex-shrink-0 ${
+              showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-slate-200 text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <i className="fa-solid fa-sliders"></i>
+            Filters
+            <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
+          </button>
         </div>
+        <div className={`${showFilters ? 'block' : 'hidden'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Assignment</label>
+              <select
+                value={assignmentFilter}
+                onChange={e => onAssignmentFilterChange(e.target.value)}
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">All Assignments</option>
+                {assignments.map(a => (
+                  <option key={a.id} value={a.id}>{a.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Prompt</label>
+              <select
+                value={promptFilter}
+                onChange={e => onPromptFilterChange(e.target.value)}
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">All Prompts</option>
+                {usedPrompts.map(p => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={e => onSortByChange(e.target.value as SortOption)}
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="title-asc">Title A → Z</option>
+                <option value="title-desc">Title Z → A</option>
+                <option value="assignment-asc">Assignment A → Z</option>
+                <option value="assignment-desc">Assignment Z → A</option>
+                <option value="prompt-asc">Prompt A → Z</option>
+                <option value="prompt-desc">Prompt Z → A</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Assignment filter */}
-        <select
-          value={assignmentFilter}
-          onChange={e => onAssignmentFilterChange(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="all">All Assignments</option>
-          {assignments.map(a => (
-            <option key={a.id} value={a.id}>{a.title}</option>
-          ))}
-        </select>
-
-        {/* Prompt filter */}
-        <select
-          value={promptFilter}
-          onChange={e => onPromptFilterChange(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="all">All Prompts</option>
-          {usedPrompts.map(p => (
-            <option key={p.id} value={p.id}>{p.title}</option>
-          ))}
-        </select>
-
-        {/* Sort */}
-        <select
-          value={sortBy}
-          onChange={e => onSortByChange(e.target.value as SortOption)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="date-desc">Newest First</option>
-          <option value="date-asc">Oldest First</option>
-          <option value="title-asc">Title A → Z</option>
-          <option value="title-desc">Title Z → A</option>
-          <option value="assignment-asc">Assignment A → Z</option>
-          <option value="assignment-desc">Assignment Z → A</option>
-          <option value="prompt-asc">Prompt A → Z</option>
-          <option value="prompt-desc">Prompt Z → A</option>
-        </select>
-
-        {/* View toggle */}
-        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-full p-1">
+      {/* View toggle + results count */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
           <button
             onClick={() => onViewModeChange('cards')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-              viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500'
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             Cards
           </button>
           <button
             onClick={() => onViewModeChange('list')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500'
+            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             List
           </button>
         </div>
+        {hasActiveFilters && (
+          <p className="text-xs text-slate-400 font-medium">
+            {filteredSubmissions.length} song{filteredSubmissions.length !== 1 ? 's' : ''} found
+          </p>
+        )}
       </div>
-
-      {/* Results count */}
-      {hasActiveFilters && (
-        <p className="text-xs text-slate-400 font-medium">
-          {filteredSubmissions.length} song{filteredSubmissions.length !== 1 ? 's' : ''} found
-        </p>
-      )}
 
       {/* Content */}
       {submissions.length === 0 ? (

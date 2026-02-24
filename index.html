@@ -36,8 +36,16 @@
             0%, 100% { opacity: 1; }
             50% { opacity: .5; }
         }
+        :root {
+            --np-accent: #4f46e5;
+            --np-track: #e2e8f0;
+            --np-bg: #ffffff;
+        }
         :root[data-theme="dark"] {
             color-scheme: dark;
+            --np-accent: #818cf8;
+            --np-track: #1e293b;
+            --np-bg: #0f172a;
         }
         :root[data-theme="dark"] body {
             background-color: #0b1220;
@@ -116,6 +124,11 @@
         :root[data-skin="notebook"][data-theme="light"] body {
             background-color: #f9fafb;
             color: #111827;
+        }
+        :root[data-skin="notebook"][data-theme="dark"] {
+            --np-accent: #818cf8;
+            --np-track: #1a1a1a;
+            --np-bg: #0f0f0f;
         }
         :root[data-skin="notebook"][data-theme="dark"] body {
             background-color: #0b0b0b;

@@ -29,6 +29,7 @@ interface PromptsPageProps {
 const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [newPrompt, setNewPrompt] = useState({ title: '', description: '', tags: [] as string[] });
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 
@@ -117,62 +118,74 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
           </div>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="self-start md:self-auto bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+        >
+          <i className="fa-solid fa-plus"></i>
+          New Prompt
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
         <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input
+              type="text"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Search title, description, tags..."
+              value={searchTerm}
+              onChange={(e) => onSearchTermChange(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors flex-shrink-0 ${
+              showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-slate-200 text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <i className="fa-solid fa-sliders"></i>
+            Filters
+            <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
+          </button>
+        </div>
+        <div className={`${showFilters ? 'block' : 'hidden'} space-y-3`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={statusFilter}
+                onChange={(e) => onStatusFilterChange(e.target.value as 'all' | PromptStatus)}
+              >
+                <option value="all">All</option>
+                <option value={PromptStatus.UNUSED}>Unused</option>
+                <option value={PromptStatus.ACTIVE}>Active</option>
+                <option value={PromptStatus.CLOSED}>Closed</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort</label>
+              <select
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={sortBy}
+                onChange={(e) => onSortByChange(e.target.value as 'newest' | 'oldest' | 'upvotes' | 'title')}
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="upvotes">Most upvoted</option>
+                <option value="title">Title A-Z</option>
+              </select>
+            </div>
+          </div>
           <button
             onClick={() => setShowTagManager(true)}
-            className="bg-white text-slate-700 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <i className="fa-solid fa-tags"></i>
             Manage Tags
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-          >
-            <i className="fa-solid fa-plus"></i>
-            New Prompt
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
-        <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</label>
-          <input
-            type="text"
-            className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Search title, description, tags..."
-            value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
-            <select
-              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={statusFilter}
-              onChange={(e) => onStatusFilterChange(e.target.value as 'all' | PromptStatus)}
-            >
-              <option value="all">All</option>
-              <option value={PromptStatus.UNUSED}>Unused</option>
-              <option value={PromptStatus.ACTIVE}>Active</option>
-              <option value={PromptStatus.CLOSED}>Closed</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort</label>
-            <select
-              className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={sortBy}
-              onChange={(e) => onSortByChange(e.target.value as 'newest' | 'oldest' | 'upvotes' | 'title')}
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="upvotes">Most upvoted</option>
-              <option value="title">Title A-Z</option>
-            </select>
-          </div>
         </div>
       </div>
 

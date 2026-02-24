@@ -23,9 +23,10 @@ interface LayoutProps {
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
   onLogout?: () => void;
+  onStartJukebox?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -239,7 +240,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
       {/* Bottom panel */}
       <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto relative ${collapsed ? 'space-y-3 flex flex-col items-center' : 'space-y-4'}`}>
-        {player && (
+        {player ? (
           collapsed ? (
             <button
               onClick={() => setShowNowPlaying(true)}
@@ -311,6 +312,29 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
               )}
             </div>
+          )
+        ) : isLoggedIn && onStartJukebox && (
+          collapsed ? (
+            <button
+              onClick={onStartJukebox}
+              className="w-10 h-10 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center transition-colors"
+              title="Start Jukebox"
+            >
+              <i className="fa-solid fa-shuffle text-sm"></i>
+            </button>
+          ) : (
+            <button
+              onClick={onStartJukebox}
+              className="w-full flex items-center gap-3 bg-amber-500/20 border border-amber-500/30 rounded-xl p-3 hover:bg-amber-500/30 transition-colors group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
+                <i className="fa-solid fa-shuffle text-sm"></i>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-white">Start Jukebox</p>
+                <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Shuffle all songs</p>
+              </div>
+            </button>
           )
         )}
         {isLoggedIn ? (
@@ -423,15 +447,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                })()}
              </h2>
           </div>
-          {player && (
-            <button
-              className="md:hidden text-indigo-900 text-lg w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center"
-              onClick={() => setShowNowPlaying(true)}
-              aria-label="Open player"
-            >
-              <i className={`fa-solid ${isPlaying ? 'fa-music' : 'fa-play'}`}></i>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!player && isLoggedIn && onStartJukebox && (
+              <button
+                className="md:hidden text-amber-600 text-sm w-9 h-9 rounded-full border border-amber-200 bg-amber-50 flex items-center justify-center hover:bg-amber-100 transition-colors"
+                onClick={onStartJukebox}
+                aria-label="Start Jukebox"
+              >
+                <i className="fa-solid fa-shuffle"></i>
+              </button>
+            )}
+            {player && (
+              <button
+                className="md:hidden text-indigo-900 text-lg w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center"
+                onClick={() => setShowNowPlaying(true)}
+                aria-label="Open player"
+              >
+                <i className={`fa-solid ${isPlaying ? 'fa-music' : 'fa-play'}`}></i>
+              </button>
+            )}
+          </div>
         </header>
 
         {showNowPlaying && player && (
