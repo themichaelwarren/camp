@@ -6,7 +6,7 @@ declare var google: any;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const APP_ID = import.meta.env.VITE_GOOGLE_APP_ID;
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events';
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
 const ASSIGNMENTS_PARENT_FOLDER_ID = import.meta.env.VITE_ASSIGNMENTS_PARENT_FOLDER_ID;
 
@@ -753,18 +753,27 @@ export class DriveAccessError extends Error {
 
 export const fetchDriveFile = async (fileId: string) => {
   if (!accessToken) throw new Error('Not authenticated');
-  // Try OAuth token first (works for files the app created/opened)
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
+  const fetchOpts = { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' as RequestCache };
+
+  // Try OAuth token (with one automatic retry to handle transient 404s)
+  let response = await fetch(url, fetchOpts);
+  if (!response.ok && (response.status === 403 || response.status === 404)) {
+    // Brief retry — handles cached 404s and Drive API eventual consistency
+    await new Promise(r => setTimeout(r, 500));
+    response = await fetch(url, fetchOpts);
+  }
   if (response.ok) return response.blob();
 
   // Fallback: try API key for publicly shared files
   if (response.status === 403 || response.status === 404) {
     const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-    const publicResponse = await fetch(publicUrl);
-    if (publicResponse.ok) return publicResponse.blob();
+    try {
+      const publicResponse = await fetch(publicUrl, { cache: 'no-store' });
+      if (publicResponse.ok) return publicResponse.blob();
+    } catch {
+      // CORS or network error on public fetch — fall through to DriveAccessError
+    }
     throw new DriveAccessError(fileId, response.status);
   }
   throw new Error('Failed to fetch Drive file');

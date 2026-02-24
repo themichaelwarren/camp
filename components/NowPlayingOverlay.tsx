@@ -122,216 +122,221 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-slate-100 flex flex-col animate-in slide-in-from-bottom duration-300"
       onClick={onClose}
     >
-      {/* Backdrop — hidden on mobile (fullscreen), visible on desktop */}
-      <div className="absolute inset-0 hidden md:block bg-black/70 backdrop-blur-sm" />
-
-      {/* Panel */}
+      {/* Full-bleed container */}
       <div
-        className="relative w-full h-full md:h-auto md:max-w-md md:mx-4 bg-white md:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 flex flex-col"
+        className="flex-1 flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Mobile pull-down indicator */}
-        <div className="md:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-slate-300" />
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-6 pt-4 pb-2 flex-shrink-0">
+          {/* Mobile pull-down indicator */}
+          <div className="md:hidden flex-1 flex justify-center">
+            <div className="w-10 h-1 rounded-full bg-slate-300" />
+          </div>
+          <div className="hidden md:block flex-1" />
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-500 hover:text-slate-700 active:scale-95 transition-all flex-shrink-0"
+          >
+            <i className="fa-solid fa-chevron-down text-sm"></i>
+          </button>
         </div>
 
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all"
-        >
-          <i className="fa-solid fa-chevron-down text-sm"></i>
-        </button>
-
-        <div className="flex-1 overflow-y-auto">
-          {/* Artwork */}
-          <div className="p-6 pb-0">
-            <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-100 shadow-xl relative">
-              <ArtworkImage
-                fileId={player.artworkFileId}
-                fallbackUrl={player.artworkUrl}
-                alt={player.title}
-                className="w-full h-full object-cover"
-                containerClassName="w-full h-full"
-                fallback={
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                    <i className="fa-solid fa-compact-disc text-6xl text-indigo-300 animate-spin" style={{ animationDuration: '3s' }}></i>
-                  </div>
-                }
-                lazy={false}
-              />
-              {isLoading && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <i className="fa-solid fa-spinner fa-spin text-white text-3xl"></i>
-                    <p className="text-white/70 text-sm font-medium">Loading audio...</p>
-                  </div>
+        {/* Content area — stacked on mobile, side-by-side on desktop */}
+        <div className="flex-1 overflow-y-auto md:overflow-hidden">
+          <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:justify-center md:h-full md:gap-12 md:px-10 md:pb-0 md:pt-10">
+            {/* Left: Player controls */}
+            <div className="flex flex-col items-center w-full max-w-sm md:flex-shrink-0">
+              {/* Artwork */}
+              <div className="w-full mt-2 md:mt-0">
+                <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-200 shadow-xl relative">
+                  <ArtworkImage
+                    fileId={player.artworkFileId}
+                    fallbackUrl={player.artworkUrl}
+                    alt={player.title}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+                        <i className="fa-solid fa-compact-disc text-6xl text-indigo-300 animate-spin" style={{ animationDuration: '3s' }}></i>
+                      </div>
+                    }
+                    lazy={false}
+                  />
+                  {isLoading && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <i className="fa-solid fa-spinner fa-spin text-white text-3xl"></i>
+                        <p className="text-white/70 text-sm font-medium">Loading audio...</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Track Info */}
-          <div className="px-6 pt-5 pb-2">
-            {player.submissionId ? (
-              <button
-                onClick={() => onNavigateToSong?.(player.submissionId!)}
-                className="text-slate-800 font-bold text-xl truncate block text-left hover:underline max-w-full"
-              >
-                {player.title}
-              </button>
-            ) : (
-              <h3 className="text-slate-800 font-bold text-xl truncate">{player.title}</h3>
-            )}
-            {player.camperId ? (
-              <button
-                onClick={() => onNavigateToCamper?.(player.camperId!)}
-                className="text-slate-500 text-sm font-medium truncate block text-left hover:text-indigo-600 hover:underline max-w-full"
-              >
-                {player.artist}
-              </button>
-            ) : (
-              <p className="text-slate-500 text-sm font-medium truncate">{player.artist}</p>
-            )}
-          </div>
-
-          {isJukeboxMode && (
-            <button
-              onClick={onStopJukebox}
-              className="mx-6 mb-1 flex items-center gap-2 bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors w-fit"
-            >
-              <i className="fa-solid fa-shuffle"></i>
-              Jukebox Mode
-              <i className="fa-solid fa-xmark ml-1"></i>
-            </button>
-          )}
-
-          {/* Seek Bar */}
-          <div className="px-6 pb-1">
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.1}
-              value={currentTime}
-              onChange={handleSeek}
-              className="w-full h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
-              style={{
-                background: `linear-gradient(to right, var(--np-accent) ${seekPercent}%, var(--np-track) ${seekPercent}%)`
-              }}
-            />
-            <div className="flex justify-between text-[11px] text-slate-400 font-mono mt-1">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-
-          {/* Transport Controls */}
-          <div className="flex items-center justify-center gap-6 py-3 px-6">
-            <button
-              className="w-11 h-11 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
-              disabled
-            >
-              <i className="fa-solid fa-backward-step text-xl"></i>
-            </button>
-            <button
-              onClick={togglePlayPause}
-              disabled={isLoading}
-              className={`w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg ${isLoading ? 'opacity-50' : 'hover:bg-indigo-700 hover:scale-105 active:scale-95'} transition-all`}
-            >
-              <i className={`fa-solid ${isLoading ? 'fa-spinner fa-spin' : isPlaying ? 'fa-pause' : 'fa-play ml-1'} text-2xl`}></i>
-            </button>
-            <button
-              onClick={onPlayNext}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-95' : 'text-slate-300 cursor-not-allowed'}`}
-              disabled={queue.length === 0}
-            >
-              <i className="fa-solid fa-forward-step text-xl"></i>
-            </button>
-          </div>
-
-          {/* Volume */}
-          <div className="flex items-center gap-3 px-6 pb-4">
-            <i className="fa-solid fa-volume-low text-slate-400 text-xs"></i>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={handleVolumeChange}
-              className="flex-1 h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
-              style={{
-                background: `linear-gradient(to right, var(--np-accent) ${volume * 100}%, var(--np-track) ${volume * 100}%)`
-              }}
-            />
-            <i className="fa-solid fa-volume-high text-slate-400 text-xs"></i>
-          </div>
-
-          {/* Queue */}
-          {queue.length > 0 && (
-            <div className="border-t border-slate-200 px-6 py-4">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
-              <div className="space-y-1">
-                {queue.map((track, i) => (
-                  <div
-                    key={i}
-                    draggable
-                    onDragStart={() => setDragIndex(i)}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
-                    onDragEnd={() => {
-                      if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-                        onReorderQueue?.(dragIndex, dragOverIndex);
-                      }
-                      setDragIndex(null);
-                      setDragOverIndex(null);
-                    }}
-                    className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
-                      dragIndex === i ? 'opacity-40' : ''
-                    } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
+              {/* Track Info */}
+              <div className="w-full mt-5 text-center">
+                {player.submissionId ? (
+                  <button
+                    onClick={() => onNavigateToSong?.(player.submissionId!)}
+                    className="text-slate-800 font-bold text-xl truncate block mx-auto hover:underline max-w-full"
                   >
-                    <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                      <ArtworkImage
-                        fileId={track.artworkFileId}
-                        fallbackUrl={track.artworkUrl}
-                        alt={track.title}
-                        className="w-full h-full object-cover"
-                        containerClassName="w-full h-full"
-                        fallback={
-                          <div className="w-full h-full flex items-center justify-center">
-                            <i className="fa-solid fa-music text-slate-300 text-xs"></i>
-                          </div>
-                        }
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {track.submissionId ? (
-                        <button
-                          onClick={() => onNavigateToSong?.(track.submissionId!)}
-                          className="text-slate-800 text-sm font-medium truncate block text-left hover:underline max-w-full"
-                        >
-                          {track.title}
-                        </button>
-                      ) : (
-                        <p className="text-slate-800 text-sm font-medium truncate">{track.title}</p>
-                      )}
-                      <p className="text-slate-500 text-xs truncate">{track.artist}</p>
-                    </div>
-                    <button
-                      onClick={() => onRemoveFromQueue(i)}
-                      className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <i className="fa-solid fa-xmark text-sm"></i>
-                    </button>
-                  </div>
-                ))}
+                    {player.title}
+                  </button>
+                ) : (
+                  <h3 className="text-slate-800 font-bold text-xl truncate">{player.title}</h3>
+                )}
+                {player.camperId ? (
+                  <button
+                    onClick={() => onNavigateToCamper?.(player.camperId!)}
+                    className="text-slate-500 text-sm font-medium truncate block mx-auto hover:text-indigo-600 hover:underline max-w-full mt-0.5"
+                  >
+                    {player.artist}
+                  </button>
+                ) : (
+                  <p className="text-slate-500 text-sm font-medium truncate mt-0.5">{player.artist}</p>
+                )}
+              </div>
+
+              {isJukeboxMode && (
+                <button
+                  onClick={onStopJukebox}
+                  className="mt-2 flex items-center gap-2 bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors"
+                >
+                  <i className="fa-solid fa-shuffle"></i>
+                  Jukebox Mode
+                  <i className="fa-solid fa-xmark ml-1"></i>
+                </button>
+              )}
+
+              {/* Seek Bar */}
+              <div className="w-full mt-4">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration || 0}
+                  step={0.1}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="w-full h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
+                  style={{
+                    background: `linear-gradient(to right, var(--np-accent) ${seekPercent}%, var(--np-track) ${seekPercent}%)`
+                  }}
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 font-mono mt-1">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              {/* Transport Controls */}
+              <div className="flex items-center justify-center gap-6 py-3 w-full">
+                <button
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
+                  disabled
+                >
+                  <i className="fa-solid fa-backward-step text-xl"></i>
+                </button>
+                <button
+                  onClick={togglePlayPause}
+                  disabled={isLoading}
+                  className={`w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg ${isLoading ? 'opacity-50' : 'hover:bg-indigo-700 hover:scale-105 active:scale-95'} transition-all`}
+                >
+                  <i className={`fa-solid ${isLoading ? 'fa-spinner fa-spin' : isPlaying ? 'fa-pause' : 'fa-play ml-1'} text-2xl`}></i>
+                </button>
+                <button
+                  onClick={onPlayNext}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 active:scale-95' : 'text-slate-300 cursor-not-allowed'}`}
+                  disabled={queue.length === 0}
+                >
+                  <i className="fa-solid fa-forward-step text-xl"></i>
+                </button>
+              </div>
+
+              {/* Volume */}
+              <div className="flex items-center gap-3 w-full pb-2">
+                <i className="fa-solid fa-volume-low text-slate-400 text-xs"></i>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="flex-1 h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
+                  style={{
+                    background: `linear-gradient(to right, var(--np-accent) ${volume * 100}%, var(--np-track) ${volume * 100}%)`
+                  }}
+                />
+                <i className="fa-solid fa-volume-high text-slate-400 text-xs"></i>
               </div>
             </div>
-          )}
+
+            {/* Right: Queue */}
+            {queue.length > 0 && (
+              <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 md:w-80 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
+                <div className="space-y-1">
+                  {queue.map((track, i) => (
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => setDragIndex(i)}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
+                      onDragEnd={() => {
+                        if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+                          onReorderQueue?.(dragIndex, dragOverIndex);
+                        }
+                        setDragIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                      className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
+                        dragIndex === i ? 'opacity-40' : ''
+                      } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
+                    >
+                      <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
+                        <ArtworkImage
+                          fileId={track.artworkFileId}
+                          fallbackUrl={track.artworkUrl}
+                          alt={track.title}
+                          className="w-full h-full object-cover"
+                          containerClassName="w-full h-full"
+                          fallback={
+                            <div className="w-full h-full flex items-center justify-center">
+                              <i className="fa-solid fa-music text-slate-300 text-xs"></i>
+                            </div>
+                          }
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {track.submissionId ? (
+                          <button
+                            onClick={() => onNavigateToSong?.(track.submissionId!)}
+                            className="text-slate-800 text-sm font-medium truncate block text-left hover:underline max-w-full"
+                          >
+                            {track.title}
+                          </button>
+                        ) : (
+                          <p className="text-slate-800 text-sm font-medium truncate">{track.title}</p>
+                        )}
+                        <p className="text-slate-500 text-xs truncate">{track.artist}</p>
+                      </div>
+                      <button
+                        onClick={() => onRemoveFromQueue(i)}
+                        className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <i className="fa-solid fa-xmark text-sm"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>,

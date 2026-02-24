@@ -787,8 +787,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to load audio', error);
       if (error instanceof googleService.DriveAccessError) {
-        // File needs re-authorization via Picker
-        setPlayer(null);
+        // File needs re-authorization via Picker — keep overlay open
         const confirmed = window.confirm(
           'This song was uploaded before the app\'s permissions were updated. To play it, select the file from your Google Drive.\n\nOpen Google Drive file picker?'
         );
@@ -810,7 +809,6 @@ const App: React.FC = () => {
           }
         }
       } else {
-        setPlayer(null);
         alert('Failed to load audio from Drive. Please try again.');
       }
     } finally {
