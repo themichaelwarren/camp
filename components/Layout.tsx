@@ -487,7 +487,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         )}
 
         <div className="p-5 md:p-6 overflow-auto flex-1">
-          {children}
+          <div className="max-w-[1600px]">
+            {children}
+          </div>
         </div>
 
         <footer className="border-t border-slate-200 bg-white px-4 md:px-6 py-2 text-[10px] text-slate-400">

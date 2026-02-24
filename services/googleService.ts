@@ -395,12 +395,13 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
 };
 
 export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:M1000&ranges=Submissions!A2:O1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:M1000&ranges=Submissions!A2:O1000&ranges=Comments!A2:J5000`;
   const result = await callGoogleApi(url);
 
   const promptsRaw = result.valueRanges[0].values || [];
   const assignmentsRaw = result.valueRanges[1].values || [];
   const submissionsRaw = result.valueRanges[2].values || [];
+  const commentsRaw = result.valueRanges[3].values || [];
 
   const prompts: Prompt[] = promptsRaw.map((row: any[]) => ({
     id: row[0] || Math.random().toString(36).substr(2, 9),
@@ -476,7 +477,9 @@ export const fetchAllData = async (spreadsheetId: string) => {
     };
   });
 
-  return { prompts, assignments, submissions };
+  const comments: Comment[] = commentsRaw.map(parseCommentRow);
+
+  return { prompts, assignments, submissions, comments };
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {

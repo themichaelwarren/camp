@@ -141,46 +141,35 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <button 
-            onClick={() => onNavigate('submissions')}
-            className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-          >
-            <i className="fa-solid fa-arrow-left"></i>
-          </button>
-          <button
-            onClick={() => {
-              setEditForm({
-                title: submission.title,
-                lyrics: submission.lyrics,
-                details: submission.details
-              });
-              setShowEdit(true);
-            }}
-            className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
-          >
-            <i className="fa-solid fa-pen"></i>
-            Edit
-          </button>
-        </div>
-        <div>
-          <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
-          <p className="text-sm mt-2">
-            By{' '}
-            <button
-              onClick={() => onNavigate('camper-detail', submission.camperId)}
-              className="text-indigo-600 font-bold hover:underline"
-            >
-              {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
-            </button>
-          </p>
-        </div>
+      {/* Header bar */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => onNavigate('submissions')}
+          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+        >
+          <i className="fa-solid fa-arrow-left"></i>
+        </button>
+        <button
+          onClick={() => {
+            setEditForm({
+              title: submission.title,
+              lyrics: submission.lyrics,
+              details: submission.details
+            });
+            setShowEdit(true);
+          }}
+          className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
+        >
+          <i className="fa-solid fa-pen"></i>
+          Edit
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
-        <div className="space-y-6">
-          <div className="relative w-full aspect-square bg-indigo-100 text-indigo-600 flex items-center justify-center border border-slate-200 overflow-hidden group">
+      {/* Hero section — album-page style */}
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+        {/* Artwork */}
+        <div className="relative w-full max-w-[280px] mx-auto md:mx-0 flex-shrink-0">
+          <div className="relative aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center border border-slate-200 shadow-sm group">
             <ArtworkImage
               fileId={submission.artworkFileId}
               fallbackUrl={submission.artworkUrl}
@@ -189,7 +178,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               fallback={<i className="fa-solid fa-compact-disc text-4xl"></i>}
             />
             {bocaCount > 0 && (
-              <div className="absolute top-4 right-4 bg-amber-400 text-amber-900 px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg z-10">
+              <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-xs flex items-center gap-1.5 shadow-lg z-10">
                 <i className="fa-solid fa-star"></i>
                 {bocaCount} {bocaCount === 1 ? 'BOCA' : 'BOCAs'}
               </div>
@@ -201,26 +190,80 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 className={`absolute inset-0 w-full h-full flex items-center justify-center transition-colors ${playingTrackId === submission.versions[0].id ? 'bg-black/20 opacity-100' : 'bg-black/0 hover:bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'}`}
                 aria-label="Play song"
               >
-                <div className="w-16 h-16 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
-                  <i className={`fa-solid ${playingTrackId === submission.versions[0].id ? 'fa-spinner fa-spin text-xl' : 'fa-play text-xl ml-1'}`}></i>
+                <div className="w-14 h-14 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
+                  <i className={`fa-solid ${playingTrackId === submission.versions[0].id ? 'fa-spinner fa-spin text-lg' : 'fa-play text-lg ml-0.5'}`}></i>
                 </div>
               </button>
             )}
           </div>
+        </div>
+
+        {/* Metadata */}
+        <div className="flex-1 min-w-0 space-y-4">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
+            <p className="text-sm mt-1">
+              By{' '}
+              <button
+                onClick={() => onNavigate('camper-detail', submission.camperId)}
+                className="text-indigo-600 font-bold hover:underline"
+              >
+                {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
+              </button>
+            </p>
+          </div>
+
+          {/* Assignment & Prompt chips */}
+          {(assignment || prompt) && (
+            <div className="flex flex-wrap gap-3">
+              {assignment && (
+                <button
+                  onClick={() => onNavigate('assignment-detail', assignment.id)}
+                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all"
+                >
+                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-indigo-600 flex-shrink-0">
+                    <i className="fa-solid fa-tasks text-sm"></i>
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Assignment</p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{assignment.title}</p>
+                  </div>
+                  <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
+                </button>
+              )}
+              {prompt && (
+                <button
+                  onClick={() => onNavigate('prompt-detail', prompt.id)}
+                  className="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 group transition-all"
+                >
+                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-amber-500 flex-shrink-0">
+                    <i className="fa-solid fa-lightbulb text-sm"></i>
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prompt</p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{prompt.title}</p>
+                  </div>
+                  <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* BOCA button */}
           {currentUserEmail && onGiveBoca && (
-            <div>
+            <div className="max-w-xs">
               {alreadyBocad ? (
-                <div className="w-full bg-amber-50 text-amber-700 border border-amber-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2">
+                <div className="bg-amber-50 text-amber-700 border border-amber-200 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2">
                   <i className="fa-solid fa-star"></i>
                   You BOCA'd this
                 </div>
               ) : isOwnSong ? (
-                <button disabled className="w-full bg-slate-50 text-slate-400 border border-slate-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                <button disabled className="bg-slate-50 text-slate-400 border border-slate-200 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 cursor-not-allowed">
                   <i className="fa-solid fa-star"></i>
                   Can't BOCA your own song
                 </button>
               ) : poolExhausted ? (
-                <button disabled className="w-full bg-slate-50 text-slate-400 border border-slate-200 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed">
+                <button disabled className="bg-slate-50 text-slate-400 border border-slate-200 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 cursor-not-allowed">
                   <i className="fa-solid fa-star"></i>
                   No BOCAs left this month
                 </button>
@@ -231,7 +274,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                     try { await onGiveBoca(submission.id); } finally { setIsGivingBoca(false); }
                   }}
                   disabled={isGivingBoca}
-                  className="w-full bg-amber-400 hover:bg-amber-500 text-amber-900 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  className="bg-amber-400 hover:bg-amber-500 text-amber-900 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors shadow-sm"
                 >
                   <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : 'fa-star'}`}></i>
                   Give a BOCA
@@ -239,9 +282,16 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Content grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column: Lyrics + Production Details */}
+        <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 font-serif">
             <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-8">Lyrics</h3>
-            <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg mx-auto">
+            <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg">
               {submission.lyrics || "No lyrics provided yet."}
             </div>
           </section>
@@ -256,44 +306,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           )}
         </div>
 
+        {/* Right column: Version History + Drive Export */}
         <div className="space-y-6">
-          <div className="space-y-4">
-            {assignment && (
-              <button
-                onClick={() => onNavigate('assignment-detail', assignment.id)}
-                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between gap-3 group transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 flex-shrink-0">
-                    <i className="fa-solid fa-tasks"></i>
-                  </div>
-                  <div className="text-left min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Assignment</p>
-                    <p className="text-xs font-bold text-slate-800 truncate">{assignment.title}</p>
-                  </div>
-                </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
-              </button>
-            )}
-            {prompt && (
-              <button
-                onClick={() => onNavigate('prompt-detail', prompt.id)}
-                className="w-full bg-slate-100 hover:bg-slate-200 p-4 rounded-2xl flex items-center justify-between gap-3 group transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-amber-500 flex-shrink-0">
-                    <i className="fa-solid fa-lightbulb"></i>
-                  </div>
-                  <div className="text-left min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prompt</p>
-                    <p className="text-xs font-bold text-slate-800 truncate">{prompt.title}</p>
-                  </div>
-                </div>
-                <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-slate-500 flex-shrink-0"></i>
-              </button>
-            )}
-          </div>
-
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Version History</h3>
             <div className="space-y-4">

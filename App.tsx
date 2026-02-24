@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bocas, setBocas] = useState<Boca[]>([]);
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
@@ -240,6 +241,7 @@ const App: React.FC = () => {
       setPrompts(data.prompts);
       setAssignments(data.assignments);
       setSubmissions(data.submissions);
+      setComments(data.comments);
       const campersData = await googleService.fetchCampers(sId);
       setCampers(campersData);
       const eventsData = await googleService.fetchEvents(sId);
@@ -282,6 +284,7 @@ const App: React.FC = () => {
       setPrompts(data.prompts);
       setAssignments(data.assignments);
       setSubmissions(data.submissions);
+      setComments(data.comments);
 
       const campersData = await googleService.fetchCampers(spreadsheetId);
       setCampers(campersData);
@@ -995,7 +998,7 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
-            spreadsheetId={spreadsheetId}
+            comments={comments}
           />
         );
       case 'inbox':
@@ -1005,7 +1008,7 @@ const App: React.FC = () => {
             assignments={assignments.filter(a => !a.deletedAt)}
             submissions={submissions.filter(s => !s.deletedAt)}
             campers={campers}
-            spreadsheetId={spreadsheetId}
+            comments={comments}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             playingTrackId={playingTrackId}
@@ -1230,7 +1233,7 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
-            spreadsheetId={spreadsheetId}
+            comments={comments}
           />
         );
     }

@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment } from '../types';
 import { getPromptStatus } from '../utils';
-import * as googleService from '../services/googleService';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -16,7 +15,7 @@ interface DashboardProps {
   playingTrackId?: string | null;
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
-  spreadsheetId?: string;
+  comments?: Comment[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -24,18 +23,12 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], spreadsheetId }) => {
-  const [comments, setComments] = useState<Comment[]>([]);
-
-  useEffect(() => {
-    if (!spreadsheetId) return;
-    googleService.fetchAllComments(spreadsheetId).then(setComments).catch(() => {});
-  }, [spreadsheetId]);
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [] }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
     { label: 'Total Songs', value: submissions.length, icon: 'fa-music', color: 'bg-green-100 text-green-600', view: 'submissions' },
-    { label: 'Campers Active', value: campersCount, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'campers' },
+    { label: 'Active Campers', value: campersCount, icon: 'fa-users', color: 'bg-purple-100 text-purple-600', view: 'campers' },
   ];
 
   if (isSyncing) {

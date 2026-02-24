@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile, StatusUpdate } from '../types';
-import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface InboxPageProps {
@@ -9,7 +8,7 @@ interface InboxPageProps {
   assignments: Assignment[];
   submissions: Submission[];
   campers: CamperProfile[];
-  spreadsheetId: string | null;
+  comments?: CommentType[];
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
@@ -84,31 +83,10 @@ const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; si
   );
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
-  const [comments, setComments] = useState<CommentType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
   const [showFilters, setShowFilters] = useState(false);
-
-  useEffect(() => {
-    if (!spreadsheetId) { setIsLoading(false); return; }
-    googleService.fetchAllComments(spreadsheetId)
-      .then(setComments)
-      .catch(err => console.error('Failed to load comments for inbox', err))
-      .finally(() => setIsLoading(false));
-  }, [spreadsheetId]);
-
-  // Polling for comments
-  useEffect(() => {
-    if (!spreadsheetId) return;
-    const interval = setInterval(() => {
-      if (!document.hidden) {
-        googleService.fetchAllComments(spreadsheetId).then(setComments).catch(() => {});
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [spreadsheetId]);
 
   const resolveEntityName = (comment: CommentType): { label: string; view: ViewState; id: string } => {
     if (comment.entityType === 'song') {
@@ -213,16 +191,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     return date.toLocaleDateString();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center gap-3">
-          <i className="fa-solid fa-spinner fa-spin text-slate-400 text-2xl"></i>
-          <p className="text-sm text-slate-500">Loading inbox...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
