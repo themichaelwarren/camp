@@ -94,6 +94,42 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     }
   }, [player?.src]);
 
+  // Media Session API — system media controls (lock screen, notification area, etc.)
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    if (player) {
+      const artwork: MediaImage[] = [];
+      if (player.artworkFileId) {
+        artwork.push({ src: `https://drive.google.com/thumbnail?id=${player.artworkFileId}&sz=w512`, sizes: '512x512', type: 'image/jpeg' });
+      }
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: player.title,
+        artist: player.artist,
+        album: 'Camp',
+        artwork,
+      });
+    } else {
+      navigator.mediaSession.metadata = null;
+    }
+  }, [player?.title, player?.artist, player?.artworkFileId]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const audio = audioRef.current;
+
+    navigator.mediaSession.setActionHandler('play', () => { audio?.play().catch(() => undefined); });
+    navigator.mediaSession.setActionHandler('pause', () => { audio?.pause(); });
+    navigator.mediaSession.setActionHandler('nexttrack', queue.length > 0 || isJukeboxMode ? () => { onPlayNext?.(); } : null);
+    navigator.mediaSession.setActionHandler('previoustrack', null);
+
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+    };
+  }, [queue.length, isJukeboxMode, onPlayNext]);
+
   useEffect(() => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
