@@ -3,14 +3,18 @@ import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAtte
 // Global declaration for the Google Identity Services script
 declare var google: any;
 
-const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com'; 
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events';
+const CLIENT_ID = '663447130691-qgv94vgu9ecbt9a6ntohv3bf50rvlfr6.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyAZYocVaPe2Umt7t9S6EWk6ixCtjm4Rq_0';  // Google Picker API key from Cloud Console
+const APP_ID = '663447130691';  // Cloud project number
+const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = '1ihYCXKBQKTS7Jz4XgybQONAnDfbmkBiCwnAam3td2Vg';
 const ASSIGNMENTS_PARENT_FOLDER_ID = '1Lifl1lByscTeluVSfZWSXNuCTh7JSppQ';
 
 let accessToken: string | null = null;
 let tokenClient: any = null;
 let authReadyCallback: (() => void) | null = null;
+
+export const getAccessToken = () => accessToken;
 
 export const initGoogleAuth = (onAuthSuccess: (token: string) => void) => {
   if (typeof google === 'undefined') {
@@ -85,6 +89,32 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
     throw new Error(error.error?.message || 'API Call failed');
   }
   return response.json();
+};
+
+export const ensureSpreadsheetAccess = async (): Promise<void> => {
+  if (!accessToken) throw new Error('Not authenticated');
+  // Quick check: can we access the master spreadsheet?
+  const testUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=spreadsheetId`;
+  const response = await fetch(testUrl, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+  });
+  if (response.ok) return; // Already authorized
+
+  // Not authorized — ask user to select the camp spreadsheet via Picker
+  const files = await openDrivePicker({
+    mimeTypes: 'application/vnd.google-apps.spreadsheet',
+    multiSelect: false,
+    title: 'Select the Camp spreadsheet to connect',
+  });
+
+  if (files.length === 0) {
+    throw new Error('Camp spreadsheet not authorized. Please select the spreadsheet to continue.');
+  }
+
+  if (files[0].id !== SPREADSHEET_ID) {
+    throw new Error('That\'s not the Camp spreadsheet. Please select the correct one and try again.');
+  }
+  // Picker granted drive.file access to this spreadsheet — proceed
 };
 
 export const findOrCreateDatabase = async () => {
@@ -691,13 +721,25 @@ export const appendLyricsRevision = async (
   });
 };
 
+export class DriveAccessError extends Error {
+  constructor(public fileId: string, public status: number) {
+    super(`Drive access denied for ${fileId} (${status})`);
+    this.name = 'DriveAccessError';
+  }
+}
+
 export const fetchDriveFile = async (fileId: string) => {
   if (!accessToken) throw new Error('Not authenticated');
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
-  if (!response.ok) throw new Error('Failed to fetch Drive file');
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 404) {
+      throw new DriveAccessError(fileId, response.status);
+    }
+    throw new Error('Failed to fetch Drive file');
+  }
   return response.blob();
 };
 
@@ -1204,4 +1246,66 @@ export const createBoca = async (
     boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt
   ]]);
   return boca;
+};
+
+// --- Google Drive Picker ---
+
+export interface PickedFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  url: string;
+}
+
+let pickerApiLoaded = false;
+
+const ensurePickerLoaded = (): Promise<void> => {
+  if (pickerApiLoaded) return Promise.resolve();
+  if (typeof gapi === 'undefined') return Promise.reject(new Error('Google API script not loaded'));
+  return new Promise((resolve, reject) => {
+    gapi.load('picker', {
+      callback: () => { pickerApiLoaded = true; resolve(); },
+      onerror: () => reject(new Error('Failed to load Google Picker')),
+    });
+  });
+};
+
+export const openDrivePicker = async (options?: {
+  mimeTypes?: string;
+  multiSelect?: boolean;
+  title?: string;
+}): Promise<PickedFile[]> => {
+  if (!accessToken) throw new Error('Not authenticated');
+  await ensurePickerLoaded();
+
+  return new Promise((resolve) => {
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS);
+    if (options?.mimeTypes) view.setMimeTypes(options.mimeTypes);
+    view.setIncludeFolders(false);
+
+    const builder = new google.picker.PickerBuilder()
+      .setOAuthToken(accessToken)
+      .setDeveloperKey(API_KEY)
+      .setAppId(APP_ID)
+      .addView(view)
+      .setCallback((data: google.picker.ResponseObject) => {
+        if (data.action === google.picker.Action.PICKED) {
+          resolve(data.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.name,
+            mimeType: doc.mimeType,
+            url: doc.url,
+          })));
+        } else if (data.action === google.picker.Action.CANCEL) {
+          resolve([]);
+        }
+      });
+
+    if (options?.title) builder.setTitle(options.title);
+    if (options?.multiSelect !== false) {
+      builder.enableFeature(google.picker.Feature.MULTISELECT_ENABLED);
+    }
+
+    builder.build().setVisible(true);
+  });
 };

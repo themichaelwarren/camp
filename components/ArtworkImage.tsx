@@ -9,6 +9,7 @@ interface ArtworkImageProps {
   containerClassName?: string;
   fallback: React.ReactNode;
   lazy?: boolean;
+  onNeedsRelink?: (fileId: string) => void;
 }
 
 const blobUrlCache = new Map<string, string>();
@@ -19,10 +20,11 @@ const parseFileId = (url?: string) => {
   return match ? match[1] : undefined;
 };
 
-const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, className, containerClassName, fallback, lazy = true }) => {
+const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, className, containerClassName, fallback, lazy = true, onNeedsRelink }) => {
   const containerRef = useRef<HTMLSpanElement | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [needsRelink, setNeedsRelink] = useState(false);
   const [isVisible, setIsVisible] = useState(!lazy);
   const effectiveFileId = useMemo(() => fileId || parseFileId(fallbackUrl), [fileId, fallbackUrl]);
 
@@ -32,6 +34,7 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
     const cached = effectiveFileId ? blobUrlCache.get(effectiveFileId) : undefined;
     setObjectUrl(cached || null);
     setLoadError(false);
+    setNeedsRelink(false);
 
     const load = async () => {
       if (!effectiveFileId || !isVisible || cached) return;
@@ -42,6 +45,10 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
         blobUrlCache.set(effectiveFileId, url);
         setObjectUrl(url);
       } catch (error) {
+        if (cancelled) return;
+        if (error instanceof googleService.DriveAccessError) {
+          setNeedsRelink(true);
+        }
         console.error('Failed to load artwork', error);
       }
     };
@@ -73,6 +80,20 @@ const ArtworkImage: React.FC<ArtworkImageProps> = ({ fileId, fallbackUrl, alt, c
   let content: React.ReactNode = fallback;
   if (objectUrl) {
     content = <img src={objectUrl} alt={alt} className={className} loading={lazy ? 'lazy' : undefined} />;
+  } else if (needsRelink && onNeedsRelink && effectiveFileId) {
+    content = (
+      <div className="relative w-full h-full">
+        {fallback}
+        <button
+          onClick={(e) => { e.stopPropagation(); onNeedsRelink(effectiveFileId); }}
+          className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/50 text-white rounded-xl gap-1"
+          title="Re-link from Google Drive"
+        >
+          <i className="fa-brands fa-google-drive text-sm"></i>
+          <span className="text-[10px] font-bold">Re-link</span>
+        </button>
+      </div>
+    );
   } else if (fallbackUrl && !loadError) {
     content = (
       <img

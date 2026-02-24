@@ -21,12 +21,27 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
     details: ''
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [driveAudioFile, setDriveAudioFile] = useState<{ id: string; name: string; url: string } | null>(null);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
+  const [driveArtworkFile, setDriveArtworkFile] = useState<{ id: string; name: string; url: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setDriveAudioFile(null);
+    }
+  };
+
+  const handlePickAudioFromDrive = async () => {
+    const files = await googleService.openDrivePicker({
+      mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
+      multiSelect: false,
+      title: 'Select your audio file',
+    });
+    if (files.length > 0) {
+      setDriveAudioFile({ id: files[0].id, name: files[0].name, url: files[0].url });
+      setSelectedFile(null);
     }
   };
 
@@ -38,29 +53,54 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         return;
       }
       setArtworkFile(file);
+      setDriveArtworkFile(null);
+    }
+  };
+
+  const handlePickArtworkFromDrive = async () => {
+    const files = await googleService.openDrivePicker({
+      mimeTypes: 'image/jpeg,image/png,image/gif,image/webp',
+      multiSelect: false,
+      title: 'Select artwork image',
+    });
+    if (files.length > 0) {
+      setDriveArtworkFile({ id: files[0].id, name: files[0].name, url: files[0].url });
+      setArtworkFile(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return alert('Please select an audio file');
+    if (!selectedFile && !driveAudioFile) return alert('Please select an audio file');
 
     setIsUploading(true);
     try {
       const assignmentFolderId = assignments.find(a => a.id === form.assignmentId)?.driveFolderId;
-      const driveFile = await googleService.uploadAudioToDriveInFolder(selectedFile, assignmentFolderId);
+
+      // Audio: use Drive-picked file directly, or upload local file
+      const audioResult = driveAudioFile
+        ? { id: driveAudioFile.id, webViewLink: driveAudioFile.url }
+        : await googleService.uploadAudioToDriveInFolder(selectedFile!, assignmentFolderId);
+
+      const audioFileName = driveAudioFile ? driveAudioFile.name : selectedFile!.name;
+
       const userLabel = userProfile?.email || userProfile?.name || 'Anonymous';
       const lyricsDoc = await googleService.createLyricsDoc(form.title, userLabel, form.lyrics, assignmentFolderId);
-      const artworkUpload = artworkFile
-        ? await googleService.uploadArtworkToDriveInFolder(artworkFile, assignmentFolderId)
-        : null;
+
+      // Artwork: use Drive-picked file, upload local file, or skip
+      let artworkResult: { id: string; webViewLink: string } | null = null;
+      if (driveArtworkFile) {
+        artworkResult = { id: driveArtworkFile.id, webViewLink: driveArtworkFile.url };
+      } else if (artworkFile) {
+        artworkResult = await googleService.uploadArtworkToDriveInFolder(artworkFile, assignmentFolderId);
+      }
 
       const newVersion: SongVersion = {
-        id: driveFile.id,
+        id: audioResult.id,
         timestamp: new Date().toISOString(),
-        audioUrl: driveFile.webViewLink,
-        fileName: selectedFile.name,
-        notes: 'Initial upload to Drive'
+        audioUrl: audioResult.webViewLink,
+        fileName: audioFileName,
+        notes: driveAudioFile ? 'Linked from Google Drive' : 'Initial upload to Drive'
       };
 
       const submission: Submission = {
@@ -75,8 +115,8 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         updatedAt: new Date().toISOString(),
         lyricsDocUrl: lyricsDoc.webViewLink,
         lyricsRevisionCount: 1,
-        artworkFileId: artworkUpload?.id || '',
-        artworkUrl: artworkUpload?.webViewLink || ''
+        artworkFileId: artworkResult?.id || '',
+        artworkUrl: artworkResult?.webViewLink || ''
       };
 
       onAdd(submission);
@@ -129,24 +169,59 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 </div>
               )}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Upload to Drive (.mp3/.wav)</label>
-                <input
-                  required
-                  type="file"
-                  accept=".mp3,.wav,.m4a"
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                  onChange={handleFileChange}
-                />
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Audio File (.mp3/.wav/.m4a)</label>
+                {driveAudioFile ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-xl">
+                    <i className="fa-brands fa-google-drive text-green-600"></i>
+                    <span className="text-sm text-green-700 font-medium truncate flex-1">{driveAudioFile.name}</span>
+                    <button type="button" onClick={() => setDriveAudioFile(null)} className="text-slate-400 hover:text-slate-600 text-xs">
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,.m4a"
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    onChange={handleFileChange}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={handlePickAudioFromDrive}
+                  className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                >
+                  <i className="fa-brands fa-google-drive text-[10px]"></i>
+                  Choose from Google Drive
+                </button>
               </div>
               <div className={lockAssignment ? '' : 'col-span-2'}>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
-                  onChange={handleArtworkChange}
-                />
-                <p className="text-[10px] text-slate-400 mt-2">Max size 5MB. JPG, PNG, or GIF.</p>
+                {driveArtworkFile ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-xl">
+                    <i className="fa-brands fa-google-drive text-green-600"></i>
+                    <span className="text-sm text-green-700 font-medium truncate flex-1">{driveArtworkFile.name}</span>
+                    <button type="button" onClick={() => setDriveArtworkFile(null)} className="text-slate-400 hover:text-slate-600 text-xs">
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                    onChange={handleArtworkChange}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={handlePickArtworkFromDrive}
+                  className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                >
+                  <i className="fa-brands fa-google-drive text-[10px]"></i>
+                  Choose from Google Drive
+                </button>
+                <p className="text-[10px] text-slate-400 mt-1">Max size 5MB. JPG, PNG, or GIF.</p>
               </div>
             </div>
 

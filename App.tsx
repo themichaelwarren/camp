@@ -224,6 +224,7 @@ const App: React.FC = () => {
   const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
     try {
+      await googleService.ensureSpreadsheetAccess();
       const sId = await googleService.findOrCreateDatabase();
       setSpreadsheetId(sId);
       if (profile?.email) {
@@ -642,8 +643,31 @@ const App: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to load audio', error);
-      setPlayer(null);
-      alert('Failed to load audio from Drive. Please try again.');
+      if (error instanceof googleService.DriveAccessError) {
+        // File needs re-authorization via Picker
+        setPlayer(null);
+        const confirmed = window.confirm(
+          'This song was uploaded before the app\'s permissions were updated. To play it, select the file from your Google Drive.\n\nOpen Google Drive file picker?'
+        );
+        if (confirmed) {
+          try {
+            const files = await googleService.openDrivePicker({
+              mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
+              multiSelect: false,
+              title: 'Select the audio file to re-authorize',
+            });
+            if (files.length > 0) {
+              // Retry playback — Picker granted access to the selected file
+              await handlePlayTrack({ ...track, versionId: files[0].id });
+            }
+          } catch (pickerError) {
+            console.error('Picker failed', pickerError);
+          }
+        }
+      } else {
+        setPlayer(null);
+        alert('Failed to load audio from Drive. Please try again.');
+      }
     } finally {
       setIsPlayerLoading(false);
     }
@@ -672,7 +696,27 @@ const App: React.FC = () => {
       }]);
     } catch (error) {
       console.error('Failed to add to queue', error);
-      alert('Failed to load audio from Drive. Please try again.');
+      if (error instanceof googleService.DriveAccessError) {
+        const confirmed = window.confirm(
+          'This song needs to be re-authorized. Select the file from your Google Drive to re-link it.\n\nOpen Google Drive file picker?'
+        );
+        if (confirmed) {
+          try {
+            const files = await googleService.openDrivePicker({
+              mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
+              multiSelect: false,
+              title: 'Select the audio file to re-authorize',
+            });
+            if (files.length > 0) {
+              await handleAddToQueue({ ...track, versionId: files[0].id });
+            }
+          } catch (pickerError) {
+            console.error('Picker failed', pickerError);
+          }
+        }
+      } else {
+        alert('Failed to load audio from Drive. Please try again.');
+      }
     }
   };
 

@@ -17,6 +17,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [driveProfilePhoto, setDriveProfilePhoto] = useState<{ id: string; name: string; url: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -30,7 +31,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
     setIsSaving(true);
     try {
       let pictureOverrideUrl = userProfile?.pictureOverrideUrl || '';
-      if (profileFile) {
+      if (driveProfilePhoto) {
+        pictureOverrideUrl = driveProfilePhoto.url;
+      } else if (profileFile) {
         const uploaded = await googleService.uploadProfilePhoto(profileFile);
         pictureOverrideUrl = uploaded.webViewLink;
       }
@@ -40,6 +43,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
         pictureOverrideUrl: pictureOverrideUrl || undefined
       }));
       setProfileFile(null);
+      setDriveProfilePhoto(null);
       setToast('Profile updated.');
       window.setTimeout(() => setToast(null), 2500);
     } catch (error) {
@@ -58,6 +62,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
         return;
       }
       setProfileFile(file);
+      setDriveProfilePhoto(null);
+    }
+  };
+
+  const handlePickPhotoFromDrive = async () => {
+    const files = await googleService.openDrivePicker({
+      mimeTypes: 'image/jpeg,image/png,image/gif,image/webp',
+      multiSelect: false,
+      title: 'Select a profile photo',
+    });
+    if (files.length > 0) {
+      setDriveProfilePhoto({ id: files[0].id, name: files[0].name, url: files[0].url });
+      setProfileFile(null);
     }
   };
   return (
@@ -97,13 +114,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profile Photo (optional)</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
-              onChange={handlePhotoChange}
-            />
-            <p className="text-[10px] text-slate-400 mt-2">Overrides your Google profile photo. Max size 5MB.</p>
+            {driveProfilePhoto ? (
+              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-xl">
+                <i className="fa-brands fa-google-drive text-green-600"></i>
+                <span className="text-sm text-green-700 font-medium truncate flex-1">{driveProfilePhoto.name}</span>
+                <button type="button" onClick={() => setDriveProfilePhoto(null)} className="text-slate-400 hover:text-slate-600 text-xs">
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                onChange={handlePhotoChange}
+              />
+            )}
+            <button
+              type="button"
+              onClick={handlePickPhotoFromDrive}
+              className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+            >
+              <i className="fa-brands fa-google-drive text-[10px]"></i>
+              Choose from Google Drive
+            </button>
+            <p className="text-[10px] text-slate-400 mt-1">Overrides your Google profile photo. Max size 5MB.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
