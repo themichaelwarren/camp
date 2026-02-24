@@ -178,16 +178,18 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                   onClick={async () => {
                     const playable = submissions.map(s => trackFromSubmission(s)).filter((t): t is PlayableTrack => t !== null);
                     if (playable.length === 0) return;
-                    await onPlayTrack(playable[0]);
-                    for (let i = 1; i < playable.length; i++) {
-                      onAddToQueue(playable[i]);
+                    // Shuffle for variety
+                    const shuffled = [...playable].sort(() => Math.random() - 0.5);
+                    await onPlayTrack(shuffled[0]);
+                    for (let i = 1; i < shuffled.length; i++) {
+                      onAddToQueue(shuffled[i]);
                     }
                   }}
                   disabled={!!playingTrackId}
                   className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-70"
                 >
-                  <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                  Play All ({submissions.filter(s => s.versions?.length > 0).length})
+                  <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-shuffle'} text-xs`}></i>
+                  Shuffle All ({submissions.filter(s => s.versions?.length > 0).length})
                 </button>
               )}
             </div>

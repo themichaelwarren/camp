@@ -145,14 +145,14 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           </button>
         </div>
 
-        {/* Content area — stacked on mobile, side-by-side on desktop */}
-        <div className="flex-1 overflow-y-auto md:overflow-hidden">
-          <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:justify-center md:h-full md:gap-12 md:px-10 md:pb-0 md:pt-10">
+        {/* Content area — stacked on mobile, side-by-side & vertically centered on desktop */}
+        <div className="flex-1 overflow-y-auto md:overflow-hidden md:flex md:items-center md:justify-center">
+          <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:gap-12 xl:gap-16 md:px-10 xl:px-16 md:pb-0">
             {/* Left: Player controls */}
-            <div className="flex flex-col items-center w-full max-w-sm md:flex-shrink-0">
+            <div className="flex flex-col items-center w-full max-w-sm lg:max-w-md xl:max-w-lg 2xl:max-w-xl md:flex-shrink-0">
               {/* Artwork */}
               <div className="w-full mt-2 md:mt-0">
-                <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-200 shadow-xl relative">
+                <div className="aspect-square w-full rounded-2xl xl:rounded-3xl overflow-hidden bg-slate-200 shadow-xl relative">
                   <ArtworkImage
                     fileId={player.artworkFileId}
                     fallbackUrl={player.artworkUrl}
@@ -161,7 +161,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     containerClassName="w-full h-full"
                     fallback={
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                        <i className="fa-solid fa-compact-disc text-6xl text-indigo-300 animate-spin" style={{ animationDuration: '3s' }}></i>
+                        <i className="fa-solid fa-compact-disc text-6xl xl:text-7xl text-indigo-300 animate-spin" style={{ animationDuration: '3s' }}></i>
                       </div>
                     }
                     lazy={false}
@@ -178,26 +178,26 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               </div>
 
               {/* Track Info */}
-              <div className="w-full mt-5 text-center">
+              <div className="w-full mt-5 xl:mt-6 text-center">
                 {player.submissionId ? (
                   <button
                     onClick={() => onNavigateToSong?.(player.submissionId!)}
-                    className="text-slate-800 font-bold text-xl truncate block mx-auto hover:underline max-w-full"
+                    className="text-slate-800 font-bold text-xl xl:text-2xl truncate block mx-auto hover:underline max-w-full"
                   >
                     {player.title}
                   </button>
                 ) : (
-                  <h3 className="text-slate-800 font-bold text-xl truncate">{player.title}</h3>
+                  <h3 className="text-slate-800 font-bold text-xl xl:text-2xl truncate">{player.title}</h3>
                 )}
                 {player.camperId ? (
                   <button
                     onClick={() => onNavigateToCamper?.(player.camperId!)}
-                    className="text-slate-500 text-sm font-medium truncate block mx-auto hover:text-indigo-600 hover:underline max-w-full mt-0.5"
+                    className="text-slate-500 text-sm xl:text-base font-medium truncate block mx-auto hover:text-indigo-600 hover:underline max-w-full mt-0.5"
                   >
                     {player.artist}
                   </button>
                 ) : (
-                  <p className="text-slate-500 text-sm font-medium truncate mt-0.5">{player.artist}</p>
+                  <p className="text-slate-500 text-sm xl:text-base font-medium truncate mt-0.5">{player.artist}</p>
                 )}
               </div>
 
@@ -213,7 +213,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               )}
 
               {/* Seek Bar */}
-              <div className="w-full mt-4">
+              <div className="w-full mt-4 xl:mt-5">
                 <input
                   type="range"
                   min={0}
@@ -233,9 +233,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               </div>
 
               {/* Transport Controls */}
-              <div className="flex items-center justify-center gap-6 py-3 w-full">
+              <div className="flex items-center justify-center gap-6 xl:gap-8 py-3 w-full">
                 <button
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
+                  className="w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
                   disabled
                 >
                   <i className="fa-solid fa-backward-step text-xl"></i>
@@ -243,13 +243,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 <button
                   onClick={togglePlayPause}
                   disabled={isLoading}
-                  className={`w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg ${isLoading ? 'opacity-50' : 'hover:bg-indigo-700 hover:scale-105 active:scale-95'} transition-all`}
+                  className={`w-16 h-16 xl:w-20 xl:h-20 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg ${isLoading ? 'opacity-50' : 'hover:bg-indigo-700 hover:scale-105 active:scale-95'} transition-all`}
                 >
-                  <i className={`fa-solid ${isLoading ? 'fa-spinner fa-spin' : isPlaying ? 'fa-pause' : 'fa-play ml-1'} text-2xl`}></i>
+                  <i className={`fa-solid ${isLoading ? 'fa-spinner fa-spin' : isPlaying ? 'fa-pause' : 'fa-play ml-1'} text-2xl xl:text-3xl`}></i>
                 </button>
                 <button
                   onClick={onPlayNext}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 active:scale-95' : 'text-slate-300 cursor-not-allowed'}`}
+                  className={`w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 active:scale-95' : 'text-slate-300 cursor-not-allowed'}`}
                   disabled={queue.length === 0}
                 >
                   <i className="fa-solid fa-forward-step text-xl"></i>
@@ -277,7 +277,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
             {/* Right: Queue */}
             {queue.length > 0 && (
-              <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 md:w-80 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
+              <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
                 <div className="space-y-1">
                   {queue.map((track, i) => (
