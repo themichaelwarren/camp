@@ -122,7 +122,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -146,7 +146,8 @@ export const findOrCreateDatabase = async () => {
     'Comments!A1:I1',
     'Tags!A1:C1',
     'Events!A1:M1',
-    'BOCAs!A1:D1'
+    'BOCAs!A1:D1',
+    'StatusUpdates!A1:E1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -208,7 +209,7 @@ export const findOrCreateDatabase = async () => {
   }
 
   const usersHeader = headerValues[3]?.values?.[0] || [];
-  if (usersHeader.length < 8) {
+  if (usersHeader.length < 9) {
     await updateSheetRows(SPREADSHEET_ID, 'Users!A1', [[
       'id',
       'name',
@@ -217,7 +218,8 @@ export const findOrCreateDatabase = async () => {
       'lastSignedInAt',
       'location',
       'status',
-      'pictureOverrideUrl'
+      'pictureOverrideUrl',
+      'statusUpdatedAt'
     ]]);
   }
 
@@ -284,6 +286,17 @@ export const findOrCreateDatabase = async () => {
       'fromEmail',
       'submissionId',
       'awardedAt'
+    ]]);
+  }
+
+  const statusUpdatesHeader = headerValues[9]?.values?.[0] || [];
+  if (statusUpdatesHeader.length < 5) {
+    await updateSheetRows(SPREADSHEET_ID, 'StatusUpdates!A1', [[
+      'id',
+      'camperEmail',
+      'camperName',
+      'status',
+      'timestamp'
     ]]);
   }
 
@@ -483,7 +496,7 @@ export const fetchAllData = async (spreadsheetId: string) => {
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
@@ -497,7 +510,8 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
     now,
     existingRow[5] || '',
     existingRow[6] || '',
-    existingRow[7] || ''
+    existingRow[7] || '',
+    existingRow[8] || ''
   ]];
 
   if (rowIndex === -1) {
@@ -505,12 +519,12 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:H${sheetRow}`;
+  const range = `Users!A${sheetRow}:I${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
@@ -521,7 +535,8 @@ export const fetchCampers = async (spreadsheetId: string) => {
     lastSignedInAt: row[4] || '',
     location: row[5] || '',
     status: row[6] || '',
-    pictureOverrideUrl: row[7] || ''
+    pictureOverrideUrl: row[7] || '',
+    statusUpdatedAt: row[8] || ''
   }));
 };
 
@@ -529,7 +544,7 @@ export const updateUserProfileDetails = async (
   spreadsheetId: string,
   data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string }
 ) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:H1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === data.id || row[2] === data.email);
@@ -537,6 +552,11 @@ export const updateUserProfileDetails = async (
     throw new Error('User profile not found');
   }
   const existingRow = rows[rowIndex];
+  const newStatus = data.status || existingRow[6] || '';
+  const oldStatus = existingRow[6] || '';
+  const statusUpdatedAt = (data.status && newStatus !== oldStatus)
+    ? new Date().toISOString()
+    : existingRow[8] || '';
   const rowValues = [[
     existingRow[0],
     data.name || existingRow[1] || '',
@@ -544,12 +564,13 @@ export const updateUserProfileDetails = async (
     existingRow[3] || '',
     existingRow[4] || '',
     data.location || existingRow[5] || '',
-    data.status || existingRow[6] || '',
-    data.pictureOverrideUrl || existingRow[7] || ''
+    newStatus,
+    data.pictureOverrideUrl || existingRow[7] || '',
+    statusUpdatedAt
   ]];
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:H${sheetRow}`;
+  const range = `Users!A${sheetRow}:I${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
@@ -1268,6 +1289,38 @@ export const createBoca = async (
     boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt
   ]]);
   return boca;
+};
+
+// --- Status Updates ---
+
+export const fetchStatusUpdates = async (spreadsheetId: string) => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/StatusUpdates!A2:E5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows.map((row: any[]) => ({
+    id: row[0] || '',
+    camperEmail: row[1] || '',
+    camperName: row[2] || '',
+    status: row[3] || '',
+    timestamp: row[4] || ''
+  }));
+};
+
+export const createStatusUpdate = async (
+  spreadsheetId: string,
+  data: { camperEmail: string; camperName: string; status: string }
+) => {
+  const entry = {
+    id: Math.random().toString(36).substr(2, 9),
+    camperEmail: data.camperEmail,
+    camperName: data.camperName,
+    status: data.status,
+    timestamp: new Date().toISOString()
+  };
+  await appendSheetRow(spreadsheetId, 'StatusUpdates!A1', [[
+    entry.id, entry.camperEmail, entry.camperName, entry.status, entry.timestamp
+  ]]);
+  return entry;
 };
 
 // --- Google Drive Picker ---

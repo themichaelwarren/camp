@@ -70,6 +70,7 @@ export interface CamperProfile {
   location?: string;
   status?: string;
   pictureOverrideUrl?: string;
+  statusUpdatedAt?: string;
 }
 
 export interface Comment {
@@ -113,6 +114,14 @@ export interface Boca {
   fromEmail: string;
   submissionId: string;
   awardedAt: string;
+}
+
+export interface StatusUpdate {
+  id: string;
+  camperEmail: string;
+  camperName: string;
+  status: string;
+  timestamp: string;
 }
 
 export interface PlayableTrack {

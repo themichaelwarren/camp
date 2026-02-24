@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile } from '../types';
+import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile, StatusUpdate } from '../types';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -14,6 +14,7 @@ interface InboxPageProps {
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   bocas?: Boca[];
+  statusUpdates?: StatusUpdate[];
 }
 
 type ActivityItem =
@@ -22,7 +23,8 @@ type ActivityItem =
   | { type: 'reaction'; date: string; comment: CommentType; emoji: string; users: string[] }
   | { type: 'prompt'; date: string; prompt: Prompt }
   | { type: 'assignment'; date: string; assignment: Assignment }
-  | { type: 'boca'; date: string; boca: Boca };
+  | { type: 'boca'; date: string; boca: Boca }
+  | { type: 'status-update'; date: string; statusUpdate: StatusUpdate };
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
@@ -51,10 +53,10 @@ const getTimeRangeEnd = (range: TimeRange): Date | null => {
   return null;
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, playingTrackId, bocas = [] }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas'>('all');
+  const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
 
   const findCamper = (emailOrName: string): CamperProfile | undefined => {
     return campers.find(c => c.email === emailOrName || c.name === emailOrName);
@@ -162,6 +164,13 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
       });
     }
 
+    // Status updates
+    if (filter === 'all' || filter === 'status') {
+      statusUpdates.forEach(su => {
+        all.push({ type: 'status-update', date: su.timestamp, statusUpdate: su });
+      });
+    }
+
     all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Apply time range filter
@@ -177,7 +186,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     }
 
     return all;
-  }, [submissions, comments, prompts, assignments, bocas, filter, timeRange]);
+  }, [submissions, comments, prompts, assignments, bocas, statusUpdates, filter, timeRange]);
 
   const filters = [
     { key: 'all', label: 'All', icon: 'fa-stream' },
@@ -186,6 +195,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     { key: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
     { key: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { key: 'bocas', label: 'BOCAs', icon: 'fa-star' },
+    { key: 'status', label: 'Status', icon: 'fa-circle-info' },
   ] as const;
 
   const formatRelativeTime = (dateStr: string) => {
@@ -288,7 +298,6 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     )}
                   </p>
                   {version.notes && <p className="text-xs text-slate-400 truncate mt-0.5">{version.notes}</p>}
-                  {(() => { const c = findCamper(sub.camperId || sub.camperName); return c?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{c.status}</p> : null; })()}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {track && (
@@ -324,7 +333,6 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     {c.parentId ? ' replied' : ' commented'} on <span className="font-semibold text-indigo-600">{entity.label}</span>
                   </p>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.text}</p>
-                  {(() => { const camper = findCamper(c.authorEmail || c.author); return camper?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{camper.status}</p> : null; })()}
                   {reactionEntries.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-2">
                       {reactionEntries.map(([emoji, users]) => (
@@ -405,12 +413,37 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
                   </p>
                   {sub && <p className="text-xs text-slate-400 mt-0.5">by {sub.camperName}</p>}
-                  {(() => { const camper = findCamper(b.fromEmail); return camper?.status ? <p className="text-[10px] text-slate-400 italic mt-0.5">{camper.status}</p> : null; })()}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-star text-[8px]"></i>
                     BOCA
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.type === 'status-update') {
+            const su = item.statusUpdate;
+            return (
+              <div
+                key={`status-${su.id}`}
+                onClick={() => onNavigate('camper-detail', su.camperEmail)}
+                className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
+              >
+                <CamperAvatar emailOrName={su.camperEmail} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-bold text-slate-800">{su.camperName}</span> updated their status
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 italic">"{su.status}"</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                    <i className="fa-solid fa-circle-info text-[8px]"></i>
+                    Status
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>
                 </div>

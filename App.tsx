@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate } from './types';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bocas, setBocas] = useState<Boca[]>([]);
+  const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
@@ -268,6 +269,8 @@ const App: React.FC = () => {
       }
       const bocasData = await googleService.fetchBocas(sId);
       setBocas(bocasData);
+      const statusUpdatesData = await googleService.fetchStatusUpdates(sId);
+      setStatusUpdates(statusUpdatesData);
     } catch (e) {
       console.error('Initial sync failed', e);
     } finally {
@@ -329,6 +332,8 @@ const App: React.FC = () => {
 
       const bocasData = await googleService.fetchBocas(spreadsheetId);
       setBocas(bocasData);
+      const statusUpdatesData = await googleService.fetchStatusUpdates(spreadsheetId);
+      setStatusUpdates(statusUpdatesData);
     } catch (e) {
       console.error('Background sync failed', e);
     }
@@ -812,6 +817,7 @@ const App: React.FC = () => {
         status: updates.status ?? prev?.status,
         pictureOverrideUrl: updates.pictureOverrideUrl ?? prev?.pictureOverrideUrl
       }));
+      const statusChanged = updates.status !== undefined && updates.status !== userProfile?.status;
       setCampers((prev) =>
         prev.map((camper) =>
           camper.email === userProfile.email
@@ -819,11 +825,19 @@ const App: React.FC = () => {
                 ...camper,
                 location: updates.location ?? camper.location,
                 status: updates.status ?? camper.status,
-                pictureOverrideUrl: updates.pictureOverrideUrl ?? camper.pictureOverrideUrl
+                pictureOverrideUrl: updates.pictureOverrideUrl ?? camper.pictureOverrideUrl,
               }
             : camper
         )
       );
+      if (statusChanged && updates.status) {
+        const entry = await googleService.createStatusUpdate(spreadsheetId, {
+          camperEmail: userProfile.email,
+          camperName: userProfile.name,
+          status: updates.status
+        });
+        setStatusUpdates(prev => [entry, ...prev]);
+      }
     } catch (error) {
       console.error('Failed to update profile', error);
       alert('Profile update failed. Please try again.');
@@ -847,6 +861,7 @@ const App: React.FC = () => {
             onPlayTrack={handlePlayTrack}
             playingTrackId={playingTrackId}
             bocas={bocas}
+            statusUpdates={statusUpdates}
           />
         );
       case 'inbox':
@@ -861,6 +876,7 @@ const App: React.FC = () => {
             onPlayTrack={handlePlayTrack}
             playingTrackId={playingTrackId}
             bocas={bocas}
+            statusUpdates={statusUpdates}
           />
         );
       case 'prompts':
@@ -1078,6 +1094,7 @@ const App: React.FC = () => {
             onPlayTrack={handlePlayTrack}
             playingTrackId={playingTrackId}
             bocas={bocas}
+            statusUpdates={statusUpdates}
           />
         );
     }

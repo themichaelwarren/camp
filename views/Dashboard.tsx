@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca } from '../types';
+import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate } from '../types';
 import { getPromptStatus } from '../utils';
 
 interface DashboardProps {
@@ -14,6 +14,7 @@ interface DashboardProps {
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   bocas?: Boca[];
+  statusUpdates?: StatusUpdate[];
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -21,7 +22,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -100,17 +101,28 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
           </section>
 
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-             <h3 className="font-bold text-slate-800 text-lg mb-4">Camp Activity</h3>
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="font-bold text-slate-800 text-lg">Camp Activity</h3>
+               <button
+                 onClick={() => onNavigate('inbox')}
+                 className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+               >
+                 See All Activity
+                 <i className="fa-solid fa-arrow-right text-[10px]"></i>
+               </button>
+             </div>
              <div className="space-y-5">
                 {(() => {
                   type ActivityItem = { type: 'song'; date: string; data: typeof submissions[0] }
                     | { type: 'prompt'; date: string; data: typeof prompts[0] }
-                    | { type: 'assignment'; date: string; data: typeof assignments[0] };
+                    | { type: 'assignment'; date: string; data: typeof assignments[0] }
+                    | { type: 'status'; date: string; data: StatusUpdate };
 
                   const items: ActivityItem[] = [
                     ...submissions.map(s => ({ type: 'song' as const, date: s.versions?.length ? s.versions[0].timestamp : s.updatedAt, data: s })),
                     ...prompts.map(p => ({ type: 'prompt' as const, date: p.createdAt, data: p })),
                     ...assignments.map(a => ({ type: 'assignment' as const, date: a.createdAt || a.startDate || a.dueDate, data: a })),
+                    ...statusUpdates.map(su => ({ type: 'status' as const, date: su.timestamp, data: su })),
                   ];
                   items.sort((a, b) => {
                     const ta = new Date(a.date).getTime() || 0;
@@ -164,6 +176,23 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                             <p className="text-sm font-medium text-slate-700">
                               New prompt: <span className="text-indigo-600 font-semibold">"{p.title}"</span>
                             </p>
+                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (item.type === 'status') {
+                      const su = item.data as StatusUpdate;
+                      return (
+                        <div key={`status-${su.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('camper-detail', su.camperEmail)}>
+                          <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-600 shrink-0 z-10 group-hover:bg-sky-100">
+                            <i className="fa-solid fa-circle-info text-xs"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-700">
+                              <span className="font-bold">{su.camperName}</span> updated their status
+                            </p>
+                            <p className="text-xs text-slate-500 mt-0.5 italic truncate">"{su.status}"</p>
                             <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
                           </div>
                         </div>
