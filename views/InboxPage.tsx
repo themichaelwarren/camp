@@ -53,41 +53,41 @@ const getTimeRangeEnd = (range: TimeRange): Date | null => {
   return null;
 };
 
+const findCamper = (campers: CamperProfile[], emailOrName: string): CamperProfile | undefined => {
+  return campers.find(c => c.email === emailOrName || c.name === emailOrName);
+};
+
+const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; size?: string }> = ({ emailOrName, campers, size = 'w-10 h-10' }) => {
+  const camper = findCamper(campers, emailOrName);
+  const photoUrl = camper?.pictureOverrideUrl || camper?.picture;
+  const initial = (camper?.name || emailOrName)?.[0]?.toUpperCase() || '?';
+  if (photoUrl) {
+    return (
+      <ArtworkImage
+        fileId={undefined}
+        fallbackUrl={photoUrl}
+        alt={camper?.name || emailOrName}
+        className={`${size} rounded-xl object-cover`}
+        containerClassName={`${size} rounded-xl flex-shrink-0 overflow-hidden`}
+        fallback={
+          <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold`}>
+            {initial}
+          </div>
+        }
+      />
+    );
+  }
+  return (
+    <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm font-bold`}>
+      {initial}
+    </div>
+  );
+};
+
 const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
-
-  const findCamper = (emailOrName: string): CamperProfile | undefined => {
-    return campers.find(c => c.email === emailOrName || c.name === emailOrName);
-  };
-
-  const CamperAvatar: React.FC<{ emailOrName: string; size?: string }> = ({ emailOrName, size = 'w-10 h-10' }) => {
-    const camper = findCamper(emailOrName);
-    const photoUrl = camper?.pictureOverrideUrl || camper?.picture;
-    const initial = (camper?.name || emailOrName)?.[0]?.toUpperCase() || '?';
-    if (photoUrl) {
-      return (
-        <ArtworkImage
-          fileId={undefined}
-          fallbackUrl={photoUrl}
-          alt={camper?.name || emailOrName}
-          className={`${size} rounded-xl object-cover`}
-          containerClassName={`${size} rounded-xl flex-shrink-0 overflow-hidden`}
-          fallback={
-            <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold`}>
-              {initial}
-            </div>
-          }
-        />
-      );
-    }
-    return (
-      <div className={`${size} rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm font-bold`}>
-        {initial}
-      </div>
-    );
-  };
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
 
   useEffect(() => {
@@ -282,7 +282,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate('song-detail', sub.id)}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all group"
               >
-                <CamperAvatar emailOrName={sub.camperId || sub.camperName} />
+                <CamperAvatar campers={campers} emailOrName={sub.camperId || sub.camperName} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{sub.camperName}</span>
@@ -330,7 +330,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate(entity.view, entity.id)}
                 className="flex items-start gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
               >
-                <CamperAvatar emailOrName={c.authorEmail || c.author} />
+                <CamperAvatar campers={campers} emailOrName={c.authorEmail || c.author} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{c.author}</span>
@@ -366,7 +366,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate('prompt-detail', p.id)}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
               >
-                <CamperAvatar emailOrName={p.createdBy} />
+                <CamperAvatar campers={campers} emailOrName={p.createdBy} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     New prompt: <span className="font-semibold text-indigo-600">"{p.title}"</span>
@@ -418,7 +418,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
           if (item.type === 'boca') {
             const b = item.boca;
             const sub = submissions.find(s => s.id === b.submissionId);
-            const giverCamper = findCamper(b.fromEmail);
+            const giverCamper = findCamper(campers, b.fromEmail);
             const giverName = giverCamper?.name || b.fromEmail;
             return (
               <div
@@ -426,7 +426,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => sub ? onNavigate('song-detail', sub.id) : undefined}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-amber-200 cursor-pointer transition-all"
               >
-                <CamperAvatar emailOrName={b.fromEmail} />
+                <CamperAvatar campers={campers} emailOrName={b.fromEmail} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{giverName}</span> gave a BOCA to{' '}
@@ -453,7 +453,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 onClick={() => onNavigate('camper-detail', su.camperEmail)}
                 className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-200 cursor-pointer transition-all"
               >
-                <CamperAvatar emailOrName={su.camperEmail} />
+                <CamperAvatar campers={campers} emailOrName={su.camperEmail} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
                     <span className="font-bold text-slate-800">{su.camperName}</span> updated their status

@@ -29,7 +29,8 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserE
 
   const resolveNames = (emails: string[]): string => {
     return emails.map(email => {
-      const c = campers.find(p => p.email === email);
+      const lower = email.toLowerCase();
+      const c = campers.find(p => p.email?.toLowerCase() === lower);
       return c?.name || email.split('@')[0];
     }).join(', ');
   };
@@ -37,8 +38,8 @@ const ReactionPicker: React.FC<ReactionPickerProps> = ({ reactions, currentUserE
   return (
     <div className="relative inline-block">
       <div className="flex items-center gap-2 flex-wrap">
-        {Object.entries(reactions).map(([emoji, users]) => {
-          const hasReacted = users.includes(currentUserEmail);
+        {Object.entries(reactions).map(([emoji, users]: [string, string[]]) => {
+          const hasReacted = users.some(u => u.toLowerCase() === currentUserEmail.toLowerCase());
           return (
             <button
               key={emoji}

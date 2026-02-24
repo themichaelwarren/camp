@@ -28,9 +28,9 @@ const Comment: React.FC<CommentProps> = ({
   const [editText, setEditText] = useState(comment.text);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  const isAuthor = comment.authorEmail === currentUserEmail;
+  const isAuthor = comment.authorEmail?.toLowerCase() === currentUserEmail?.toLowerCase();
 
-  const camper = campers.find(c => c.email === comment.authorEmail || c.name === comment.author);
+  const camper = campers.find(c => c.email?.toLowerCase() === comment.authorEmail?.toLowerCase() || c.name === comment.author);
   const photoUrl = camper?.pictureOverrideUrl || camper?.picture;
 
   const handleReplySubmit = async (text: string) => {
