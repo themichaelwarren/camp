@@ -139,9 +139,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           <div className="hidden md:block flex-1" />
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-500 hover:text-slate-700 active:scale-95 transition-all flex-shrink-0"
+            className="w-10 h-10 rounded-full bg-slate-300 hover:bg-slate-400 flex items-center justify-center text-slate-600 hover:text-slate-800 active:scale-95 transition-all flex-shrink-0"
           >
-            <i className="fa-solid fa-chevron-down text-sm"></i>
+            <i className="fa-solid fa-chevron-down text-base"></i>
           </button>
         </div>
 
@@ -149,7 +149,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         <div className="flex-1 overflow-y-auto md:overflow-hidden md:flex md:items-center md:justify-center">
           <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:gap-12 xl:gap-16 md:px-10 xl:px-16 md:pb-0">
             {/* Left: Player controls */}
-            <div className="flex flex-col items-center w-full max-w-sm lg:max-w-md xl:max-w-lg 2xl:max-w-xl md:flex-shrink-0">
+            <div className="flex flex-col items-center w-full max-w-sm md:max-w-none md:w-96 lg:w-[30rem] xl:w-[38rem] 2xl:w-[46rem] md:flex-shrink-0">
               {/* Artwork */}
               <div className="w-full mt-2 md:mt-0">
                 <div className="aspect-square w-full rounded-2xl xl:rounded-3xl overflow-hidden bg-slate-200 shadow-xl relative">
@@ -160,8 +160,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     className="w-full h-full object-cover"
                     containerClassName="w-full h-full"
                     fallback={
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-                        <i className="fa-solid fa-compact-disc text-6xl xl:text-7xl text-indigo-300 animate-spin" style={{ animationDuration: '3s' }}></i>
+                      <div className="w-full h-full flex items-center justify-center bg-slate-200">
+                        <i className="fa-solid fa-compact-disc text-6xl xl:text-7xl text-slate-400 animate-spin" style={{ animationDuration: '3s' }}></i>
                       </div>
                     }
                     lazy={false}
@@ -275,65 +275,69 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               </div>
             </div>
 
-            {/* Right: Queue */}
-            {queue.length > 0 && (
+            {/* Right: Queue — keep column mounted in jukebox mode to avoid layout shift */}
+            {(queue.length > 0 || isJukeboxMode) && (
               <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
-                <div className="space-y-1">
-                  {queue.map((track, i) => (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={() => setDragIndex(i)}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
-                      onDragEnd={() => {
-                        if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-                          onReorderQueue?.(dragIndex, dragOverIndex);
-                        }
-                        setDragIndex(null);
-                        setDragOverIndex(null);
-                      }}
-                      className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
-                        dragIndex === i ? 'opacity-40' : ''
-                      } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
-                    >
-                      <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
-                        <ArtworkImage
-                          fileId={track.artworkFileId}
-                          fallbackUrl={track.artworkUrl}
-                          alt={track.title}
-                          className="w-full h-full object-cover"
-                          containerClassName="w-full h-full"
-                          fallback={
-                            <div className="w-full h-full flex items-center justify-center">
-                              <i className="fa-solid fa-music text-slate-300 text-xs"></i>
-                            </div>
+                {queue.length > 0 ? (
+                  <div className="space-y-1">
+                    {queue.map((track, i) => (
+                      <div
+                        key={i}
+                        draggable
+                        onDragStart={() => setDragIndex(i)}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
+                        onDragEnd={() => {
+                          if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+                            onReorderQueue?.(dragIndex, dragOverIndex);
                           }
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        {track.submissionId ? (
-                          <button
-                            onClick={() => onNavigateToSong?.(track.submissionId!)}
-                            className="text-slate-800 text-sm font-medium truncate block text-left hover:underline max-w-full"
-                          >
-                            {track.title}
-                          </button>
-                        ) : (
-                          <p className="text-slate-800 text-sm font-medium truncate">{track.title}</p>
-                        )}
-                        <p className="text-slate-500 text-xs truncate">{track.artist}</p>
-                      </div>
-                      <button
-                        onClick={() => onRemoveFromQueue(i)}
-                        className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                          setDragIndex(null);
+                          setDragOverIndex(null);
+                        }}
+                        className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
+                          dragIndex === i ? 'opacity-40' : ''
+                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
                       >
-                        <i className="fa-solid fa-xmark text-sm"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
+                          <ArtworkImage
+                            fileId={track.artworkFileId}
+                            fallbackUrl={track.artworkUrl}
+                            alt={track.title}
+                            className="w-full h-full object-cover"
+                            containerClassName="w-full h-full"
+                            fallback={
+                              <div className="w-full h-full flex items-center justify-center">
+                                <i className="fa-solid fa-music text-slate-300 text-xs"></i>
+                              </div>
+                            }
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {track.submissionId ? (
+                            <button
+                              onClick={() => onNavigateToSong?.(track.submissionId!)}
+                              className="text-slate-800 text-sm font-medium truncate block text-left hover:underline max-w-full"
+                            >
+                              {track.title}
+                            </button>
+                          ) : (
+                            <p className="text-slate-800 text-sm font-medium truncate">{track.title}</p>
+                          )}
+                          <p className="text-slate-500 text-xs truncate">{track.artist}</p>
+                        </div>
+                        <button
+                          onClick={() => onRemoveFromQueue(i)}
+                          className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <i className="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-sm py-4">Loading next song...</p>
+                )}
               </div>
             )}
           </div>
