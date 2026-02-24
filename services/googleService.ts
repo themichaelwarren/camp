@@ -658,7 +658,10 @@ const uploadFileToDriveInFolder = async (file: File, folderId?: string, mimeType
   });
 
   if (!response.ok) throw new Error('Upload to Drive failed');
-  return response.json();
+  const result = await response.json();
+  // Share uploaded file so all camp members can access it
+  shareFilePublicly(result.id).catch(() => {});
+  return result;
 };
 
 export const createLyricsDoc = async (title: string, userLabel: string, lyrics: string, folderId?: string) => {
@@ -719,6 +722,22 @@ export const appendLyricsRevision = async (
       }]
     })
   });
+};
+
+export const shareFilePublicly = async (fileId: string): Promise<void> => {
+  if (!accessToken) return;
+  try {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+    });
+  } catch (err) {
+    console.warn('Failed to share file publicly:', fileId, err);
+  }
 };
 
 export class DriveAccessError extends Error {

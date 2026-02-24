@@ -82,6 +82,9 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         ? { id: driveAudioFile.id, webViewLink: driveAudioFile.url }
         : await googleService.uploadAudioToDriveInFolder(selectedFile!, assignmentFolderId);
 
+      // Share Drive-picked audio so all campers can play it
+      if (driveAudioFile) googleService.shareFilePublicly(audioResult.id).catch(() => {});
+
       const audioFileName = driveAudioFile ? driveAudioFile.name : selectedFile!.name;
 
       const userLabel = userProfile?.email || userProfile?.name || 'Anonymous';
@@ -91,6 +94,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
       let artworkResult: { id: string; webViewLink: string } | null = null;
       if (driveArtworkFile) {
         artworkResult = { id: driveArtworkFile.id, webViewLink: driveArtworkFile.url };
+        googleService.shareFilePublicly(artworkResult.id).catch(() => {});
       } else if (artworkFile) {
         artworkResult = await googleService.uploadArtworkToDriveInFolder(artworkFile, assignmentFolderId);
       }

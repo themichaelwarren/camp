@@ -1,25 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import * as googleService from '../services/googleService';
+import { Submission } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
+
+const ADMIN_USER_ID = '107401200819936745460';
 
 interface SettingsPageProps {
   themePreference: 'light' | 'dark' | 'system';
   onThemeChange: (value: 'light' | 'dark' | 'system') => void;
-  userProfile?: { name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null;
+  userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null;
   onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => void;
   rememberMe: boolean;
   onRememberMeChange: (value: boolean) => void;
   visualTheme: 'default' | 'notebook' | 'modern';
   onVisualThemeChange: (value: 'default' | 'notebook' | 'modern') => void;
+  submissions?: Submission[];
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, visualTheme, onVisualThemeChange }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, visualTheme, onVisualThemeChange, submissions = [] }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [driveProfilePhoto, setDriveProfilePhoto] = useState<{ id: string; name: string; url: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [shareProgress, setShareProgress] = useState<string | null>(null);
+  const isAdmin = userProfile?.id === ADMIN_USER_ID;
 
   useEffect(() => {
     setLocation(userProfile?.location || '');
@@ -33,6 +39,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
       let pictureOverrideUrl = userProfile?.pictureOverrideUrl || '';
       if (driveProfilePhoto) {
         pictureOverrideUrl = driveProfilePhoto.url;
+        googleService.shareFilePublicly(driveProfilePhoto.id).catch(() => {});
       } else if (profileFile) {
         const uploaded = await googleService.uploadProfilePhoto(profileFile);
         pictureOverrideUrl = uploaded.webViewLink;
@@ -295,6 +302,57 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
           </label>
         </div>
       </section>
+
+      {isAdmin && submissions.length > 0 && (
+        <section className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-bold text-slate-800">Admin Tools</h3>
+          <p className="text-slate-500 text-sm mt-1">One-time maintenance actions.</p>
+          <div className="mt-6">
+            <button
+              type="button"
+              disabled={!!shareProgress}
+              onClick={async () => {
+                const fileIds = new Set<string>();
+                for (const sub of submissions) {
+                  for (const v of sub.versions || []) {
+                    if (v.id) fileIds.add(v.id);
+                  }
+                  if (sub.artworkFileId) fileIds.add(sub.artworkFileId);
+                }
+                const ids = Array.from(fileIds);
+                setShareProgress(`Sharing 0/${ids.length} files...`);
+                let done = 0;
+                let failed = 0;
+                for (const id of ids) {
+                  try {
+                    await googleService.shareFilePublicly(id);
+                  } catch {
+                    failed++;
+                  }
+                  done++;
+                  setShareProgress(`Sharing ${done}/${ids.length} files...${failed ? ` (${failed} failed)` : ''}`);
+                }
+                setShareProgress(`Done! ${done - failed}/${ids.length} shared.${failed ? ` ${failed} failed.` : ''}`);
+                setTimeout(() => setShareProgress(null), 5000);
+              }}
+              className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {shareProgress ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  {shareProgress}
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-share-nodes"></i>
+                  Share All Songs Publicly
+                </>
+              )}
+            </button>
+            <p className="text-[10px] text-slate-400 mt-2">Sets "anyone with the link can view" on every audio file and artwork. Run this once to fix songs uploaded before public sharing was enabled.</p>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

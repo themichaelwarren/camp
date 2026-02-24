@@ -657,6 +657,8 @@ const App: React.FC = () => {
               title: 'Select the audio file to re-authorize',
             });
             if (files.length > 0) {
+              // Share re-linked file so all campers can access it
+              googleService.shareFilePublicly(files[0].id).catch(() => {});
               // Retry playback — Picker granted access to the selected file
               await handlePlayTrack({ ...track, versionId: files[0].id });
             }
@@ -708,6 +710,8 @@ const App: React.FC = () => {
               title: 'Select the audio file to re-authorize',
             });
             if (files.length > 0) {
+              // Share re-linked file so all campers can access it
+              googleService.shareFilePublicly(files[0].id).catch(() => {});
               await handleAddToQueue({ ...track, versionId: files[0].id });
             }
           } catch (pickerError) {
@@ -1015,6 +1019,7 @@ const App: React.FC = () => {
             onRememberMeChange={setRememberMe}
             visualTheme={visualTheme}
             onVisualThemeChange={setVisualTheme}
+            submissions={submissions}
           />
         );
       case 'campers':
