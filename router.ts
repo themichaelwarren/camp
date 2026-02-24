@@ -123,3 +123,75 @@ export function parseHash(hash: string): RouteInfo {
 export function resolveShortId(shortId: string, entityIds: string[]): string | null {
   return entityIds.find(fullId => fullId.endsWith(shortId)) || null;
 }
+
+// --- OG Meta Tags ---
+
+export interface PageMeta {
+  title: string;
+  description?: string;
+  image?: string;
+}
+
+const VIEW_TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  inbox: 'Activity',
+  prompts: 'Prompts',
+  assignments: 'Assignments',
+  submissions: 'Song Vault',
+  events: 'Events',
+  campers: 'Campers',
+  settings: 'Settings',
+  bocas: 'BOCAs',
+};
+
+export function getDefaultPageMeta(view: ViewState): PageMeta {
+  return { title: VIEW_TITLES[view] || 'Camp' };
+}
+
+export function updateMetaTags(meta: PageMeta): void {
+  const displayTitle = meta.title ? `${meta.title} · Camp` : 'Camp · Songwriter Toolkit';
+  document.title = displayTitle;
+
+  const url = window.location.href;
+  const defaultDesc = 'A collaborative toolkit for songwriting camps.';
+
+  const setProperty = (prop: string, content: string) => {
+    let el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('property', prop);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', content);
+  };
+
+  const setName = (name: string, content: string) => {
+    let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', name);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', content);
+  };
+
+  setProperty('og:title', meta.title || 'Camp');
+  setProperty('og:description', meta.description || defaultDesc);
+  setProperty('og:url', url);
+  setProperty('og:type', 'website');
+  setName('description', meta.description || defaultDesc);
+
+  if (meta.image) {
+    setProperty('og:image', meta.image);
+    setName('twitter:image', meta.image);
+    setName('twitter:card', 'summary_large_image');
+  } else {
+    setName('twitter:card', 'summary');
+    // Remove stale image tags from previous navigation
+    document.querySelector('meta[property="og:image"]')?.remove();
+    document.querySelector('meta[name="twitter:image"]')?.remove();
+  }
+
+  setName('twitter:title', meta.title || 'Camp');
+  setName('twitter:description', meta.description || defaultDesc);
+}

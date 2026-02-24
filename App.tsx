@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate } from './types';
-import { buildHashPath, parseHash, resolveShortId } from './router';
+import { buildHashPath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -80,11 +80,7 @@ const App: React.FC = () => {
     artworkUrl?: string;
   }[]>([]);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') !== '0');
-  const [visualTheme, setVisualTheme] = useState<'default' | 'notebook' | 'modern'>(() => {
-    const stored = window.localStorage.getItem('camp-skin');
-    if (stored === 'default' || stored === 'notebook' || stored === 'modern') return stored;
-    return 'modern';
-  });
+  const visualTheme = 'modern';
   const previousAudioUrl = useRef<string | null>(null);
   const [isJukeboxMode, setIsJukeboxMode] = useState(false);
   const isJukeboxModeRef = useRef(false);
@@ -169,7 +165,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     document.documentElement.dataset.skin = visualTheme;
-    window.localStorage.setItem('camp-skin', visualTheme);
   }, [visualTheme]);
 
   useEffect(() => {
@@ -369,6 +364,62 @@ const App: React.FC = () => {
     }
   };
 
+  const getPageMeta = (view: ViewState, id: string | null): PageMeta => {
+    if (!id) return getDefaultPageMeta(view);
+    switch (view) {
+      case 'song-detail': {
+        const sub = submissions.find(s => s.id === id);
+        if (!sub) return { title: 'Song' };
+        const assignment = assignments.find(a => a.id === sub.assignmentId);
+        const image = sub.artworkFileId
+          ? `https://drive.google.com/thumbnail?id=${sub.artworkFileId}&sz=w600`
+          : undefined;
+        return {
+          title: sub.title,
+          description: `By ${sub.camperName}${assignment ? ` · ${assignment.title}` : ''}`,
+          image,
+        };
+      }
+      case 'prompt-detail': {
+        const prompt = prompts.find(p => p.id === id);
+        if (!prompt) return { title: 'Prompt' };
+        return {
+          title: prompt.title,
+          description: prompt.description?.slice(0, 200) || undefined,
+        };
+      }
+      case 'assignment-detail': {
+        const a = assignments.find(x => x.id === id);
+        if (!a) return { title: 'Assignment' };
+        return {
+          title: a.title,
+          description: a.instructions?.slice(0, 200) || undefined,
+        };
+      }
+      case 'event-detail': {
+        const ev = events.find(e => e.id === id);
+        if (!ev) return { title: 'Event' };
+        const dateStr = new Date(ev.startDateTime).toLocaleDateString('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric',
+        });
+        return {
+          title: ev.title,
+          description: `${dateStr}${ev.description ? ` · ${ev.description.slice(0, 150)}` : ''}`,
+        };
+      }
+      case 'camper-detail': {
+        const camper = campers.find(c => c.id === id || c.email === id);
+        if (!camper) return { title: 'Camper' };
+        return {
+          title: camper.name,
+          description: camper.status ? `"${camper.status}"${camper.location ? ` · ${camper.location}` : ''}` : camper.location || undefined,
+        };
+      }
+      default:
+        return getDefaultPageMeta(view);
+    }
+  };
+
   const navigateTo = (view: ViewState, id: string | null = null, { replace = false } = {}) => {
     setActiveView(view);
     setSelectedId(id);
@@ -381,6 +432,7 @@ const App: React.FC = () => {
     } else {
       window.history.pushState(state, '', hashPath);
     }
+    updateMetaTags(getPageMeta(view, id));
   };
 
   // Handle URL hash routing: initialize from hash on mount + browser back/forward
@@ -396,16 +448,12 @@ const App: React.FC = () => {
     }
 
     const handlePopState = (e: PopStateEvent) => {
-      if (e.state?.view) {
-        setActiveView(e.state.view);
-        setSelectedId(e.state.id || null);
-        window.scrollTo(0, 0);
-      } else {
-        const parsed = parseHash(window.location.hash);
-        setActiveView(parsed.view);
-        setSelectedId(parsed.id);
-        window.scrollTo(0, 0);
-      }
+      const view = e.state?.view || parseHash(window.location.hash).view;
+      const id = e.state?.id || parseHash(window.location.hash).id;
+      setActiveView(view);
+      setSelectedId(id || null);
+      window.scrollTo(0, 0);
+      updateMetaTags(getPageMeta(view, id || null));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -451,6 +499,7 @@ const App: React.FC = () => {
       setActiveView(parsed.view);
       setSelectedId(resolvedId);
       window.history.replaceState({ view: parsed.view, id: resolvedId }, '', hash);
+      updateMetaTags(getPageMeta(parsed.view, resolvedId));
     }
   }, [prompts, assignments, submissions, campers, events]);
 
@@ -1129,8 +1178,6 @@ const App: React.FC = () => {
             onProfileUpdate={handleProfileUpdate}
             rememberMe={rememberMe}
             onRememberMeChange={setRememberMe}
-            visualTheme={visualTheme}
-            onVisualThemeChange={setVisualTheme}
             submissions={submissions}
           />
         );

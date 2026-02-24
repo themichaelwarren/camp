@@ -12,12 +12,10 @@ interface SettingsPageProps {
   onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => void;
   rememberMe: boolean;
   onRememberMeChange: (value: boolean) => void;
-  visualTheme: 'default' | 'notebook' | 'modern';
-  onVisualThemeChange: (value: 'default' | 'notebook' | 'modern') => void;
   submissions?: Submission[];
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, visualTheme, onVisualThemeChange, submissions = [] }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [] }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -242,64 +240,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               </p>
             </label>
           ))}
-        </div>
-      </section>
-
-      <section className="bg-white border border-slate-200 rounded-3xl p-8">
-        <h3 className="text-lg font-bold text-slate-800">Theme Style</h3>
-        <p className="text-slate-500 text-sm mt-1">Switch the visual style of the camp interface.</p>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <label
-            className={`border rounded-2xl p-4 cursor-pointer transition-all ${
-              visualTheme === 'default' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">Studio</span>
-              <input
-                type="radio"
-                name="visualTheme"
-                value="default"
-                checked={visualTheme === 'default'}
-                onChange={() => onVisualThemeChange('default')}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-2">Current purple accent theme.</p>
-          </label>
-          <label
-            className={`border rounded-2xl p-4 cursor-pointer transition-all ${
-              visualTheme === 'notebook' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-red-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">Notebook</span>
-              <input
-                type="radio"
-                name="visualTheme"
-                value="notebook"
-                checked={visualTheme === 'notebook'}
-                onChange={() => onVisualThemeChange('notebook')}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-2">Monospace, white/gray/black/red.</p>
-          </label>
-          <label
-            className={`border rounded-2xl p-4 cursor-pointer transition-all ${
-              visualTheme === 'modern' ? 'border-violet-500 bg-violet-50' : 'border-slate-200 hover:border-violet-200'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-800">Modern</span>
-              <input
-                type="radio"
-                name="visualTheme"
-                value="modern"
-                checked={visualTheme === 'modern'}
-                onChange={() => onVisualThemeChange('modern')}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-2">Compact, clean, Linear-inspired.</p>
-          </label>
         </div>
       </section>
 

@@ -227,12 +227,12 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
 
             return upcomingEvent ? (
               <section
-                className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl cursor-pointer hover:bg-indigo-800 transition-colors"
+                className="camp-event-card rounded-2xl p-6 shadow-xl cursor-pointer transition-colors"
                 onClick={() => onNavigate('events')}
               >
                 <div className="flex items-center gap-3 mb-4">
                   <i className="fa-solid fa-calendar-days text-amber-400 text-xl"></i>
-                  <h3 className="font-bold text-lg">Next Live Session</h3>
+                  <h3 className="font-bold text-lg">Next Event</h3>
                 </div>
                 <p className="text-white text-sm mb-2 font-semibold">
                   {upcomingEvent.title}
@@ -269,7 +269,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
               <section className="bg-slate-100 rounded-2xl p-6 border-2 border-dashed border-slate-300">
                 <div className="flex items-center gap-3 mb-4">
                   <i className="fa-solid fa-calendar-days text-slate-400 text-xl"></i>
-                  <h3 className="font-bold text-lg text-slate-600">Next Live Session</h3>
+                  <h3 className="font-bold text-lg text-slate-600">Next Event</h3>
                 </div>
                 <p className="text-slate-500 text-sm mb-6">
                   No upcoming events scheduled. Check back soon!
