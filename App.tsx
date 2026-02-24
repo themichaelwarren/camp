@@ -66,6 +66,8 @@ const App: React.FC = () => {
     artworkUrl?: string;
   } | null>(null);
   const [isPlayerLoading, setIsPlayerLoading] = useState(false);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [queueingTrackId, setQueueingTrackId] = useState<string | null>(null);
   const [queue, setQueue] = useState<{
     src: string;
     title: string;
@@ -614,6 +616,7 @@ const App: React.FC = () => {
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
+    setPlayingTrackId(track.versionId);
     // Show player immediately with track info while audio loads
     setPlayer({
       src: '',
@@ -672,6 +675,7 @@ const App: React.FC = () => {
       }
     } finally {
       setIsPlayerLoading(false);
+      setPlayingTrackId(null);
     }
   };
 
@@ -684,6 +688,7 @@ const App: React.FC = () => {
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
+    setQueueingTrackId(track.versionId);
     try {
       const blob = await googleService.fetchDriveFile(track.versionId);
       const url = URL.createObjectURL(blob);
@@ -721,6 +726,8 @@ const App: React.FC = () => {
       } else {
         alert('Failed to load audio from Drive. Please try again.');
       }
+    } finally {
+      setQueueingTrackId(null);
     }
   };
 
@@ -838,6 +845,7 @@ const App: React.FC = () => {
             isSyncing={isSyncing}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            playingTrackId={playingTrackId}
             bocas={bocas}
           />
         );
@@ -851,6 +859,7 @@ const App: React.FC = () => {
             spreadsheetId={spreadsheetId}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            playingTrackId={playingTrackId}
             bocas={bocas}
           />
         );
@@ -908,6 +917,8 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
             onStartJukebox={handleStartJukebox}
             userProfile={userProfile}
             viewMode={submissionsViewMode}
@@ -948,6 +959,8 @@ const App: React.FC = () => {
             onUpdate={handleUpdatePrompt}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
             onUpvote={handlePromptUpvote}
             upvotedPromptIds={upvotedPromptIds}
             currentUser={userProfile}
@@ -970,6 +983,8 @@ const App: React.FC = () => {
             onUpdate={handleUpdateAssignment}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
             onAddSubmission={handleAddSubmission}
             onCreateEvent={handleCreateEventForAssignment}
             currentUser={userProfile}
@@ -990,6 +1005,8 @@ const App: React.FC = () => {
             onUpdate={handleUpdateSubmission}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
             currentUser={{ name: userProfile.name || 'Anonymous', email: userProfile.email || '' }}
             spreadsheetId={spreadsheetId}
             bocas={bocas}
@@ -1005,6 +1022,7 @@ const App: React.FC = () => {
             currentUserEmail={userProfile?.email || ''}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            playingTrackId={playingTrackId}
             onGiveBoca={handleGiveBoca}
           />
         );
@@ -1036,6 +1054,8 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
             songsView={camperDetailSongsView}
             onSongsViewChange={setCamperDetailSongsView}
             searchTerm={camperDetailSearch}
@@ -1056,6 +1076,7 @@ const App: React.FC = () => {
             isSyncing={isSyncing}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            playingTrackId={playingTrackId}
             bocas={bocas}
           />
         );

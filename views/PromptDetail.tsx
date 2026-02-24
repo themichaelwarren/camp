@@ -17,6 +17,8 @@ interface PromptDetailProps {
   onUpdate: (prompt: Prompt) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
+  queueingTrackId?: string | null;
   onUpvote: (prompt: Prompt) => void;
   upvotedPromptIds: string[];
   currentUser?: { name: string; email: string };
@@ -29,7 +31,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [] }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -180,9 +182,10 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                       onAddToQueue(playable[i]);
                     }
                   }}
-                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+                  disabled={!!playingTrackId}
+                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-70"
                 >
-                  <i className="fa-solid fa-play text-xs"></i>
+                  <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                   Play All ({submissions.filter(s => s.versions?.length > 0).length})
                 </button>
               )}
@@ -216,17 +219,19 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                       <div className="flex gap-1.5 flex-shrink-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          disabled={playingTrackId === track.versionId}
                           className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                           title="Play"
                         >
-                          <i className="fa-solid fa-play text-xs"></i>
+                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          disabled={queueingTrackId === track.versionId}
                           className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                           title="Add to queue"
                         >
-                          <i className="fa-solid fa-list text-xs"></i>
+                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                         </button>
                       </div>
                     )}

@@ -726,17 +726,16 @@ export const appendLyricsRevision = async (
 
 export const shareFilePublicly = async (fileId: string): Promise<void> => {
   if (!accessToken) return;
-  try {
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-    });
-  } catch (err) {
-    console.warn('Failed to share file publicly:', fileId, err);
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to share ${fileId}: ${response.status}`);
   }
 };
 

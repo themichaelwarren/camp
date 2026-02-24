@@ -12,6 +12,7 @@ interface InboxPageProps {
   spreadsheetId: string | null;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
   bocas?: Boca[];
 }
 
@@ -50,7 +51,7 @@ const getTimeRangeEnd = (range: TimeRange): Date | null => {
   return null;
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, bocas = [] }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, spreadsheetId, onNavigate, onPlayTrack, playingTrackId, bocas = [] }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas'>('all');
@@ -293,10 +294,11 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                   {track && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                      className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
+                      disabled={playingTrackId === track.versionId}
+                      className={`w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors ${playingTrackId === track.versionId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                       title="Play"
                     >
-                      <i className="fa-solid fa-play text-xs"></i>
+                      <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                     </button>
                   )}
                   <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>

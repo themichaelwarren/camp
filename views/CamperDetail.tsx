@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -11,6 +11,8 @@ interface CamperDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
+  queueingTrackId?: string | null;
   songsView: 'cards' | 'list';
   onSongsViewChange: (value: 'cards' | 'list') => void;
   searchTerm: string;
@@ -37,7 +39,18 @@ const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPro
   return Array.from(tags);
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [] }) => {
+type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc';
+
+const getFirstVersionDate = (sub: Submission): number => {
+  if (sub.versions?.length) {
+    const t = new Date(sub.versions[sub.versions.length - 1].timestamp).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return new Date(sub.updatedAt).getTime() || 0;
+};
+
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [] }) => {
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
   const allSubmissionTags = useMemo(() => {
     const tags = new Set<string>();
@@ -48,7 +61,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
   }, [submissions, assignments, allPrompts]);
 
   const filteredSubmissions = useMemo(() => {
-    return submissions.filter(sub => {
+    const filtered = submissions.filter(sub => {
       if (searchTerm.trim()) {
         if (!sub.title.toLowerCase().includes(searchTerm.trim().toLowerCase())) return false;
       }
@@ -58,7 +71,17 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       }
       return true;
     });
-  }, [submissions, assignments, allPrompts, searchTerm, selectedTags]);
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc': return getFirstVersionDate(b) - getFirstVersionDate(a);
+        case 'date-asc': return getFirstVersionDate(a) - getFirstVersionDate(b);
+        case 'title-asc': return a.title.localeCompare(b.title);
+        case 'title-desc': return b.title.localeCompare(a.title);
+        default: return 0;
+      }
+    });
+  }, [submissions, assignments, allPrompts, searchTerm, selectedTags, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -153,6 +176,16 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
               className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
+            <option value="title-asc">Title A–Z</option>
+            <option value="title-desc">Title Z–A</option>
+          </select>
           {allSubmissionTags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {allSubmissionTags.map(tag => (
@@ -205,23 +238,25 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
-                      <p className="text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt).toLocaleDateString()}</p>
                     </div>
                     {track && (
                       <div className="flex gap-1.5 flex-shrink-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          disabled={playingTrackId === track.versionId}
                           className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                           title="Play"
                         >
-                          <i className="fa-solid fa-play text-xs"></i>
+                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          disabled={queueingTrackId === track.versionId}
                           className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                           title="Add to queue"
                         >
-                          <i className="fa-solid fa-list text-xs"></i>
+                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                         </button>
                       </div>
                     )}
@@ -246,7 +281,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
               <thead className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3">Song</th>
-                  <th className="px-4 py-3">Updated</th>
+                  <th className="px-4 py-3">Uploaded</th>
                   <th className="px-4 py-3">Artwork</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -272,7 +307,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[0].timestamp : submission.updatedAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className={`w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center ${
                           bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'
@@ -291,17 +326,19 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                           <div className="flex gap-1.5">
                             <button
                               onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              disabled={playingTrackId === track.versionId}
                               className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                               title="Play"
                             >
-                              <i className="fa-solid fa-play text-xs"></i>
+                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                              disabled={queueingTrackId === track.versionId}
                               className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                               title="Add to queue"
                             >
-                              <i className="fa-solid fa-list text-xs"></i>
+                              <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                             </button>
                           </div>
                         )}

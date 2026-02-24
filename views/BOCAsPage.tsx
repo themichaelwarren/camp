@@ -9,6 +9,7 @@ interface BOCAsPageProps {
   currentUserEmail: string;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
   onGiveBoca: (submissionId: string) => Promise<void>;
 }
 
@@ -17,7 +18,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, onGiveBoca }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -152,13 +153,14 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                     BOCA'd by {count} camper{count !== 1 ? 's' : ''}
                   </div>
                   {track && (
-                    <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                    <div className={`absolute inset-0 flex items-center justify-center gap-3 transition-opacity bg-black/20 ${playingTrackId === track.versionId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       <button
                         onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                        className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg hover:bg-amber-600 hover:scale-105 transition-all"
+                        disabled={playingTrackId === track.versionId}
+                        className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg hover:bg-amber-600 hover:scale-105 transition-all disabled:opacity-70"
                         title="Play"
                       >
-                        <i className="fa-solid fa-play text-lg ml-0.5"></i>
+                        <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-lg ml-0.5`}></i>
                       </button>
                     </div>
                   )}

@@ -12,6 +12,7 @@ interface DashboardProps {
   isSyncing: boolean;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
   bocas?: Boca[];
 }
 
@@ -20,7 +21,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, bocas = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [] }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -142,10 +143,11 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                           {track && (
                             <button
                               onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              disabled={playingTrackId === track.versionId}
                               className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors flex-shrink-0 self-center"
                               title="Play"
                             >
-                              <i className="fa-solid fa-play text-xs"></i>
+                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                             </button>
                           )}
                         </div>

@@ -22,6 +22,8 @@ interface AssignmentDetailProps {
   onAddPrompt: (prompt: Prompt) => Promise<void>;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
+  queueingTrackId?: string | null;
   onAddSubmission: (submission: Submission) => void;
   onCreateEvent: (assignmentId: string) => Promise<void>;
   currentUser?: { name: string; email: string };
@@ -35,7 +37,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [] }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -293,9 +295,10 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       onAddToQueue(playable[i]);
                     }
                   }}
-                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+                  disabled={!!playingTrackId}
+                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-70"
                 >
-                  <i className="fa-solid fa-play text-xs"></i>
+                  <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                   Play All ({submissions.filter(s => s.versions?.length > 0).length})
                 </button>
               )}
@@ -330,17 +333,19 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                         <div className="flex gap-1.5 flex-shrink-0">
                           <button
                             onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                            disabled={playingTrackId === track.versionId}
                             className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                             title="Play"
                           >
-                            <i className="fa-solid fa-play text-xs"></i>
+                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                            disabled={queueingTrackId === track.versionId}
                             className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                             title="Add to queue"
                           >
-                            <i className="fa-solid fa-list text-xs"></i>
+                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                           </button>
                         </div>
                       )}

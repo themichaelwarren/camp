@@ -12,6 +12,8 @@ interface SubmissionsPageProps {
   onViewDetail: (id: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  playingTrackId?: string | null;
+  queueingTrackId?: string | null;
   onStartJukebox: (tracks: PlayableTrack[]) => void;
   userProfile?: { name?: string; email?: string } | null;
   viewMode: 'cards' | 'list';
@@ -34,7 +36,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, bocas }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, bocas }) => {
   const [showUpload, setShowUpload] = useState(false);
 
   const getSubmissionDate = (sub: Submission): string => {
@@ -294,17 +296,19 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                     <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                       <button
                         onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                        className="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all"
+                        disabled={playingTrackId === track.versionId}
+                        className="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all disabled:opacity-70"
                         title="Play"
                       >
-                        <i className="fa-solid fa-play text-lg ml-0.5"></i>
+                        <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-lg ml-0.5`}></i>
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-                        className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 flex items-center justify-center shadow-lg hover:bg-white hover:scale-105 transition-all"
+                        disabled={queueingTrackId === track.versionId}
+                        className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 flex items-center justify-center shadow-lg hover:bg-white hover:scale-105 transition-all disabled:opacity-70"
                         title="Add to queue"
                       >
-                        <i className="fa-solid fa-list text-sm"></i>
+                        <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-sm`}></i>
                       </button>
                     </div>
                   )}
@@ -335,7 +339,6 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               <tr>
                 <th className="px-4 py-3">Song</th>
                 <th className="px-4 py-3 hidden md:table-cell">Assignment</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Prompt</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -343,7 +346,6 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             <tbody className="divide-y divide-slate-100">
               {filteredSubmissions.map(sub => {
                 const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                const promptTitle = getPromptForSubmission(sub)?.title || '—';
                 const track = trackFromSubmission(sub);
                 const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                 return (
@@ -379,7 +381,6 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600 truncate hidden md:table-cell">{assignmentTitle}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600 truncate hidden lg:table-cell">{promptTitle}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
                       {new Date(getSubmissionDate(sub)).toLocaleDateString()}
                     </td>
@@ -388,17 +389,19 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                         <div className="flex gap-1.5">
                           <button
                             onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                            disabled={playingTrackId === track.versionId}
                             className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                             title="Play"
                           >
-                            <i className="fa-solid fa-play text-xs"></i>
+                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                            disabled={queueingTrackId === track.versionId}
                             className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                             title="Add to queue"
                           >
-                            <i className="fa-solid fa-list text-xs"></i>
+                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                           </button>
                         </div>
                       )}

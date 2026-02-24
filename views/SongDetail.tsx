@@ -13,6 +13,8 @@ interface SongDetailProps {
   onUpdate: (submission: Submission) => void;
   onPlayTrack: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   onAddToQueue?: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
+  playingTrackId?: string | null;
+  queueingTrackId?: string | null;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   bocas?: Boca[];
@@ -20,10 +22,8 @@ interface SongDetailProps {
   onGiveBoca?: (submissionId: string) => Promise<void>;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
-  const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
-  const [queueLoadingVersionId, setQueueLoadingVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
     title: submission.title,
@@ -56,7 +56,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
   const loadAudio = async (versionId: string) => {
     if (activeVersionId === versionId) return;
-    setLoadingVersionId(versionId);
     try {
       await onPlayTrack({
         versionId,
@@ -70,9 +69,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       setActiveVersionId(versionId);
     } catch (error) {
       console.error('Failed to load audio', error);
-      alert('Failed to load audio from Drive. Please try again.');
-    } finally {
-      setLoadingVersionId(null);
     }
   };
 
@@ -169,8 +165,14 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         </div>
         <div>
           <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
-          <p className="text-indigo-600 font-bold text-sm mt-2">
-            By {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
+          <p className="text-sm mt-2">
+            By{' '}
+            <button
+              onClick={() => onNavigate('camper-detail', submission.camperId)}
+              className="text-indigo-600 font-bold hover:underline"
+            >
+              {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
+            </button>
           </p>
         </div>
       </div>
@@ -194,11 +196,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             {submission.versions[0] && (
               <button
                 onClick={() => loadAudio(submission.versions[0].id)}
-                className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                disabled={playingTrackId === submission.versions[0].id}
+                className={`absolute inset-0 w-full h-full flex items-center justify-center transition-colors ${playingTrackId === submission.versions[0].id ? 'bg-black/20 opacity-100' : 'bg-black/0 hover:bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'}`}
                 aria-label="Play song"
               >
                 <div className="w-16 h-16 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
-                  <i className="fa-solid fa-play text-xl ml-1"></i>
+                  <i className={`fa-solid ${playingTrackId === submission.versions[0].id ? 'fa-spinner fa-spin text-xl' : 'fa-play text-xl ml-1'}`}></i>
                 </div>
               </button>
             )}
@@ -307,33 +310,27 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                     <div className="flex gap-2">
                       <button
                         onClick={() => loadAudio(v.id)}
+                        disabled={playingTrackId === v.id}
                         className="flex-1 flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                       >
-                        <i className={`fa-solid ${loadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
+                        <i className={`fa-solid ${playingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
                         {activeVersionId === v.id ? 'Loaded' : 'Play'}
                       </button>
                       {onAddToQueue && (
                         <button
-                          onClick={async () => {
-                            setQueueLoadingVersionId(v.id);
-                            try {
-                              await onAddToQueue({
-                                versionId: v.id,
-                                title: submission.title,
-                                artist: submission.camperName,
-                                submissionId: submission.id,
-                                artworkFileId: submission.artworkFileId,
-                                artworkUrl: submission.artworkUrl
-                              });
-                            } finally {
-                              setQueueLoadingVersionId(null);
-                            }
-                          }}
-                          disabled={queueLoadingVersionId === v.id}
+                          onClick={() => onAddToQueue({
+                            versionId: v.id,
+                            title: submission.title,
+                            artist: submission.camperName,
+                            submissionId: submission.id,
+                            artworkFileId: submission.artworkFileId,
+                            artworkUrl: submission.artworkUrl
+                          })}
+                          disabled={queueingTrackId === v.id}
                           className="flex items-center justify-center gap-1.5 bg-white text-slate-500 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-all shadow-sm disabled:opacity-50"
                           title="Add to queue"
                         >
-                          <i className={`fa-solid ${queueLoadingVersionId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
+                          <i className={`fa-solid ${queueingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
                         </button>
                       )}
                     </div>
