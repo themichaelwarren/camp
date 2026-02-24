@@ -39,6 +39,12 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+          VITE_GOOGLE_APP_ID: ${{ secrets.VITE_GOOGLE_APP_ID }}
+          VITE_SPREADSHEET_ID: ${{ secrets.VITE_SPREADSHEET_ID }}
+          VITE_ASSIGNMENTS_PARENT_FOLDER_ID: ${{ secrets.VITE_ASSIGNMENTS_PARENT_FOLDER_ID }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
