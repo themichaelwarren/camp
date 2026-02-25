@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState } from '../types';
-import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate } from '../utils';
+import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration } from '../types';
+import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface SemesterDetailProps {
@@ -21,11 +21,12 @@ interface SemesterDetailProps {
   dateFormat: DateFormat;
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 const gridClasses: Record<3 | 4 | 5, string> = {
@@ -34,7 +35,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange }) => {
+const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   // Unique prompts used this semester (from assignments' promptIds)
@@ -63,7 +64,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
 
   const allTracks = useMemo(() => {
     return sortedSubmissions
-      .map(s => trackFromSubmission(s))
+      .map(s => trackFromSubmission(s, collaborations))
       .filter((t): t is PlayableTrack => t !== null);
   }, [sortedSubmissions]);
 
@@ -75,7 +76,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
   };
 
   const renderCard = (sub: Submission) => {
-    const track = trackFromSubmission(sub);
+    const track = trackFromSubmission(sub, collaborations);
     const bocaCount = getBocaCount(sub.id);
     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
     const isFavorited = favoritedSubmissionIds.includes(sub.id);
@@ -134,7 +135,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
         </div>
         <div className="p-4">
           <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
-          <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+          <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
           <div className="mt-4 text-xs text-slate-500 space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
             <p className="font-semibold text-slate-700 truncate">{assignmentTitle}</p>
@@ -151,7 +152,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
   };
 
   const renderRow = (sub: Submission) => {
-    const track = trackFromSubmission(sub);
+    const track = trackFromSubmission(sub, collaborations);
     const bocaCount = getBocaCount(sub.id);
     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
     const isFavorited = favoritedSubmissionIds.includes(sub.id);
@@ -177,7 +178,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
             <div className="min-w-0 flex items-center gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-                <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+                <p className="text-xs text-slate-500 truncate">{getDisplayArtist(sub, collaborations)}</p>
               </div>
               {bocaCount > 0 && (
                 <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">

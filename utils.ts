@@ -1,4 +1,4 @@
-import { Assignment, PromptStatus } from './types';
+import { Assignment, PromptStatus, Submission, Collaboration, CollaboratorRole } from './types';
 
 export function getTerm(dateStr: string): string {
   const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
@@ -48,4 +48,44 @@ export function formatDate(input: string | Date, format: DateFormat): string {
     case 'short': return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     case 'system': default: return date.toLocaleDateString();
   }
+}
+
+export interface ArtistSegment {
+  name: string;
+  camperId: string;
+  role: CollaboratorRole;
+}
+
+export function getDisplayArtist(submission: Submission, collaborations: Collaboration[]): string {
+  const collabs = collaborations.filter(c => c.submissionId === submission.id);
+  if (collabs.length === 0) return submission.camperName;
+
+  const primaries: string[] = [submission.camperName];
+  const featured: string[] = [];
+  const producers: string[] = [];
+
+  for (const c of collabs) {
+    const role = c.role || 'collaborator';
+    if (role === '' || role === 'collaborator') primaries.push(c.camperName);
+    else if (role === 'featured') featured.push(c.camperName);
+    else if (role === 'producer') producers.push(c.camperName);
+  }
+
+  let result = primaries.join(' & ');
+  if (featured.length > 0) result += ' ft. ' + featured.join(' & ');
+  if (producers.length > 0) result += ' (prod. ' + producers.join(' & ') + ')';
+  return result;
+}
+
+export function getArtistSegments(submission: Submission, collaborations: Collaboration[]): ArtistSegment[] {
+  const segments: ArtistSegment[] = [{
+    name: submission.camperName,
+    camperId: submission.camperId,
+    role: '' as CollaboratorRole
+  }];
+  const collabs = collaborations.filter(c => c.submissionId === submission.id);
+  for (const c of collabs) {
+    segments.push({ name: c.camperName, camperId: c.camperId, role: c.role });
+  }
+  return segments;
 }

@@ -12,6 +12,7 @@ interface LayoutProps {
   onViewChange: (view: ViewState) => void;
   isSyncing?: boolean;
   isLoggedIn?: boolean;
+  hasInitialData?: boolean;
   isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
   player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
@@ -32,15 +33,12 @@ interface LayoutProps {
   onToggleFavorite?: (submissionId: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const toastTimeoutRef = useRef<number | null>(null);
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
   const hadPlayerRef = useRef(false);
@@ -163,27 +161,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     };
   }, [queue.length, isJukeboxMode, onPlayNext]);
 
-  useEffect(() => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    if (isSyncing) {
-      setToastMessage('Cloud Sync in Progress');
-      setShowToast(true);
-    } else if (showToast) {
-      setToastMessage('Changes Saved to Sheets');
-      toastTimeoutRef.current = window.setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
-    }
-
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, [isSyncing]);
 
   useEffect(() => {
     return () => {
@@ -512,9 +489,16 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         )}
 
         <div className="p-5 md:p-6 overflow-auto flex-1">
-          <div className="max-w-[1600px]">
-            {children}
-          </div>
+          {isLoggedIn && !hasInitialData ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+              <i className="fa-solid fa-arrows-rotate animate-spin text-3xl text-indigo-400"></i>
+              <p className="text-sm font-semibold">Loading your data...</p>
+            </div>
+          ) : (
+            <div className="max-w-[1600px]">
+              {children}
+            </div>
+          )}
         </div>
 
         <footer className="border-t border-slate-200 bg-white px-4 md:px-6 py-2 text-[10px] text-slate-400">
@@ -522,20 +506,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         </footer>
       </main>
 
-      {isLoggedIn && showToast && (
-        <div className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
-          showToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-        }`}>
-          <div className={`px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg border ${
-            isSyncing
-              ? 'bg-amber-50 border-amber-200 text-amber-700'
-              : 'bg-green-50 border-green-200 text-green-700'
-          }`}>
-            <i className={`fa-solid ${isSyncing ? 'fa-arrows-rotate animate-spin' : 'fa-cloud-check'}`}></i>
-            {toastMessage}
-          </div>
-        </div>
-      )}
 
       {nowPlayingToast && (
         <button

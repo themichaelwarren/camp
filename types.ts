@@ -125,6 +125,17 @@ export interface StatusUpdate {
   timestamp: string;
 }
 
+export type CollaboratorRole = '' | 'collaborator' | 'featured' | 'producer';
+
+export interface Collaboration {
+  id: string;
+  submissionId: string;
+  camperId: string;
+  camperName: string;
+  role: CollaboratorRole;
+  createdAt: string;
+}
+
 export interface PlayableTrack {
   versionId: string;
   title: string;

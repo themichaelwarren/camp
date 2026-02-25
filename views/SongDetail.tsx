@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile } from '../types';
-import { DateFormat, formatDate } from '../utils';
+import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole } from '../types';
+import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment } from '../utils';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -25,9 +25,110 @@ interface SongDetailProps {
   dateFormat: DateFormat;
   isFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
+  collaborations?: Collaboration[];
+  onAddCollaborator?: (submissionId: string, camperId: string, camperName: string, role: string) => Promise<void>;
+  onRemoveCollaborator?: (collaboratorId: string) => Promise<void>;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat, isFavorited = false, onToggleFavorite }) => {
+const ROLE_OPTIONS: { value: CollaboratorRole; label: string }[] = [
+  { value: 'collaborator', label: 'Collaborator' },
+  { value: 'featured', label: 'Featured' },
+  { value: 'producer', label: 'Producer' },
+];
+
+const CollaboratorEditor: React.FC<{
+  submissionId: string;
+  collaborations: Collaboration[];
+  campers: CamperProfile[];
+  primaryCamperId: string;
+  onAdd: (submissionId: string, camperId: string, camperName: string, role: string) => Promise<void>;
+  onRemove: (collaboratorId: string) => Promise<void>;
+}> = ({ submissionId, collaborations, campers, primaryCamperId, onAdd, onRemove }) => {
+  const [selectedCamperId, setSelectedCamperId] = useState('');
+  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>('collaborator');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const existingIds = new Set([primaryCamperId, ...collaborations.map(c => c.camperId)]);
+  const availableCampers = campers.filter(c => !existingIds.has(c.email) && !existingIds.has(c.id));
+
+  const handleAdd = async () => {
+    const camper = campers.find(c => c.email === selectedCamperId || c.id === selectedCamperId);
+    if (!camper) return;
+    setIsAdding(true);
+    try {
+      await onAdd(submissionId, camper.email || camper.id, camper.name, selectedRole);
+      setSelectedCamperId('');
+      setSelectedRole('collaborator');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Collaborators</label>
+      {collaborations.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {collaborations.map(c => (
+            <div key={c.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-700">{c.camperName}</span>
+                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold uppercase">
+                  {c.role || 'collaborator'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(c.id)}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {availableCampers.length > 0 && (
+        <div className="flex items-end gap-2">
+          <div className="flex-1 min-w-0">
+            <select
+              value={selectedCamperId}
+              onChange={(e) => setSelectedCamperId(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Select camper...</option>
+              {availableCampers.map(c => (
+                <option key={c.id} value={c.email || c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value as CollaboratorRole)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500"
+          >
+            {ROLE_OPTIONS.map(r => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!selectedCamperId || isAdding}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex-shrink-0"
+          >
+            {isAdding ? <i className="fa-solid fa-spinner fa-spin"></i> : 'Add'}
+          </button>
+        </div>
+      )}
+      {availableCampers.length === 0 && collaborations.length === 0 && (
+        <p className="text-xs text-slate-400 italic">No other campers available to add.</p>
+      )}
+    </div>
+  );
+};
+
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat, isFavorited = false, onToggleFavorite, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -65,7 +166,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       await onPlayTrack({
         versionId,
         title: submission.title,
-        artist: submission.camperName,
+        artist: getDisplayArtist(submission, collaborations),
         camperId: submission.camperId,
         submissionId: submission.id,
         artworkFileId: submission.artworkFileId,
@@ -222,13 +323,38 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               )}
             </div>
             <p className="text-sm mt-1">
-              By{' '}
-              <button
-                onClick={() => onNavigate('camper-detail', submission.camperId)}
-                className="text-indigo-600 font-bold hover:underline"
-              >
-                {submission.camperName.includes('@') ? submission.camperName.split('@')[0] : submission.camperName}
-              </button>
+              {(() => {
+                const segments = getArtistSegments(submission, collaborations);
+                const primaries = segments.filter(s => !s.role || s.role === '' || s.role === 'collaborator');
+                const featured = segments.filter(s => s.role === 'featured');
+                const producers = segments.filter(s => s.role === 'producer');
+
+                const renderName = (seg: ArtistSegment, i: number) => (
+                  <button
+                    key={`${seg.camperId}-${i}`}
+                    onClick={() => onNavigate('camper-detail', seg.camperId)}
+                    className="text-indigo-600 font-bold hover:underline"
+                  >
+                    {seg.name.includes('@') ? seg.name.split('@')[0] : seg.name}
+                  </button>
+                );
+
+                const joinNames = (items: ArtistSegment[]) =>
+                  items.map((seg, i) => (
+                    <React.Fragment key={`${seg.camperId}-${i}`}>
+                      {i > 0 && <span> & </span>}
+                      {renderName(seg, i)}
+                    </React.Fragment>
+                  ));
+
+                return (
+                  <>
+                    By {joinNames(primaries)}
+                    {featured.length > 0 && <> ft. {joinNames(featured)}</>}
+                    {producers.length > 0 && <> (prod. {joinNames(producers)})</>}
+                  </>
+                );
+              })()}
             </p>
           </div>
 
@@ -355,7 +481,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                           onClick={() => onAddToQueue({
                             versionId: v.id,
                             title: submission.title,
-                            artist: submission.camperName,
+                            artist: getDisplayArtist(submission, collaborations),
                             submissionId: submission.id,
                             artworkFileId: submission.artworkFileId,
                             artworkUrl: submission.artworkUrl
@@ -459,6 +585,16 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   />
                   <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
                 </div>
+                {onAddCollaborator && onRemoveCollaborator && (
+                  <CollaboratorEditor
+                    submissionId={submission.id}
+                    collaborations={collaborations.filter(c => c.submissionId === submission.id)}
+                    campers={campers}
+                    primaryCamperId={submission.camperId}
+                    onAdd={onAddCollaborator}
+                    onRemove={onRemoveCollaborator}
+                  />
+                )}
               </div>
               <div className="p-6 border-t border-slate-100 shrink-0 space-y-3">
                 <button

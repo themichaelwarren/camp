@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole } from '../types';
 
 // Global declaration for the Google Identity Services script
 declare var google: any;
@@ -106,7 +106,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -132,7 +132,8 @@ export const findOrCreateDatabase = async () => {
     'Events!A1:M1',
     'BOCAs!A1:D1',
     'StatusUpdates!A1:E1',
-    'Favorites!A1:D1'
+    'Favorites!A1:D1',
+    'Collaborators!A1:F1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -292,6 +293,18 @@ export const findOrCreateDatabase = async () => {
       'id',
       'userEmail',
       'submissionId',
+      'createdAt'
+    ]]);
+  }
+
+  const collaboratorsHeader = headerValues[11]?.values?.[0] || [];
+  if (collaboratorsHeader.length < 6) {
+    await updateSheetRows(SPREADSHEET_ID, 'Collaborators!A1', [[
+      'id',
+      'submissionId',
+      'camperId',
+      'camperName',
+      'role',
       'createdAt'
     ]]);
   }
@@ -641,6 +654,69 @@ export const removeFavorite = async (
   const sheetId = favSheet.properties.sheetId;
 
   const sheetRow = rowIndex + 1; // +1 for header
+  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  await callGoogleApi(batchUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRow,
+            endIndex: sheetRow + 1
+          }
+        }
+      }]
+    })
+  });
+};
+
+// --- Collaborators ---
+
+export const fetchAllCollaborations = async (spreadsheetId: string): Promise<Collaboration[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Collaborators!A2:F5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows
+    .filter((row: any[]) => row[0] && row[1])
+    .map((row: any[]) => ({
+      id: row[0],
+      submissionId: row[1],
+      camperId: row[2] || '',
+      camperName: row[3] || '',
+      role: (row[4] || '') as CollaboratorRole,
+      createdAt: row[5] || ''
+    }));
+};
+
+export const addCollaborator = async (
+  spreadsheetId: string,
+  data: { submissionId: string; camperId: string; camperName: string; role: string }
+): Promise<string> => {
+  const id = Math.random().toString(36).substr(2, 9);
+  const now = new Date().toISOString();
+  const row = [[id, data.submissionId, data.camperId, data.camperName, data.role, now]];
+  await appendSheetRow(spreadsheetId, 'Collaborators!A1', row);
+  return id;
+};
+
+export const removeCollaborator = async (
+  spreadsheetId: string,
+  collaboratorId: string
+): Promise<void> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Collaborators!A2:F5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === collaboratorId);
+  if (rowIndex === -1) return;
+
+  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
+  const metadata = await callGoogleApi(metadataUrl);
+  const collabSheet = metadata.sheets.find((s: any) => s.properties.title === 'Collaborators');
+  const sheetId = collabSheet.properties.sheetId;
+
+  const sheetRow = rowIndex + 1;
   const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
   await callGoogleApi(batchUrl, {
     method: 'POST',

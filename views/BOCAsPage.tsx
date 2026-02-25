@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Boca, Submission, PlayableTrack, ViewState } from '../types';
-import { DateFormat, formatDate } from '../utils';
+import { Boca, Submission, PlayableTrack, ViewState, Collaboration } from '../types';
+import { DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 type BocasSortOption = 'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent';
@@ -21,14 +21,15 @@ interface BOCAsPageProps {
   sortBy: BocasSortOption;
   onSortByChange: (value: BocasSortOption) => void;
   dateFormat: DateFormat;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, collaborations }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -247,7 +248,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredSortedSongs.map(({ submissionId, count, submission: sub }) => {
               if (!sub) return null;
-              const track = trackFromSubmission(sub);
+              const track = trackFromSubmission(sub, collaborations);
               const alreadyBocad = bocas.some(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
               const isOwnSong = currentUserEmail === sub.camperId;
               const canGive = currentUserEmail && !alreadyBocad && !isOwnSong && remaining > 0 && isCurrentMonth;
@@ -285,7 +286,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                   </div>
                   <div className="p-4">
                     <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+                    <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
                     <div className="mt-3 flex items-center justify-between">
                       {alreadyBocad ? (
                         <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1">
@@ -329,7 +330,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
               <tbody className="divide-y divide-slate-100">
                 {filteredSortedSongs.map(({ submissionId, count, submission: sub }) => {
                   if (!sub) return null;
-                  const track = trackFromSubmission(sub);
+                  const track = trackFromSubmission(sub, collaborations);
                   const alreadyBocad = bocas.some(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
                   const isOwnSong = currentUserEmail === sub.camperId;
                   const canGive = currentUserEmail && !alreadyBocad && !isOwnSong && remaining > 0 && isCurrentMonth;
@@ -354,7 +355,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-                            <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+                            <p className="text-xs text-slate-500 truncate">{getDisplayArtist(sub, collaborations)}</p>
                           </div>
                         </div>
                       </td>

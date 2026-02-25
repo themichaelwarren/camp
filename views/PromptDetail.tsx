@@ -1,13 +1,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, CamperProfile } from '../types';
+import { Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, CamperProfile, Collaboration } from '../types';
 import TagInput from '../components/TagInput';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
-import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate, getDisplayArtist } from '../utils';
 
 interface PromptDetailProps {
   prompt: Prompt;
@@ -28,14 +28,15 @@ interface PromptDetailProps {
   dateFormat: DateFormat;
   favoritedSubmissionIds: string[];
   onToggleFavorite: (submissionId: string) => void;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -179,7 +180,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
                 <button
                   onClick={async () => {
-                    const playable = submissions.map(s => trackFromSubmission(s)).filter((t): t is PlayableTrack => t !== null);
+                    const playable = submissions.map(s => trackFromSubmission(s, collaborations)).filter((t): t is PlayableTrack => t !== null);
                     if (playable.length === 0) return;
                     // Shuffle for variety
                     const shuffled = [...playable].sort(() => Math.random() - 0.5);
@@ -198,7 +199,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
             </div>
             <div className="space-y-4">
               {submissions.map(s => {
-                const track = trackFromSubmission(s);
+                const track = trackFromSubmission(s, collaborations);
                 const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
                 const isFavorited = favoritedSubmissionIds.includes(s.id);
                 return (
@@ -220,7 +221,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500">by {s.camperName}</p>
+                      <p className="text-xs text-slate-500">by {getDisplayArtist(s, collaborations)}</p>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
                       <button

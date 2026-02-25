@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment } from '../types';
-import { getPromptStatus, DateFormat, formatDate } from '../utils';
+import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment, Collaboration } from '../types';
+import { getPromptStatus, DateFormat, formatDate, getDisplayArtist } from '../utils';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -17,14 +17,15 @@ interface DashboardProps {
   statusUpdates?: StatusUpdate[];
   comments?: Comment[];
   dateFormat: DateFormat;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [], dateFormat }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [], dateFormat, collaborations }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -137,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                   return items.slice(0, 8).map((item) => {
                     if (item.type === 'song') {
                       const sub = item.data as typeof submissions[0];
-                      const track = trackFromSubmission(sub);
+                      const track = trackFromSubmission(sub, collaborations);
                       const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                       return (
                         <div key={`song-${sub.id}`} className="flex gap-3 relative cursor-pointer group" onClick={() => onNavigate('song-detail', sub.id)}>
@@ -146,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-700">
-                              <span className="font-bold">{sub.camperName}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
+                              <span className="font-bold">{getDisplayArtist(sub, collaborations)}</span> submitted <span className="text-indigo-600 font-semibold">"{sub.title}"</span>
                               {bocaCount > 0 && (
                                 <span className="ml-1.5 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle">
                                   <i className="fa-solid fa-star text-[8px]"></i>

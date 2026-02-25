@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile, StatusUpdate } from '../types';
-import { DateFormat, formatDate } from '../utils';
+import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile, StatusUpdate, Collaboration } from '../types';
+import { DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface InboxPageProps {
@@ -20,6 +20,7 @@ interface InboxPageProps {
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
   dateFormat: DateFormat;
+  collaborations: Collaboration[];
 }
 
 type ActivityItem =
@@ -31,9 +32,9 @@ type ActivityItem =
   | { type: 'boca'; date: string; boca: Boca }
   | { type: 'status-update'; date: string; statusUpdate: StatusUpdate };
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 type TimeRange = 'today' | 'yesterday' | 'week' | 'month' | 'all-time';
@@ -89,7 +90,7 @@ const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; si
   );
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, favoritedSubmissionIds, onToggleFavorite, bocas = [], statusUpdates = [], dateFormat }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, favoritedSubmissionIds, onToggleFavorite, bocas = [], statusUpdates = [], dateFormat, collaborations }) => {
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
   const [showFilters, setShowFilters] = useState(false);
@@ -264,7 +265,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
           if (item.type === 'song-version') {
             const sub = item.submission;
             const version = sub.versions[item.versionIndex];
-            const track = trackFromSubmission(sub);
+            const track = trackFromSubmission(sub, collaborations);
             const isFirstVersion = item.versionIndex === sub.versions.length - 1;
             const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
             return (
@@ -276,7 +277,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 <CamperAvatar campers={campers} emailOrName={sub.camperId || sub.camperName} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700">
-                    <span className="font-bold text-slate-800">{sub.camperName}</span>
+                    <span className="font-bold text-slate-800">{getDisplayArtist(sub, collaborations)}</span>
                     {isFirstVersion
                       ? <> uploaded <span className="font-semibold text-indigo-600">"{sub.title}"</span></>
                       : <> updated <span className="font-semibold text-indigo-600">"{sub.title}"</span> <span className="text-slate-400">(v{sub.versions.length - item.versionIndex})</span></>
@@ -385,7 +386,10 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-bold text-slate-800">{c.author}</span>
                     {c.parentId ? ' replied' : ' commented'} on <span className="font-semibold text-indigo-600">{entity.label}</span>
                   </p>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.text}</p>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    {c.text}
+                    {c.editedAt && <span className="text-slate-400 italic ml-1">(edited)</span>}
+                  </p>
                   {reactionEntries.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-2">
                       {reactionEntries.map(([emoji, users]) => (
@@ -502,7 +506,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                     <span className="font-bold text-slate-800">{giverName}</span> gave a BOCA to{' '}
                     <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
                   </p>
-                  {sub && <p className="text-xs text-slate-400 mt-0.5">by {sub.camperName}</p>}
+                  {sub && <p className="text-xs text-slate-400 mt-0.5">by {getDisplayArtist(sub, collaborations)}</p>}
                   <div className="flex items-center gap-2 mt-1.5 sm:hidden">
                     <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                       <i className="fa-solid fa-star text-[8px]"></i>

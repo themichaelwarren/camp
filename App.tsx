@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
 import { DateFormat } from './utils';
 import Layout from './components/Layout';
@@ -20,7 +20,7 @@ import FavoritesPage from './views/FavoritesPage';
 import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
 import * as googleService from './services/googleService';
-import { getTerm, getTermSortKey } from './utils';
+import { getTerm, getTermSortKey, getDisplayArtist } from './utils';
 
 const CAMP_QUOTES = [
   'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
@@ -44,6 +44,7 @@ const App: React.FC = () => {
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [favoritedSubmissionIds, setFavoritedSubmissionIds] = useState<string[]>([]);
+  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bocas, setBocas] = useState<Boca[]>([]);
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
@@ -306,6 +307,8 @@ const App: React.FC = () => {
         setUpvotedPromptIds([]);
         setFavoritedSubmissionIds([]);
       }
+      const collabs = await googleService.fetchAllCollaborations(sId);
+      setCollaborations(collabs);
       const bocasData = await googleService.fetchBocas(sId);
       setBocas(bocasData);
       const statusUpdatesData = await googleService.fetchStatusUpdates(sId);
@@ -371,6 +374,9 @@ const App: React.FC = () => {
         const favs = await googleService.fetchUserFavorites(spreadsheetId, userProfile.email);
         setFavoritedSubmissionIds(favs);
       }
+
+      const collabs = await googleService.fetchAllCollaborations(spreadsheetId);
+      setCollaborations(collabs);
 
       const bocasData = await googleService.fetchBocas(spreadsheetId);
       setBocas(bocasData);
@@ -638,6 +644,38 @@ const App: React.FC = () => {
         console.error('Failed to add favorite', error);
         setFavoritedSubmissionIds(prev => prev.filter(id => id !== submissionId));
       }
+    }
+  };
+
+  const handleAddCollaborator = async (submissionId: string, camperId: string, camperName: string, role: string) => {
+    if (!spreadsheetId) return;
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const newCollab: Collaboration = { id: tempId, submissionId, camperId, camperName, role: role as CollaboratorRole, createdAt: new Date().toISOString() };
+    setCollaborations(prev => [...prev, newCollab]);
+    try {
+      const realId = await googleService.addCollaborator(spreadsheetId, { submissionId, camperId, camperName, role });
+      setCollaborations(prev => prev.map(c => c.id === tempId ? { ...c, id: realId } : c));
+    } catch (error) {
+      console.error('Failed to add collaborator', error);
+      setCollaborations(prev => prev.filter(c => c.id !== tempId));
+    }
+  };
+
+  const handleRemoveCollaborator = async (collaboratorId: string) => {
+    if (!spreadsheetId) return;
+    const removed = collaborations.find(c => c.id === collaboratorId);
+    setCollaborations(prev => prev.filter(c => c.id !== collaboratorId));
+    try {
+      await googleService.removeCollaborator(spreadsheetId, collaboratorId);
+    } catch (error) {
+      console.error('Failed to remove collaborator', error);
+      if (removed) setCollaborations(prev => [...prev, removed]);
+    }
+  };
+
+  const handleAddCollaborators = (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => {
+    for (const c of collaborators) {
+      handleAddCollaborator(submissionId, c.camperId, c.camperName, c.role);
     }
   };
 
@@ -1112,6 +1150,7 @@ const App: React.FC = () => {
             statusUpdates={statusUpdates}
             comments={comments}
             dateFormat={dateFormat}
+            collaborations={collaborations}
           />
         );
       case 'inbox':
@@ -1132,6 +1171,7 @@ const App: React.FC = () => {
             bocas={bocas}
             statusUpdates={statusUpdates}
             dateFormat={dateFormat}
+            collaborations={collaborations}
           />
         );
       case 'prompts':
@@ -1215,6 +1255,9 @@ const App: React.FC = () => {
             onGridSizeChange={setSubmissionsGridSize}
             favoritedSubmissionIds={favoritedSubmissionIds}
             onToggleFavorite={handleToggleFavorite}
+            collaborations={collaborations}
+            campers={campers}
+            onAddCollaborators={handleAddCollaborators}
           />
         );
       case 'events':
@@ -1255,6 +1298,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             favoritedSubmissionIds={favoritedSubmissionIds}
             onToggleFavorite={handleToggleFavorite}
+            collaborations={collaborations}
           />
         ) : null;
       case 'assignment-detail':
@@ -1285,6 +1329,8 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             favoritedSubmissionIds={favoritedSubmissionIds}
             onToggleFavorite={handleToggleFavorite}
+            collaborations={collaborations}
+            onAddCollaborators={handleAddCollaborators}
           />
         ) : null;
       case 'song-detail':
@@ -1309,6 +1355,9 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             isFavorited={favoritedSubmissionIds.includes(s.id)}
             onToggleFavorite={handleToggleFavorite}
+            collaborations={collaborations}
+            onAddCollaborator={handleAddCollaborator}
+            onRemoveCollaborator={handleRemoveCollaborator}
           />
         ) : null;
       case 'bocas':
@@ -1328,6 +1377,7 @@ const App: React.FC = () => {
             sortBy={bocasSortBy}
             onSortByChange={setBocasSortBy}
             dateFormat={dateFormat}
+            collaborations={collaborations}
           />
         );
       case 'favorites':
@@ -1347,6 +1397,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
+            collaborations={collaborations}
           />
         );
       case 'semesters':
@@ -1387,6 +1438,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
+            collaborations={collaborations}
           />
         ) : null;
       }
@@ -1414,7 +1466,7 @@ const App: React.FC = () => {
             prompts={prompts.filter((prompt) => !prompt.deletedAt && (prompt.createdBy === camper.email || prompt.createdBy === camper.name))}
             allPrompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
-            submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name))}
+            submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name || collaborations.some(c => c.submissionId === submission.id && (c.camperId === camper.email || c.camperName === camper.name))))}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -1433,6 +1485,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
+            collaborations={collaborations}
           />
         ) : null;
       default:
@@ -1451,6 +1504,7 @@ const App: React.FC = () => {
             statusUpdates={statusUpdates}
             comments={comments}
             dateFormat={dateFormat}
+            collaborations={collaborations}
           />
         );
     }
@@ -1487,6 +1541,7 @@ const App: React.FC = () => {
       onViewChange={(v) => navigateTo(v)}
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}
+      hasInitialData={!!spreadsheetId}
       userProfile={userProfile}
       player={player}
       isPlayerLoading={isPlayerLoading}
@@ -1506,7 +1561,7 @@ const App: React.FC = () => {
           .map(s => ({
             versionId: s.versions[0].id,
             title: s.title,
-            artist: s.camperName,
+            artist: getDisplayArtist(s, collaborations),
             camperId: s.camperId,
             submissionId: s.id,
             artworkFileId: s.artworkFileId,

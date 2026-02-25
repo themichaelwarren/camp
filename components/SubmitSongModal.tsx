@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Submission, SongVersion } from '../types';
+import { Assignment, Submission, SongVersion, CamperProfile, CollaboratorRole } from '../types';
 import * as googleService from '../services/googleService';
 
 interface SubmitSongModalProps {
@@ -11,9 +11,11 @@ interface SubmitSongModalProps {
   userProfile?: { name?: string; email?: string } | null;
   onAdd: (submission: Submission) => void;
   onClose: () => void;
+  campers?: CamperProfile[];
+  onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
 
-const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultAssignmentId, lockAssignment, userProfile, onAdd, onClose }) => {
+const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultAssignmentId, lockAssignment, userProfile, onAdd, onClose, campers = [], onAddCollaborators }) => {
   const [form, setForm] = useState({
     title: '',
     assignmentId: defaultAssignmentId || '',
@@ -25,6 +27,9 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [driveArtworkFile, setDriveArtworkFile] = useState<{ id: string; name: string; url: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedCollaborators, setSelectedCollaborators] = useState<Array<{ camperId: string; camperName: string; role: CollaboratorRole }>>([]);
+  const [collabCamperId, setCollabCamperId] = useState('');
+  const [collabRole, setCollabRole] = useState<CollaboratorRole>('collaborator');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -124,6 +129,9 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
       };
 
       onAdd(submission);
+      if (selectedCollaborators.length > 0 && onAddCollaborators) {
+        onAddCollaborators(submission.id, selectedCollaborators);
+      }
       onClose();
     } catch (e) {
       console.error(e);
@@ -248,6 +256,74 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 onChange={e => setForm({...form, details: e.target.value})}
               ></textarea>
             </div>
+
+            {campers.length > 0 && onAddCollaborators && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Collaborators (optional)</label>
+                {selectedCollaborators.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedCollaborators.map((c, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                        {c.camperName}
+                        <span className="text-[10px] opacity-60 uppercase">{c.role}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCollaborators(prev => prev.filter((_, j) => j !== i))}
+                          className="text-indigo-400 hover:text-indigo-700 ml-0.5"
+                        >
+                          <i className="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 min-w-0">
+                    <select
+                      value={collabCamperId}
+                      onChange={(e) => setCollabCamperId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Select camper...</option>
+                      {campers
+                        .filter(c => {
+                          const id = c.email || c.id;
+                          const isCurrentUser = id === userProfile?.email;
+                          const alreadyAdded = selectedCollaborators.some(sc => sc.camperId === id);
+                          return !isCurrentUser && !alreadyAdded;
+                        })
+                        .map(c => (
+                          <option key={c.id} value={c.email || c.id}>{c.name}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                  <select
+                    value={collabRole}
+                    onChange={(e) => setCollabRole(e.target.value as CollaboratorRole)}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="collaborator">Collaborator</option>
+                    <option value="featured">Featured</option>
+                    <option value="producer">Producer</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const camper = campers.find(c => c.email === collabCamperId || c.id === collabCamperId);
+                      if (!camper) return;
+                      setSelectedCollaborators(prev => [...prev, { camperId: camper.email || camper.id, camperName: camper.name, role: collabRole }]);
+                      setCollabCamperId('');
+                      setCollabRole('collaborator');
+                    }}
+                    disabled={!collabCamperId}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-6 border-t border-slate-100 shrink-0">

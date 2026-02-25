@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
-import { DateFormat, formatDate } from '../utils';
+import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, Collaboration } from '../types';
+import { getTerm, DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -27,11 +27,12 @@ interface CamperDetailProps {
   dateFormat: DateFormat;
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPrompts: Prompt[]): string[] => {
@@ -62,7 +63,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -99,7 +100,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
 
   const allTracks = useMemo(() => {
     return filteredSubmissions
-      .map(s => trackFromSubmission(s))
+      .map(s => trackFromSubmission(s, collaborations))
       .filter((t): t is PlayableTrack => t !== null);
   }, [filteredSubmissions]);
 
@@ -300,7 +301,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
         {songsView === 'cards' ? (
           <div className={`grid ${gridClasses[gridSize]} gap-4`}>
             {filteredSubmissions.map((submission) => {
-              const track = trackFromSubmission(submission);
+              const track = trackFromSubmission(submission, collaborations);
               const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
               const isFavorited = favoritedSubmissionIds.includes(submission.id);
               return (
@@ -357,7 +358,17 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                   </div>
                   <div className="p-4">
                     <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{submission.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</p>
+                    <div className="mt-3 text-xs text-slate-500 space-y-1">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
+                      <p className="font-semibold text-slate-700 truncate">{assignments.find(a => a.id === submission.assignmentId)?.title || 'Independent Work'}</p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
+                      <span className="flex items-center gap-1">
+                        <i className="fa-solid fa-calendar"></i>
+                        {formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}
+                      </span>
+                      <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-semibold">{getTerm(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt)}</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -385,7 +396,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredSubmissions.map((submission) => {
-                  const track = trackFromSubmission(submission);
+                  const track = trackFromSubmission(submission, collaborations);
                   const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
                   const isFavorited = favoritedSubmissionIds.includes(submission.id);
                   return (

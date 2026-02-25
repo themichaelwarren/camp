@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Submission, Assignment, PlayableTrack, Boca } from '../types';
-import { getTerm, DateFormat, formatDate } from '../utils';
+import { Submission, Assignment, PlayableTrack, Boca, Collaboration } from '../types';
+import { getTerm, DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface FavoritesPageProps {
@@ -19,11 +19,12 @@ interface FavoritesPageProps {
   dateFormat: DateFormat;
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
+  collaborations: Collaboration[];
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 const gridClasses: Record<3 | 4 | 5, string> = {
@@ -32,7 +33,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange }) => {
+const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
@@ -52,13 +53,13 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
 
   const allTracks = useMemo(() => {
     return filteredSubmissions
-      .map(s => trackFromSubmission(s))
+      .map(s => trackFromSubmission(s, collaborations))
       .filter((t): t is PlayableTrack => t !== null);
   }, [filteredSubmissions]);
 
   const renderCard = (sub: Submission) => {
     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-    const track = trackFromSubmission(sub);
+    const track = trackFromSubmission(sub, collaborations);
     const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
     const isFavorited = favoritedSubmissionIds.includes(sub.id);
 
@@ -116,7 +117,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
         </div>
         <div className="p-4">
           <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
-          <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+          <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
           <div className="mt-4 text-xs text-slate-500 space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
             <p className="font-semibold text-slate-700 truncate">{assignmentTitle}</p>
@@ -154,7 +155,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
           <div className="min-w-0 flex items-center gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-              <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+              <p className="text-xs text-slate-500 truncate">{getDisplayArtist(sub, collaborations)}</p>
             </div>
             {bocaCount > 0 && (
               <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
@@ -291,12 +292,13 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
                   </button>
                 </div>
                 {viewMode === 'cards' && (
-                  <div className="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                  <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
                     {([3, 4, 5] as const).map(n => (
                       <button
                         key={n}
                         onClick={() => onGridSizeChange(n)}
-                        className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${gridSize === n ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${gridSize === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+                        title={`${n} per row`}
                       >
                         {n}
                       </button>
@@ -328,7 +330,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
                   <tbody className="divide-y divide-slate-100">
                     {filteredSubmissions.map(sub => {
                       const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                      const track = trackFromSubmission(sub);
+                      const track = trackFromSubmission(sub, collaborations);
                       const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                       return renderRow(sub, assignmentTitle, track, bocaCount);
                     })}

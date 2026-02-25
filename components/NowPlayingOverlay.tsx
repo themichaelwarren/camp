@@ -376,8 +376,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
             {/* Right: Queue — toggleable, keep column mounted in jukebox mode to avoid layout shift */}
             {showQueue && (queue.length > 0 || isJukeboxMode) && (
-              <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
-                <div className="flex items-center justify-between mb-3">
+              <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:flex md:flex-col md:py-2">
+                <div className="flex items-center justify-between mb-3 flex-shrink-0 pr-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Up Next</p>
                   {queue.length > 0 && onClearQueue && (
                     <button
@@ -389,7 +389,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                   )}
                 </div>
                 {queue.length > 0 ? (
-                  <div className="space-y-1">
+                  <div className="space-y-1 md:overflow-y-auto md:min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
                     {queue.map((track, i) => (
                       <div
                         key={i}

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Submission, Assignment, Prompt, PlayableTrack, Boca } from '../types';
-import { getTerm, getTermSortKey, DateFormat, formatDate } from '../utils';
+import { Submission, Assignment, Prompt, PlayableTrack, Boca, Collaboration, CamperProfile } from '../types';
+import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
 
@@ -35,11 +35,14 @@ interface SubmissionsPageProps {
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   favoritedSubmissionIds: string[];
   onToggleFavorite: (submissionId: string) => void;
+  collaborations: Collaboration[];
+  campers?: CamperProfile[];
+  onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
@@ -50,7 +53,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite, collaborations, campers, onAddCollaborators }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -221,7 +224,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       </div>
       <div className="p-4">
         <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
-        <p className="text-xs text-slate-500 mt-1">By {sub.camperName}</p>
+        <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
         <div className="mt-4 text-xs text-slate-500 space-y-1">
           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
           <p className="font-semibold text-slate-700 truncate">{assignmentTitle}</p>
@@ -259,7 +262,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           <div className="min-w-0 flex items-center gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-              <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+              <p className="text-xs text-slate-500 truncate">{getDisplayArtist(sub, collaborations)}</p>
             </div>
             {bocaCount > 0 && (
               <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
@@ -327,7 +330,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           <button
             onClick={() => {
               const tracks = filteredSubmissions
-                .map(s => trackFromSubmission(s))
+                .map(s => trackFromSubmission(s, collaborations))
                 .filter((t): t is PlayableTrack => t !== null);
               if (tracks.length > 0) onStartJukebox(tracks);
             }}
@@ -517,7 +520,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 <div className={`grid ${gridClasses[gridSize]} gap-4`}>
                   {items.map(sub => {
                     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                    const track = trackFromSubmission(sub);
+                    const track = trackFromSubmission(sub, collaborations);
                     const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                     return renderCard(sub, assignmentTitle, track, bocaCount);
                   })}
@@ -528,7 +531,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             <div className={`grid ${gridClasses[gridSize]} gap-4`}>
               {filteredSubmissions.map(sub => {
                 const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                const track = trackFromSubmission(sub);
+                const track = trackFromSubmission(sub, collaborations);
                 const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                 return renderCard(sub, assignmentTitle, track, bocaCount);
               })}
@@ -546,7 +549,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                     <tbody className="divide-y divide-slate-100">
                       {items.map(sub => {
                         const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                        const track = trackFromSubmission(sub);
+                        const track = trackFromSubmission(sub, collaborations);
                         const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                         return renderRow(sub, assignmentTitle, track, bocaCount);
                       })}
@@ -569,7 +572,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 <tbody className="divide-y divide-slate-100">
                   {filteredSubmissions.map(sub => {
                     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
-                    const track = trackFromSubmission(sub);
+                    const track = trackFromSubmission(sub, collaborations);
                     const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
                     return renderRow(sub, assignmentTitle, track, bocaCount);
                   })}
@@ -586,6 +589,8 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           userProfile={userProfile}
           onAdd={onAdd}
           onClose={() => setShowUpload(false)}
+          campers={campers}
+          onAddCollaborators={onAddCollaborators}
         />
       )}
     </div>

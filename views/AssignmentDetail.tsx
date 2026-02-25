@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile } from '../types';
-import { DateFormat, formatDate } from '../utils';
+import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration } from '../types';
+import { DateFormat, formatDate, getDisplayArtist } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -35,14 +35,16 @@ interface AssignmentDetailProps {
   dateFormat: DateFormat;
   favoritedSubmissionIds: string[];
   onToggleFavorite: (submissionId: string) => void;
+  collaborations: Collaboration[];
+  onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
 
-const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
+const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
   if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
+  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [], onAddCollaborators }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -293,7 +295,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
                 <button
                   onClick={async () => {
-                    const playable = submissions.map(s => trackFromSubmission(s)).filter((t): t is PlayableTrack => t !== null);
+                    const playable = submissions.map(s => trackFromSubmission(s, collaborations)).filter((t): t is PlayableTrack => t !== null);
                     if (playable.length === 0) return;
                     // Shuffle for variety
                     const shuffled = [...playable].sort(() => Math.random() - 0.5);
@@ -312,7 +314,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {submissions.map(s => {
-                const track = trackFromSubmission(s);
+                const track = trackFromSubmission(s, collaborations);
                 const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
                 const isFavorited = favoritedSubmissionIds.includes(s.id);
                 return (
@@ -335,7 +337,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0">
                         <button
@@ -736,6 +738,8 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           userProfile={currentUser}
           onAdd={(sub) => { onAddSubmission(sub); setShowSubmitModal(false); }}
           onClose={() => setShowSubmitModal(false)}
+          campers={campers}
+          onAddCollaborators={onAddCollaborators}
         />
       )}
     </div>
