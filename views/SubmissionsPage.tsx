@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Submission, Assignment, Prompt, PlayableTrack, Boca, Collaboration, CamperProfile } from '../types';
-import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
 
@@ -39,11 +39,6 @@ interface SubmissionsPageProps {
   campers?: CamperProfile[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 

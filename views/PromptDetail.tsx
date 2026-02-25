@@ -7,7 +7,7 @@ import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
-import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 
 interface PromptDetailProps {
   prompt: Prompt;
@@ -30,11 +30,6 @@ interface PromptDetailProps {
   onToggleFavorite: (submissionId: string) => void;
   collaborations: Collaboration[];
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);

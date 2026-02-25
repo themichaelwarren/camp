@@ -1,4 +1,15 @@
-import { Assignment, PromptStatus, Submission, Collaboration, CollaboratorRole } from './types';
+import { Assignment, PromptStatus, Submission, SongVersion, Collaboration, CollaboratorRole, PlayableTrack } from './types';
+
+export function isSubmissionVisible(
+  sub: Submission,
+  currentUserEmail: string,
+  collaborations: Collaboration[]
+): boolean {
+  if (sub.deletedAt) return false;
+  if (!sub.status || sub.status === 'shared') return true;
+  if (sub.camperId === currentUserEmail) return true;
+  return collaborations.some(c => c.submissionId === sub.id && c.camperId === currentUserEmail);
+}
 
 export function getTerm(dateStr: string): string {
   const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
@@ -88,4 +99,27 @@ export function getArtistSegments(submission: Submission, collaborations: Collab
     segments.push({ name: c.camperName, camperId: c.camperId, role: c.role });
   }
   return segments;
+}
+
+export function getPrimaryVersion(sub: Submission): SongVersion | null {
+  if (!sub.versions?.length) return null;
+  if (sub.primaryVersionId) {
+    const found = sub.versions.find(v => v.id === sub.primaryVersionId);
+    if (found) return found;
+  }
+  return sub.versions[0];
+}
+
+export function trackFromSubmission(sub: Submission, collaborations: Collaboration[]): PlayableTrack | null {
+  const primary = getPrimaryVersion(sub);
+  if (!primary) return null;
+  return {
+    versionId: primary.id,
+    title: sub.title,
+    artist: getDisplayArtist(sub, collaborations),
+    camperId: sub.camperId,
+    submissionId: sub.id,
+    artworkFileId: sub.artworkFileId,
+    artworkUrl: sub.artworkUrl
+  };
 }

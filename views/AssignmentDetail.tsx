@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -38,11 +38,6 @@ interface AssignmentDetailProps {
   collaborations: Collaboration[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [], onAddCollaborators }) => {
   const [showEditModal, setShowEditModal] = useState(false);

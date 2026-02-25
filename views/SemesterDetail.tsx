@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration } from '../types';
-import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface SemesterDetailProps {
@@ -23,11 +23,6 @@ interface SemesterDetailProps {
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   collaborations: Collaboration[];
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 const gridClasses: Record<3 | 4 | 5, string> = {
   3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',

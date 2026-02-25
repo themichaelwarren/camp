@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment } from '../utils';
+import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion } from '../types';
+import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion } from '../utils';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -142,9 +142,19 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
   const [docLoading, setDocLoading] = useState(false);
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
+  const [isRefreshingLyrics, setIsRefreshingLyrics] = useState(false);
+  const [isUploadingVersion, setIsUploadingVersion] = useState(false);
+  const [newVersionFile, setNewVersionFile] = useState<File | null>(null);
+  const [newVersionNotes, setNewVersionNotes] = useState('');
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [editingNotesText, setEditingNotesText] = useState('');
 
   const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
   const isOwnSong = currentUserEmail === submission.camperId;
+  const isCollaborator = collaborations.some(c => c.submissionId === submission.id && c.camperId === currentUserEmail);
+  const canManageVersions = isOwnSong || isCollaborator;
+  const primaryVersion = getPrimaryVersion(submission);
   const alreadyBocad = bocas.some(b => b.submissionId === submission.id && b.fromEmail === currentUserEmail);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -166,11 +176,14 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   React.useEffect(() => {
     if (!submission.lyricsDocUrl) return;
     const docId = googleService.extractDocIdFromUrl(submission.lyricsDocUrl);
-    if (!docId) return;
+    if (!docId) {
+      console.warn('Could not extract doc ID from lyricsDocUrl:', submission.lyricsDocUrl);
+      return;
+    }
     setDocLoading(true);
     googleService.fetchDocContent(docId)
       .then(setDocLyrics)
-      .catch(() => setDocLyrics(null))
+      .catch((err) => { console.error('Failed to fetch lyrics doc:', err, 'URL:', submission.lyricsDocUrl, 'docId:', docId); setDocLyrics(null); })
       .finally(() => setDocLoading(false));
   }, [submission.lyricsDocUrl]);
 
@@ -220,6 +233,57 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     } finally {
       setIsCreatingDoc(false);
     }
+  };
+
+  const handleUploadVersion = async () => {
+    if (!newVersionFile) return;
+    setIsUploadingVersion(true);
+    try {
+      const uploaded = await googleService.uploadAudioToDriveInFolder(newVersionFile, assignment?.driveFolderId);
+      await googleService.shareFilePublicly(uploaded.id);
+      const newVersion: SongVersion = {
+        id: uploaded.id,
+        timestamp: new Date().toISOString(),
+        audioUrl: uploaded.webViewLink,
+        fileName: newVersionFile.name,
+        notes: newVersionNotes.trim() || 'New version'
+      };
+      const updatedSubmission: Submission = {
+        ...submission,
+        versions: [newVersion, ...submission.versions],
+        updatedAt: new Date().toISOString()
+      };
+      onUpdate(updatedSubmission);
+      setNewVersionFile(null);
+      setNewVersionNotes('');
+      setShowUploadForm(false);
+    } catch (error) {
+      console.error('Failed to upload new version', error);
+      alert('Failed to upload new version. Please try again.');
+    } finally {
+      setIsUploadingVersion(false);
+    }
+  };
+
+  const handleSetPrimary = (versionId: string) => {
+    onUpdate({ ...submission, primaryVersionId: versionId, updatedAt: new Date().toISOString() });
+  };
+
+  const handleSaveNotes = (versionId: string) => {
+    const updatedVersions = submission.versions.map(v =>
+      v.id === versionId ? { ...v, notes: editingNotesText.trim() } : v
+    );
+    onUpdate({ ...submission, versions: updatedVersions, updatedAt: new Date().toISOString() });
+    setEditingNotesId(null);
+    setEditingNotesText('');
+  };
+
+  const handleDeleteVersion = (versionId: string) => {
+    if (submission.versions.length <= 1) return;
+    if (!window.confirm('Delete this version? The audio file will remain in Google Drive.')) return;
+    const updatedVersions = submission.versions.filter(v => v.id !== versionId);
+    const newPrimaryId = submission.primaryVersionId === versionId ? '' : (submission.primaryVersionId || '');
+    onUpdate({ ...submission, versions: updatedVersions, primaryVersionId: newPrimaryId, updatedAt: new Date().toISOString() });
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -286,20 +350,53 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         >
           <i className="fa-solid fa-arrow-left"></i>
         </button>
-        <button
-          onClick={() => {
-            setEditForm({
-              title: submission.title,
-              lyrics: submission.lyrics,
-              details: submission.details
-            });
-            setShowEdit(true);
-          }}
-          className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
-        >
-          <i className="fa-solid fa-pen"></i>
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          {canManageVersions && (
+            <button
+              onClick={() => {
+                setEditForm({
+                  title: submission.title,
+                  lyrics: submission.lyrics,
+                  details: submission.details
+                });
+                setShowEdit(true);
+              }}
+              className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
+            >
+              <i className="fa-solid fa-pen"></i>
+              Edit
+            </button>
+          )}
+          {canManageVersions ? (
+            <button
+              onClick={() => {
+                if (submission.status !== 'shared') {
+                  if (!window.confirm('Share this song? It will become visible to all campers.')) return;
+                }
+                const newStatus = submission.status === 'shared' ? 'private' : 'shared';
+                onUpdate({ ...submission, status: newStatus, updatedAt: new Date().toISOString() });
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${
+                submission.status === 'shared'
+                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+              }`}
+              title={submission.status === 'shared' ? 'Click to make private' : 'Click to share'}
+            >
+              <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
+              {submission.status === 'shared' ? 'Shared' : 'Private'}
+            </button>
+          ) : (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+              submission.status === 'shared'
+                ? 'bg-green-50 text-green-600 border-green-200'
+                : 'bg-slate-50 text-slate-400 border-slate-200'
+            }`}>
+              <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
+              {submission.status === 'shared' ? 'Shared' : 'Private'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Hero section — album-page style */}
@@ -320,15 +417,15 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 {bocaCount} {bocaCount === 1 ? 'BOCA' : 'BOCAs'}
               </div>
             )}
-            {submission.versions[0] && (
+            {primaryVersion && (
               <button
-                onClick={() => loadAudio(submission.versions[0].id)}
-                disabled={playingTrackId === submission.versions[0].id}
-                className={`absolute inset-0 w-full h-full flex items-center justify-center transition-colors ${playingTrackId === submission.versions[0].id ? 'bg-black/20 opacity-100' : 'bg-black/0 hover:bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'}`}
+                onClick={() => loadAudio(primaryVersion.id)}
+                disabled={playingTrackId === primaryVersion.id}
+                className={`absolute inset-0 w-full h-full flex items-center justify-center transition-colors ${playingTrackId === primaryVersion.id ? 'bg-black/20 opacity-100' : 'bg-black/0 hover:bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'}`}
                 aria-label="Play song"
               >
                 <div className="w-14 h-14 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
-                  <i className={`fa-solid ${playingTrackId === submission.versions[0].id ? 'fa-spinner fa-spin text-lg' : 'fa-play text-lg ml-0.5'}`}></i>
+                  <i className={`fa-solid ${playingTrackId === primaryVersion.id ? 'fa-spinner fa-spin text-lg' : 'fa-play text-lg ml-0.5'}`}></i>
                 </div>
               </button>
             )}
@@ -470,15 +567,33 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest">Lyrics</h3>
               {submission.lyricsDocUrl ? (
-                <a
-                  href={submission.lyricsDocUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
-                >
-                  <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                  Open in Google Docs
-                </a>
+                <div className="flex items-center gap-1.5">
+                  <a
+                    href={submission.lyricsDocUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    Open in Google Docs
+                  </a>
+                  <button
+                    onClick={() => {
+                      const docId = googleService.extractDocIdFromUrl(submission.lyricsDocUrl!);
+                      if (!docId) return;
+                      setIsRefreshingLyrics(true);
+                      googleService.fetchDocContent(docId)
+                        .then(setDocLyrics)
+                        .catch(() => {})
+                        .finally(() => setIsRefreshingLyrics(false));
+                    }}
+                    disabled={isRefreshingLyrics}
+                    className="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                    title="Refresh lyrics from Google Docs"
+                  >
+                    <i className={`fa-solid fa-arrows-rotate text-[10px] ${isRefreshingLyrics ? 'fa-spin' : ''}`}></i>
+                  </button>
+                </div>
               ) : isOwnSong ? (
                 <button
                   onClick={handleCreateLyricsDoc}
@@ -511,67 +626,159 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             )}
           </section>
 
+        </div>
+
+        {/* Right column: Production Details + Version History */}
+        <div className="space-y-6">
           {submission.details && (
-            <section className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Production Details</h3>
-              <p className="text-slate-700 leading-relaxed italic">
+            <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Production Notes</h3>
+              <p className="text-sm text-slate-700 leading-relaxed italic whitespace-pre-wrap">
                 {submission.details}
               </p>
             </section>
           )}
-        </div>
-
-        {/* Right column: Version History + Drive Export */}
-        <div className="space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Version History</h3>
+
+            {canManageVersions && !showUploadForm && (
+              <button
+                onClick={() => setShowUploadForm(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors mb-4"
+              >
+                <i className="fa-solid fa-cloud-arrow-up"></i>
+                Upload New Version
+              </button>
+            )}
+
+            {showUploadForm && (
+              <div className="p-4 rounded-2xl border border-indigo-200 bg-indigo-50/30 mb-4 space-y-3">
+                <input
+                  type="file"
+                  accept=".mp3,.wav,.m4a,.aac,.ogg,.flac"
+                  onChange={(e) => { if (e.target.files?.[0]) setNewVersionFile(e.target.files[0]); }}
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-slate-200 file:text-xs file:font-bold file:bg-white file:text-slate-700 hover:file:bg-slate-50"
+                />
+                <input
+                  type="text"
+                  placeholder="Version notes (e.g., 'Added guitar solo')"
+                  value={newVersionNotes}
+                  onChange={(e) => setNewVersionNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs placeholder:text-slate-400"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleUploadVersion}
+                    disabled={!newVersionFile || isUploadingVersion}
+                    className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {isUploadingVersion ? 'Uploading...' : 'Upload'}
+                  </button>
+                  <button
+                    onClick={() => { setShowUploadForm(false); setNewVersionFile(null); setNewVersionNotes(''); }}
+                    className="px-4 py-2 bg-white text-slate-600 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               {submission.versions.length > 0 ? (
-                submission.versions.map((v, idx) => (
-                  <div key={v.id} className={`p-4 rounded-2xl border ${idx === 0 ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100 bg-slate-50'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100 uppercase">
-                        {idx === 0 ? 'Latest' : `v${submission.versions.length - idx}`}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold">{formatDate(v.timestamp, dateFormat)}</span>
-                    </div>
-                    <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
-                    <p className="text-[10px] text-slate-500 italic mb-3">"{v.notes}"</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => loadAudio(v.id)}
-                        disabled={playingTrackId === v.id}
-                        className="flex-1 flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                      >
-                        <i className={`fa-solid ${playingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
-                        {activeVersionId === v.id ? 'Loaded' : 'Play'}
-                      </button>
-                      {onAddToQueue && (
+                submission.versions.map((v, idx) => {
+                  const isPrimary = v.id === primaryVersion?.id;
+                  return (
+                    <div key={v.id} className={`p-4 rounded-2xl border ${isPrimary ? 'border-green-200 bg-green-50/30' : 'border-slate-100 bg-slate-50'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${isPrimary ? 'text-green-700 bg-white border-green-200' : 'text-slate-500 bg-white border-slate-200'}`}>
+                          {isPrimary ? 'Primary' : `v${submission.versions.length - idx}`}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">{formatDate(v.timestamp, dateFormat)}</span>
+                      </div>
+                      <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
+                      {editingNotesId === v.id ? (
+                        <div className="flex gap-1.5 mb-3">
+                          <input
+                            type="text"
+                            value={editingNotesText}
+                            onChange={(e) => setEditingNotesText(e.target.value)}
+                            className="flex-1 px-2 py-1 rounded-lg border border-slate-200 text-[10px]"
+                            autoFocus
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNotes(v.id); if (e.key === 'Escape') setEditingNotesId(null); }}
+                          />
+                          <button onClick={() => handleSaveNotes(v.id)} className="text-[10px] text-indigo-600 font-bold px-1.5">Save</button>
+                          <button onClick={() => setEditingNotesId(null)} className="text-[10px] text-slate-400 font-bold px-1.5">Cancel</button>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 italic mb-3 group/notes">
+                          "{v.notes}"
+                          {canManageVersions && (
+                            <button
+                              onClick={() => { setEditingNotesId(v.id); setEditingNotesText(v.notes); }}
+                              className="ml-1.5 text-slate-300 hover:text-slate-500 opacity-0 group-hover/notes:opacity-100 transition-opacity"
+                              title="Edit notes"
+                            >
+                              <i className="fa-solid fa-pencil text-[8px]"></i>
+                            </button>
+                          )}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => onAddToQueue({
-                            versionId: v.id,
-                            title: submission.title,
-                            artist: getDisplayArtist(submission, collaborations),
-                            submissionId: submission.id,
-                            artworkFileId: submission.artworkFileId,
-                            artworkUrl: submission.artworkUrl
-                          })}
-                          disabled={queueingTrackId === v.id}
-                          className="flex items-center justify-center gap-1.5 bg-white text-slate-500 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-all shadow-sm disabled:opacity-50"
-                          title="Add to queue"
+                          onClick={() => loadAudio(v.id)}
+                          disabled={playingTrackId === v.id}
+                          className="flex-1 flex items-center justify-center gap-2 bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                         >
-                          <i className={`fa-solid ${queueingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
+                          <i className={`fa-solid ${playingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-play'}`}></i>
+                          {activeVersionId === v.id ? 'Loaded' : 'Play'}
                         </button>
+                        {onAddToQueue && (
+                          <button
+                            onClick={() => onAddToQueue({
+                              versionId: v.id,
+                              title: submission.title,
+                              artist: getDisplayArtist(submission, collaborations),
+                              submissionId: submission.id,
+                              artworkFileId: submission.artworkFileId,
+                              artworkUrl: submission.artworkUrl
+                            })}
+                            disabled={queueingTrackId === v.id}
+                            className="flex items-center justify-center gap-1.5 bg-white text-slate-500 py-2 px-3 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-all shadow-sm disabled:opacity-50"
+                            title="Add to queue"
+                          >
+                            <i className={`fa-solid ${queueingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
+                          </button>
+                        )}
+                      </div>
+                      {canManageVersions && (
+                        <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-100">
+                          {!isPrimary && (
+                            <button
+                              onClick={() => handleSetPrimary(v.id)}
+                              className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold"
+                            >
+                              <i className="fa-solid fa-star mr-1"></i>Set Primary
+                            </button>
+                          )}
+                          {submission.versions.length > 1 && (
+                            <button
+                              onClick={() => handleDeleteVersion(v.id)}
+                              className="text-[10px] text-rose-500 hover:text-rose-700 font-bold ml-auto"
+                            >
+                              <i className="fa-solid fa-trash mr-1"></i>Delete
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-slate-400 text-sm italic text-center py-4">No audio versions yet.</p>
               )}
             </div>
           </section>
-
         </div>
       </div>
 
@@ -604,14 +811,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                     value={editForm.title}
                     onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
-                  <textarea
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-base"
-                    value={editForm.lyrics}
-                    onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
                   />
                 </div>
                 <div>

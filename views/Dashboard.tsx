@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment, Collaboration } from '../types';
-import { getPromptStatus, DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { getPromptStatus, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -19,11 +19,6 @@ interface DashboardProps {
   dateFormat: DateFormat;
   collaborations: Collaboration[];
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [], dateFormat, collaborations }) => {
   const stats = [

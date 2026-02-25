@@ -124,7 +124,7 @@ export const findOrCreateDatabase = async () => {
   const headerRanges = [
     'Prompts!A1:J1',
     'Assignments!A1:L1',
-    'Submissions!A1:O1',
+    'Submissions!A1:Q1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
     'Comments!A1:J1',
@@ -174,7 +174,7 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
   const submissionsHeader = headerValues[2]?.values?.[0] || [];
-  if (submissionsHeader.length < 15) {
+  if (submissionsHeader.length < 17) {
     await updateSheetRows(SPREADSHEET_ID, 'Submissions!A1', [[
       'id',
       'assignmentId',
@@ -190,7 +190,9 @@ export const findOrCreateDatabase = async () => {
       'artworkFileId',
       'artworkUrl',
       'deletedAt',
-      'deletedBy'
+      'deletedBy',
+      'primaryVersionId',
+      'status'
     ]]);
   }
 
@@ -388,7 +390,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:O1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:Q1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
@@ -407,7 +409,9 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
     submission.artworkFileId || '',
     submission.artworkUrl || '',
     submission.deletedAt || '',
-    submission.deletedBy || ''
+    submission.deletedBy || '',
+    submission.primaryVersionId || '',
+    submission.status || ''
   ]];
 
   if (rowIndex === -1) {
@@ -415,12 +419,12 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Submissions!A${sheetRow}:O${sheetRow}`;
+  const range = `Submissions!A${sheetRow}:Q${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:O1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:Q1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   // Column F (index 5) = lyrics, Column J (index 9) = lyricsDocUrl
@@ -445,7 +449,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
   const ranges = [
     'Prompts!A2:J1000',
     'Assignments!A2:M1000',
-    'Submissions!A2:O1000',
+    'Submissions!A2:Q1000',
     'Comments!A2:J5000',
     'Users!A2:I1000',
     'Events!A2:O5000',
@@ -543,7 +547,9 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       artworkFileId,
       artworkUrl,
       deletedAt: rawDeletedAt || '',
-      deletedBy: rawDeletedBy || ''
+      deletedBy: rawDeletedBy || '',
+      primaryVersionId: row[15] || '',
+      status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined
     };
   });
 
@@ -992,7 +998,7 @@ export const appendLyricsRevision = async (
 };
 
 export const extractDocIdFromUrl = (url: string): string | null => {
-  const match = url.match(/document\/d\/([^/]+)/);
+  const match = url.match(/document\/(?:u\/\d+\/)?d\/([^/]+)/);
   return match ? match[1] : null;
 };
 
@@ -1072,7 +1078,13 @@ export class DriveAccessError extends Error {
 }
 
 export const fetchDriveFile = async (fileId: string) => {
-  if (!accessToken) throw new Error('Not authenticated');
+  if (!accessToken) {
+    // Try API key for publicly shared files when not yet authenticated
+    const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+    const publicResponse = await fetch(publicUrl, { cache: 'no-store' });
+    if (publicResponse.ok) return publicResponse.blob();
+    throw new Error('Not authenticated');
+  }
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const fetchOpts = { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' as RequestCache };
 

@@ -12,6 +12,7 @@ import PromptDetail from './views/PromptDetail';
 import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import SettingsPage from './views/SettingsPage';
+import ChangelogPage from './views/ChangelogPage';
 import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import InboxPage from './views/InboxPage';
@@ -20,7 +21,7 @@ import FavoritesPage from './views/FavoritesPage';
 import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
 import * as googleService from './services/googleService';
-import { getTerm, getTermSortKey, getDisplayArtist } from './utils';
+import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible } from './utils';
 
 const CAMP_QUOTES = [
   'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
@@ -725,7 +726,9 @@ const App: React.FC = () => {
           newSubmission.details, newSubmission.updatedAt, newSubmission.lyricsDocUrl || '',
           newSubmission.lyricsRevisionCount ?? 0,
           newSubmission.artworkFileId || '', newSubmission.artworkUrl || '',
-          newSubmission.deletedAt || '', newSubmission.deletedBy || ''
+          newSubmission.deletedAt || '', newSubmission.deletedBy || '',
+          newSubmission.primaryVersionId || '',
+          newSubmission.status || ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);
@@ -1099,7 +1102,7 @@ const App: React.FC = () => {
   const allSemesters = useMemo(() => {
     const terms = new Set<string>();
     assignments.filter(a => !a.deletedAt).forEach(a => terms.add(getTerm(a.dueDate)));
-    submissions.filter(s => !s.deletedAt).forEach(s => {
+    submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations)).forEach(s => {
       const date = s.versions?.length ? s.versions[0].timestamp : s.updatedAt;
       terms.add(getTerm(date));
     });
@@ -1113,7 +1116,7 @@ const App: React.FC = () => {
           <Dashboard
             prompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
-            submissions={submissions.filter((s) => !s.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
@@ -1132,7 +1135,7 @@ const App: React.FC = () => {
           <InboxPage
             prompts={prompts.filter(p => !p.deletedAt)}
             assignments={assignments.filter(a => !a.deletedAt)}
-            submissions={submissions.filter(s => !s.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             campers={campers}
             comments={comments}
             onNavigate={navigateTo}
@@ -1200,7 +1203,7 @@ const App: React.FC = () => {
       case 'submissions':
         return (
           <SubmissionsPage
-            submissions={submissions.filter((s) => !s.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             onAdd={handleAddSubmission}
@@ -1255,7 +1258,7 @@ const App: React.FC = () => {
             assignments={assignments.filter(a => (a.promptIds?.includes(p.id) || a.promptId === p.id) && !a.deletedAt)}
             submissions={submissions.filter(s => {
               const assignment = assignments.find(asn => asn.id === s.assignmentId);
-              return assignment && (assignment.promptIds?.includes(p.id) || assignment.promptId === p.id) && !s.deletedAt;
+              return assignment && (assignment.promptIds?.includes(p.id) || assignment.promptId === p.id) && isSubmissionVisible(s, userProfile?.email || '', collaborations);
             })}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}
@@ -1283,7 +1286,7 @@ const App: React.FC = () => {
             prompt={prompts.find(pr => pr.id === a.promptId)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((asn) => !asn.deletedAt)}
-            submissions={submissions.filter(s => s.assignmentId === a.id && !s.deletedAt)}
+            submissions={submissions.filter(s => s.assignmentId === a.id && isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}
@@ -1338,7 +1341,7 @@ const App: React.FC = () => {
         return (
           <BOCAsPage
             bocas={bocas}
-            submissions={submissions.filter(sub => !sub.deletedAt)}
+            submissions={submissions.filter(sub => isSubmissionVisible(sub, userProfile?.email || '', collaborations))}
             currentUserEmail={userProfile?.email || ''}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
@@ -1357,7 +1360,7 @@ const App: React.FC = () => {
       case 'favorites':
         return (
           <FavoritesPage
-            submissions={submissions.filter(s => !s.deletedAt && favoritedSubmissionIds.includes(s.id))}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations) && favoritedSubmissionIds.includes(s.id))}
             assignments={assignments.filter(a => !a.deletedAt)}
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
@@ -1379,7 +1382,7 @@ const App: React.FC = () => {
           <SemestersPage
             semesters={allSemesters}
             assignments={assignments.filter(a => !a.deletedAt)}
-            submissions={submissions.filter(s => !s.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             prompts={prompts.filter(p => !p.deletedAt)}
             onViewDetail={(semester) => navigateTo('semester-detail', semester)}
             viewMode={semestersViewMode}
@@ -1390,7 +1393,7 @@ const App: React.FC = () => {
         const semesterName = selectedId;
         const semAssignments = assignments.filter(a => !a.deletedAt && getTerm(a.dueDate) === semesterName);
         const semSubmissions = submissions.filter(s => {
-          if (s.deletedAt) return false;
+          if (!isSubmissionVisible(s, userProfile?.email || '', collaborations)) return false;
           const date = s.versions?.length ? s.versions[0].timestamp : s.updatedAt;
           return getTerm(date) === semesterName;
         });
@@ -1430,6 +1433,8 @@ const App: React.FC = () => {
             submissions={submissions}
           />
         );
+      case 'changelog':
+        return <ChangelogPage />;
       case 'campers':
         return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} dateFormat={dateFormat} />;
       case 'camper-detail':
@@ -1440,7 +1445,7 @@ const App: React.FC = () => {
             prompts={prompts.filter((prompt) => !prompt.deletedAt && (prompt.createdBy === camper.email || prompt.createdBy === camper.name))}
             allPrompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
-            submissions={submissions.filter((submission) => !submission.deletedAt && (submission.camperId === camper.email || submission.camperName === camper.name || collaborations.some(c => c.submissionId === submission.id && (c.camperId === camper.email || c.camperName === camper.name))))}
+            submissions={submissions.filter((submission) => isSubmissionVisible(submission, userProfile?.email || '', collaborations) && (submission.camperId === camper.email || submission.camperName === camper.name || collaborations.some(c => c.submissionId === submission.id && (c.camperId === camper.email || c.camperName === camper.name))))}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -1467,7 +1472,7 @@ const App: React.FC = () => {
           <Dashboard
             prompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
-            submissions={submissions.filter((s) => !s.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             isSyncing={isSyncing}
@@ -1531,16 +1536,19 @@ const App: React.FC = () => {
       onStopJukebox={handleStopJukebox}
       onStartJukebox={() => {
         const tracks = submissions
-          .filter(s => s.versions?.length && s.versions[0].id)
-          .map(s => ({
-            versionId: s.versions[0].id,
-            title: s.title,
-            artist: getDisplayArtist(s, collaborations),
-            camperId: s.camperId,
-            submissionId: s.id,
-            artworkFileId: s.artworkFileId,
-            artworkUrl: s.artworkUrl,
-          } as PlayableTrack));
+          .filter(s => getPrimaryVersion(s)?.id)
+          .map(s => {
+            const primary = getPrimaryVersion(s)!;
+            return {
+              versionId: primary.id,
+              title: s.title,
+              artist: getDisplayArtist(s, collaborations),
+              camperId: s.camperId,
+              submissionId: s.id,
+              artworkFileId: s.artworkFileId,
+              artworkUrl: s.artworkUrl,
+            } as PlayableTrack;
+          });
         if (tracks.length > 0) handleStartJukebox(tracks);
       }}
       currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}

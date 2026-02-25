@@ -30,6 +30,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   const [selectedCollaborators, setSelectedCollaborators] = useState<Array<{ camperId: string; camperName: string; role: CollaboratorRole }>>([]);
   const [collabCamperId, setCollabCamperId] = useState('');
   const [collabRole, setCollabRole] = useState<CollaboratorRole>('collaborator');
+  const [isPrivate, setIsPrivate] = useState(true);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -125,7 +126,8 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         lyricsDocUrl: lyricsDoc.webViewLink,
         lyricsRevisionCount: 1,
         artworkFileId: artworkResult?.id || '',
-        artworkUrl: artworkResult?.webViewLink || ''
+        artworkUrl: artworkResult?.webViewLink || '',
+        status: isPrivate ? 'private' as const : 'shared' as const
       };
 
       onAdd(submission);
@@ -255,6 +257,25 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 value={form.details}
                 onChange={e => setForm({...form, details: e.target.value})}
               ></textarea>
+            </div>
+
+            <div className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase">Visibility</label>
+                <p className="text-[10px] text-slate-400 mt-0.5">Private songs are only visible to you and collaborators</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrivate(!isPrivate)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors flex items-center gap-1.5 ${
+                  isPrivate
+                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                }`}
+              >
+                <i className={`fa-solid ${isPrivate ? 'fa-lock' : 'fa-globe'} text-[10px]`}></i>
+                {isPrivate ? 'Private' : 'Shared'}
+              </button>
             </div>
 
             {campers.length > 0 && onAddCollaborators && (

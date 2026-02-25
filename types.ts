@@ -51,6 +51,7 @@ export interface Submission {
   title: string;
   lyrics: string;
   versions: SongVersion[];
+  primaryVersionId?: string;
   details: string;
   updatedAt: string;
   lyricsDocUrl?: string;
@@ -59,6 +60,7 @@ export interface Submission {
   artworkUrl?: string;
   deletedAt?: string;
   deletedBy?: string;
+  status?: 'private' | 'shared';
 }
 
 export interface CamperProfile {
@@ -167,4 +169,5 @@ export type ViewState =
   | 'bocas'
   | 'favorites'
   | 'semesters'
-  | 'semester-detail';
+  | 'semester-detail'
+  | 'changelog';

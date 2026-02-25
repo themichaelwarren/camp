@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Boca, Submission, PlayableTrack, ViewState, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 type BocasSortOption = 'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent';
@@ -23,11 +23,6 @@ interface BOCAsPageProps {
   dateFormat: DateFormat;
   collaborations: Collaboration[];
 }
-
-const trackFromSubmission = (sub: Submission, collaborations: Collaboration[]): PlayableTrack | null => {
-  if (!sub.versions?.length || !sub.versions[0].id) return null;
-  return { versionId: sub.versions[0].id, title: sub.title, artist: getDisplayArtist(sub, collaborations), camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
-};
 
 const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, collaborations }) => {
   const now = new Date();

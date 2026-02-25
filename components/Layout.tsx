@@ -382,6 +382,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   <i className="fa-solid fa-gear"></i>
                   Settings
                 </button>
+                <button
+                  onClick={() => handleNavigate('changelog')}
+                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                >
+                  <i className="fa-solid fa-bolt"></i>
+                  What's New
+                </button>
                 {isLoggedIn && (
                   <button
                     onClick={onLogout}
