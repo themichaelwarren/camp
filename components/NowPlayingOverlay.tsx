@@ -68,10 +68,14 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [volume, setVolume] = useState(1);
   const [isMobile] = useState(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
 
-  // Swipe-to-remove state for queue items
+  // Swipe-to-remove state for queue items (iOS-style reveal)
   const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
+  const swipeLocked = useRef(false); // locks to horizontal once direction is determined
   const [swipeOffsets, setSwipeOffsets] = useState<Record<number, number>>({});
+  const [openSwipeIndex, setOpenSwipeIndex] = useState<number | null>(null);
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+  const SWIPE_SNAP = 72; // px to reveal delete button
 
   // Prevent background page scroll while overlay is open
   useEffect(() => {
@@ -132,33 +136,68 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     setVolume(vol);
   }, [audioRef]);
 
-  // Swipe-to-remove handlers for queue items
+  // Swipe-to-remove handlers (iOS-style snap-to-reveal)
   const handleSwipeStart = useCallback((e: React.TouchEvent, index: number) => {
+    // Close any other open swipe first
+    if (openSwipeIndex !== null && openSwipeIndex !== index) {
+      setSwipeOffsets(prev => ({ ...prev, [openSwipeIndex]: 0 }));
+      setOpenSwipeIndex(null);
+    }
     swipeStartX.current = e.touches[0].clientX;
-    setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
-  }, []);
+    swipeStartY.current = e.touches[0].clientY;
+    swipeLocked.current = false;
+    const startOffset = openSwipeIndex === index ? -SWIPE_SNAP : 0;
+    setSwipeOffsets(prev => ({ ...prev, [index]: startOffset }));
+  }, [openSwipeIndex, SWIPE_SNAP]);
 
   const handleSwipeMove = useCallback((e: React.TouchEvent, index: number) => {
     if (swipeStartX.current === null) return;
-    const delta = e.touches[0].clientX - swipeStartX.current;
-    // Only allow left swipe
-    setSwipeOffsets(prev => ({ ...prev, [index]: Math.min(0, delta) }));
-  }, []);
+    const dx = e.touches[0].clientX - swipeStartX.current;
+    const dy = e.touches[0].clientY - (swipeStartY.current || 0);
+    // Determine direction on first significant move
+    if (!swipeLocked.current) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 5) {
+        // Vertical scroll — abort swipe
+        swipeStartX.current = null;
+        return;
+      }
+      if (Math.abs(dx) > 5) swipeLocked.current = true;
+      else return;
+    }
+    e.preventDefault(); // prevent scroll while swiping horizontally
+    const base = openSwipeIndex === index ? -SWIPE_SNAP : 0;
+    const raw = base + dx;
+    // Clamp: no right overshoot, max left = -SWIPE_SNAP * 1.3
+    const clamped = Math.max(-SWIPE_SNAP * 1.3, Math.min(0, raw));
+    setSwipeOffsets(prev => ({ ...prev, [index]: clamped }));
+  }, [openSwipeIndex, SWIPE_SNAP]);
 
   const handleSwipeEnd = useCallback((index: number) => {
     const offset = swipeOffsets[index] || 0;
-    if (offset < -80) {
-      setRemovingIndex(index);
-      setTimeout(() => {
-        onRemoveFromQueue(index);
-        setRemovingIndex(null);
-        setSwipeOffsets(prev => { const next = { ...prev }; delete next[index]; return next; });
-      }, 200);
+    if (offset < -SWIPE_SNAP * 0.4) {
+      // Snap open — reveal delete button
+      setSwipeOffsets(prev => ({ ...prev, [index]: -SWIPE_SNAP }));
+      setOpenSwipeIndex(index);
     } else {
+      // Snap closed
       setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
+      setOpenSwipeIndex(prev => prev === index ? null : prev);
     }
     swipeStartX.current = null;
-  }, [swipeOffsets, onRemoveFromQueue]);
+    swipeStartY.current = null;
+    swipeLocked.current = false;
+  }, [swipeOffsets, SWIPE_SNAP]);
+
+  const handleSwipeDelete = useCallback((index: number) => {
+    setRemovingIndex(index);
+    setSwipeOffsets(prev => ({ ...prev, [index]: -500 }));
+    setTimeout(() => {
+      onRemoveFromQueue(index);
+      setRemovingIndex(null);
+      setOpenSwipeIndex(null);
+      setSwipeOffsets(prev => { const next = { ...prev }; delete next[index]; return next; });
+    }, 250);
+  }, [onRemoveFromQueue]);
 
   // Close on Escape
   useEffect(() => {
@@ -432,8 +471,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 {queue.length > 0 ? (
                   <div className="space-y-1 md:overflow-y-auto md:min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
                     {queue.map((track, i) => (
+                      <div key={i} className="relative overflow-hidden rounded-lg">
+                        {/* Red delete zone revealed behind the item */}
+                        {isMobile && (
+                          <button
+                            onClick={() => handleSwipeDelete(i)}
+                            className="absolute inset-y-0 right-0 w-[72px] bg-red-500 flex items-center justify-center text-white"
+                          >
+                            <i className="fa-solid fa-trash text-sm"></i>
+                          </button>
+                        )}
                       <div
-                        key={i}
                         draggable={!isMobile}
                         onDragStart={() => setDragIndex(i)}
                         onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
@@ -447,14 +495,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         onTouchStart={(e) => handleSwipeStart(e, i)}
                         onTouchMove={(e) => handleSwipeMove(e, i)}
                         onTouchEnd={() => handleSwipeEnd(i)}
-                        className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
+                        className={`relative flex items-center gap-3 group rounded-lg px-2 py-1.5 bg-white ${
                           dragIndex === i ? 'opacity-40' : ''
-                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}${
-                          removingIndex === i ? ' opacity-0 -translate-x-full' : ''
-                        }`}
+                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
                         style={{
-                          transform: swipeOffsets[i] ? `translateX(${swipeOffsets[i]}px)` : undefined,
-                          transition: swipeOffsets[i] ? 'none' : 'all 0.2s ease'
+                          transform: `translateX(${swipeOffsets[i] || 0}px)`,
+                          transition: swipeStartX.current !== null ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                          ...(removingIndex === i ? { transform: 'translateX(-110%)', transition: 'transform 0.25s ease-in' } : {})
                         }}
                       >
                         {!isMobile && <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>}
@@ -485,12 +532,15 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                           )}
                           <p className="text-slate-500 text-xs truncate">{track.artist}{track.assignmentTitle ? ` · ${track.assignmentTitle}` : ''}</p>
                         </div>
-                        <button
-                          onClick={() => onRemoveFromQueue(i)}
-                          className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <i className="fa-solid fa-xmark text-sm"></i>
-                        </button>
+                        {!isMobile && (
+                          <button
+                            onClick={() => onRemoveFromQueue(i)}
+                            className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <i className="fa-solid fa-xmark text-sm"></i>
+                          </button>
+                        )}
+                      </div>
                       </div>
                     ))}
                   </div>
