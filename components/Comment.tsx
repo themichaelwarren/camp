@@ -46,9 +46,15 @@ const Comment: React.FC<CommentProps> = ({
       return;
     }
     setIsSavingEdit(true);
-    await onEditComment(comment.id, trimmed);
-    setIsEditing(false);
-    setIsSavingEdit(false);
+    try {
+      await onEditComment(comment.id, trimmed);
+      setIsEditing(false);
+    } catch {
+      // Error alert shown by parent; revert edit text
+      setEditText(comment.text);
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const formatTimestamp = (timestamp: string) => {

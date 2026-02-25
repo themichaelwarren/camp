@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -31,6 +32,7 @@ interface AssignmentDetailProps {
   availableTags: string[];
   bocas?: Boca[];
   campers?: CamperProfile[];
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -38,7 +40,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [] }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -216,9 +218,9 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 {assignment.status}
               </span>
               {assignment.startDate && (
-                <span className="text-slate-400 text-xs font-medium">Started {assignment.startDate}</span>
+                <span className="text-slate-400 text-xs font-medium">Started {formatDate(assignment.startDate, dateFormat)}</span>
               )}
-              <span className="text-slate-400 text-xs font-medium">Due {assignment.dueDate}</span>
+              <span className="text-slate-400 text-xs font-medium">Due {formatDate(assignment.dueDate, dateFormat)}</span>
             </div>
           </div>
         </div>
@@ -360,7 +362,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
                       <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
-                      <span>UPDATED {new Date(s.updatedAt).toLocaleDateString()}</span>
+                      <span>UPDATED {formatDate(s.updatedAt, dateFormat)}</span>
                     </div>
                   </div>
                 );
@@ -532,100 +534,104 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
 
       {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Assignment</h3>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 overflow-visible">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.title}
-                  onChange={e => setEditForm({...editForm, title: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
-                <MultiPromptSelector
-                  prompts={prompts}
-                  assignments={assignments}
-                  selectedPromptIds={editForm.promptIds}
-                  onChange={(promptIds) => setEditForm({...editForm, promptIds})}
-                  onCreatePrompt={onAddPrompt}
-                  availableTags={availableTags}
-                  spreadsheetId={spreadsheetId}
-                  userEmail={currentUser?.email}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editForm.startDate}
-                    onChange={e => setEditForm({...editForm, startDate: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
                   <input
                     required
-                    type="date"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editForm.dueDate}
-                    onChange={e => setEditForm({...editForm, dueDate: e.target.value})}
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editForm.title}
+                    onChange={e => setEditForm({...editForm, title: e.target.value})}
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
+                  <MultiPromptSelector
+                    prompts={prompts}
+                    assignments={assignments}
+                    selectedPromptIds={editForm.promptIds}
+                    onChange={(promptIds) => setEditForm({...editForm, promptIds})}
+                    onCreatePrompt={onAddPrompt}
+                    availableTags={availableTags}
+                    spreadsheetId={spreadsheetId}
+                    userEmail={currentUser?.email}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editForm.startDate}
+                      onChange={e => setEditForm({...editForm, startDate: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                    <input
+                      required
+                      type="date"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editForm.dueDate}
+                      onChange={e => setEditForm({...editForm, dueDate: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
+                  <MarkdownEditor
+                    value={editForm.instructions}
+                    onChange={(instructions) => setEditForm({...editForm, instructions})}
+                    placeholder="e.g. Focus on complex chord changes or experimental vocals..."
+                    required
+                    minHeight="h-48"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+                  <select
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editForm.status}
+                    onChange={e => setEditForm({...editForm, status: e.target.value as 'Open' | 'Closed'})}
+                  >
+                    <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
-                <MarkdownEditor
-                  value={editForm.instructions}
-                  onChange={(instructions) => setEditForm({...editForm, instructions})}
-                  placeholder="e.g. Focus on complex chord changes or experimental vocals..."
-                  required
-                  minHeight="h-48"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
-                <select
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.status}
-                  onChange={e => setEditForm({...editForm, status: e.target.value as 'Open' | 'Closed'})}
-                >
-                  <option value="Open">Open</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
-                Save Changes
-              </button>
-              <div className="flex gap-3 mt-3 pt-3 border-t border-slate-100">
-                {assignment.status === 'Open' && (
+              <div className="p-6 border-t border-slate-100 shrink-0 space-y-3">
+                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                  Save Changes
+                </button>
+                <div className="flex gap-3">
+                  {assignment.status === 'Open' && (
+                    <button
+                      type="button"
+                      onClick={() => { handleCloseAssignment(); setShowEditModal(false); }}
+                      className="flex-1 text-amber-600 border border-amber-200 py-2 rounded-xl text-sm font-semibold hover:bg-amber-50 transition-colors"
+                    >
+                      Close Assignment
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => { handleCloseAssignment(); setShowEditModal(false); }}
-                    className="flex-1 text-amber-600 border border-amber-200 py-2 rounded-xl text-sm font-semibold hover:bg-amber-50 transition-colors"
+                    onClick={handleDeleteAssignment}
+                    className="flex-1 text-rose-600 border border-rose-200 py-2 rounded-xl text-sm font-semibold hover:bg-rose-50 transition-colors"
                   >
-                    Close Assignment
+                    Delete Assignment
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleDeleteAssignment}
-                  className="flex-1 text-rose-600 border border-rose-200 py-2 rounded-xl text-sm font-semibold hover:bg-rose-50 transition-colors"
-                >
-                  Delete Assignment
-                </button>
+                </div>
               </div>
             </form>
           </div>
@@ -635,74 +641,72 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
 
       {showEventEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Event</h3>
               <button onClick={() => setShowEventEditModal(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-
-            <form onSubmit={handleEventEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editEventForm.title}
-                  onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24"
-                  value={editEventForm.description}
-                  onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleEventEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
                   <input
                     required
-                    type="datetime-local"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editEventForm.startDateTime}
-                    onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.title}
+                    onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
-                  <input
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                  <textarea
                     required
-                    type="datetime-local"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editEventForm.endDateTime}
-                    onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500 h-24"
+                    value={editEventForm.description}
+                    onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                    <input
+                      required
+                      type="datetime-local"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editEventForm.startDateTime}
+                      onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
+                    <input
+                      required
+                      type="datetime-local"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editEventForm.endDateTime}
+                      onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.location}
+                    onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
+                    placeholder="Virtual (Google Meet)"
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editEventForm.location}
-                  onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
-                  placeholder="Virtual (Google Meet)"
-                />
+              <div className="p-6 border-t border-slate-100 shrink-0">
+                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                  Save Event Changes
+                </button>
               </div>
-
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                Save Event Changes
-              </button>
             </form>
           </div>
         </div>,

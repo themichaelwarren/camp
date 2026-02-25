@@ -42,7 +42,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
         placeholder={placeholder}
         autoFocus={autoFocus}
         disabled={isSubmitting}
-        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm disabled:bg-slate-50 disabled:text-slate-400"
+        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-base disabled:bg-slate-50 disabled:text-slate-400"
         rows={3}
       />
       <div className="flex items-center gap-2 justify-end">

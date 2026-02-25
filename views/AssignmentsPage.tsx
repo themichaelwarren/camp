@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt } from '../types';
-import { getTerm, getTermSortKey } from '../utils';
+import { getTerm, getTermSortKey, DateFormat, formatDate } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
@@ -31,9 +31,10 @@ interface AssignmentsPageProps {
   onSortByChange: (value: AssignmentsSortBy) => void;
   semesterFilter: string;
   onSemesterFilterChange: (value: string) => void;
+  dateFormat: DateFormat;
 }
 
-const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange }) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, dateFormat }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
@@ -193,7 +194,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           </div>
         </td>
         <td className="px-6 py-4">
-          <div className="text-sm text-slate-700">{a.dueDate}</div>
+          <div className="text-sm text-slate-700">{formatDate(a.dueDate, dateFormat)}</div>
           <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(a.dueDate)}</span>
         </td>
         <td className="px-6 py-4">
@@ -225,7 +226,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             </span>
             <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-semibold">{getTerm(a.dueDate)}</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-bold uppercase">Due {a.dueDate}</span>
+          <span className="text-[10px] text-slate-400 font-bold uppercase">Due {formatDate(a.dueDate, dateFormat)}</span>
         </div>
         <h3 className="font-bold text-lg text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{a.title}</h3>
         <div className="text-xs text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 line-clamp-3 overflow-hidden">
@@ -286,7 +287,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input
               type="text"
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Search assignments, prompts, instructions..."
               value={searchTerm}
               onChange={(e) => onSearchTermChange(e.target.value)}
@@ -308,7 +309,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Semester</label>
               <select
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={semesterFilter}
                 onChange={(e) => onSemesterFilterChange(e.target.value)}
               >
@@ -321,7 +322,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</label>
               <select
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={statusFilter}
                 onChange={(e) => onStatusFilterChange(e.target.value as 'all' | 'Open' | 'Closed')}
               >
@@ -333,7 +334,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Prompt</label>
               <select
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={promptFilter}
                 onChange={(e) => onPromptFilterChange(e.target.value)}
               >
@@ -346,7 +347,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort By</label>
               <select
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={sortBy}
                 onChange={(e) => onSortByChange(e.target.value as AssignmentsSortBy)}
               >
@@ -449,73 +450,77 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
 
       {showAdd && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Create Assignment</h3>
               <button onClick={() => setShowAdd(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-visible">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={form.title}
-                  onChange={e => setForm({...form, title: e.target.value})}
-                  placeholder="e.g. Winter Songwriting Challenge"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
-                <MultiPromptSelector
-                  prompts={prompts}
-                  assignments={assignments}
-                  selectedPromptIds={form.promptIds}
-                  onChange={(promptIds) => setForm({...form, promptIds})}
-                  onCreatePrompt={onAddPrompt}
-                  availableTags={availableTags}
-                  spreadsheetId={spreadsheetId || ''}
-                  userEmail={userProfile?.email}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={form.startDate}
-                    onChange={e => setForm({...form, startDate: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
                   <input
                     required
-                    type="date"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={form.dueDate}
-                    onChange={e => setForm({...form, dueDate: e.target.value})}
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={form.title}
+                    onChange={e => setForm({...form, title: e.target.value})}
+                    placeholder="e.g. Winter Songwriting Challenge"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Prompts</label>
+                  <MultiPromptSelector
+                    prompts={prompts}
+                    assignments={assignments}
+                    selectedPromptIds={form.promptIds}
+                    onChange={(promptIds) => setForm({...form, promptIds})}
+                    onCreatePrompt={onAddPrompt}
+                    availableTags={availableTags}
+                    spreadsheetId={spreadsheetId || ''}
+                    userEmail={userProfile?.email}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={form.startDate}
+                      onChange={e => setForm({...form, startDate: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                    <input
+                      required
+                      type="date"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={form.dueDate}
+                      onChange={e => setForm({...form, dueDate: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
+                  <MarkdownEditor
+                    value={form.instructions}
+                    onChange={(instructions) => setForm({...form, instructions})}
+                    placeholder="e.g. Focus on complex chord changes or experimental vocals..."
+                    required
+                    minHeight="h-48"
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions / Specific Goals</label>
-                <MarkdownEditor
-                  value={form.instructions}
-                  onChange={(instructions) => setForm({...form, instructions})}
-                  placeholder="e.g. Focus on complex chord changes or experimental vocals..."
-                  required
-                  minHeight="h-48"
-                />
+              <div className="p-6 border-t border-slate-100 shrink-0">
+                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                  Launch Assignment
+                </button>
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
-                Launch Assignment
-              </button>
             </form>
           </div>
         </div>,

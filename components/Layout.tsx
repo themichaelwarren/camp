@@ -14,8 +14,8 @@ interface LayoutProps {
   isLoggedIn?: boolean;
   isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
-  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string } | null;
-  queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }[];
+  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
+  queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -20,6 +21,7 @@ interface CamperDetailProps {
   selectedTags: string[];
   onSelectedTagsChange: (value: string[] | ((prev: string[]) => string[])) => void;
   bocas?: Boca[];
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -49,7 +51,7 @@ const getFirstVersionDate = (sub: Submission): number => {
   return new Date(sub.updatedAt).getTime() || 0;
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [] }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [], dateFormat }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -258,7 +260,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
-                      <p className="text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</p>
                     </div>
                     {track && (
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -327,7 +329,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{new Date(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</td>
                       <td className="px-4 py-3">
                         <div className={`w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center ${
                           bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'

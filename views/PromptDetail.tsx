@@ -7,7 +7,7 @@ import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
-import { getPromptStatus, getPromptStatusStyle } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate } from '../utils';
 
 interface PromptDetailProps {
   prompt: Prompt;
@@ -25,6 +25,7 @@ interface PromptDetailProps {
   spreadsheetId: string;
   bocas?: Boca[];
   campers?: CamperProfile[];
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -32,7 +33,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [] }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -154,7 +155,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                 >
                   <div>
                     <h4 className="font-bold text-slate-800">{a.title}</h4>
-                    <p className="text-xs text-slate-500">Due {a.dueDate}</p>
+                    <p className="text-xs text-slate-500">Due {formatDate(a.dueDate, dateFormat)}</p>
                   </div>
                   <i className="fa-solid fa-chevron-right text-slate-300"></i>
                 </div>
@@ -240,7 +241,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                     )}
                     <div className="text-right flex-shrink-0">
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Last Update</p>
-                      <p className="text-xs font-semibold text-slate-700">{new Date(s.updatedAt).toLocaleDateString()}</p>
+                      <p className="text-xs font-semibold text-slate-700">{formatDate(s.updatedAt, dateFormat)}</p>
                     </div>
                   </div>
                 );
@@ -264,7 +265,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               </div>
               <div className="py-2 border-b border-slate-50">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Creation Date</span>
-                <span className="text-sm text-slate-800 font-bold">{prompt.createdAt}</span>
+                <span className="text-sm text-slate-800 font-bold">{formatDate(prompt.createdAt, dateFormat)}</span>
               </div>
               <div className="py-2 border-b border-slate-50">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Status</span>
@@ -305,54 +306,58 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
 
       {showEditModal && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Prompt</h3>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 overflow-visible">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={editPrompt.title}
-                  onChange={e => setEditPrompt({ ...editPrompt, title: e.target.value })}
-                />
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                  <input
+                    required
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={editPrompt.title}
+                    onChange={e => setEditPrompt({ ...editPrompt, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                  <MarkdownEditor
+                    value={editPrompt.description}
+                    onChange={(description) => setEditPrompt({ ...editPrompt, description })}
+                    placeholder="Describe the challenge..."
+                    required
+                    minHeight="h-24"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags</label>
+                  <TagInput
+                    value={editPrompt.tags}
+                    onChange={(tags: string[]) => setEditPrompt({ ...editPrompt, tags })}
+                    availableTags={availableTags}
+                    onCreateTag={async () => {}} // No-op: tags created on form submit
+                    placeholder="Type to add tags..."
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <MarkdownEditor
-                  value={editPrompt.description}
-                  onChange={(description) => setEditPrompt({ ...editPrompt, description })}
-                  placeholder="Describe the challenge..."
-                  required
-                  minHeight="h-24"
-                />
+              <div className="p-6 border-t border-slate-100 shrink-0 space-y-3">
+                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeletePrompt}
+                  className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
+                >
+                  Delete Prompt
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tags</label>
-                <TagInput
-                  value={editPrompt.tags}
-                  onChange={(tags: string[]) => setEditPrompt({ ...editPrompt, tags })}
-                  availableTags={availableTags}
-                  onCreateTag={async () => {}} // No-op: tags created on form submit
-                  placeholder="Type to add tags..."
-                />
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mt-4 shadow-lg shadow-indigo-100">
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={handleDeletePrompt}
-                className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
-              >
-                Delete Prompt
-              </button>
             </form>
           </div>
         </div>,

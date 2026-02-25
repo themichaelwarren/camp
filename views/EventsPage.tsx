@@ -422,82 +422,86 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
 
       {showEventEditModal && selectedEvent && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-visible animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Event</h3>
               <button onClick={() => setShowEventEditModal(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
-            <form onSubmit={handleEventEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editEventForm.title}
-                  onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
-                <textarea
-                  required
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24"
-                  value={editEventForm.description}
-                  onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleEventEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
                   <input
                     required
-                    type="datetime-local"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editEventForm.startDateTime}
-                    onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.title}
+                    onChange={e => setEditEventForm({...editEventForm, title: e.target.value})}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
-                  <input
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label>
+                  <textarea
                     required
-                    type="datetime-local"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                    value={editEventForm.endDateTime}
-                    onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500 h-24"
+                    value={editEventForm.description}
+                    onChange={e => setEditEventForm({...editEventForm, description: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
+                    <input
+                      required
+                      type="datetime-local"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editEventForm.startDateTime}
+                      onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
+                    <input
+                      required
+                      type="datetime-local"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                      value={editEventForm.endDateTime}
+                      onChange={e => setEditEventForm({...editEventForm, endDateTime: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editEventForm.location}
+                    onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
+                    placeholder="Virtual (Google Meet)"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editEventForm.location}
-                  onChange={e => setEditEventForm({...editEventForm, location: e.target.value})}
-                  placeholder="Virtual (Google Meet)"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                  Save Event Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteEvent}
-                  className="px-5 py-3 rounded-xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                >
-                  <i className="fa-solid fa-trash"></i>
-                </button>
+              <div className="p-6 border-t border-slate-100 shrink-0">
+                <div className="flex gap-3">
+                  <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                    Save Event Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteEvent}
+                    className="px-5 py-3 rounded-xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -143,15 +143,15 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 p-6 space-y-4">
+            <div className="space-y-4">
+              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Song Title</label>
                 <input
                   required
                   type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                   value={form.title}
                   onChange={e => setForm({...form, title: e.target.value})}
                 />
@@ -161,7 +161,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assignment</label>
                   <select
                     required
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                     value={form.assignmentId}
                     onChange={e => setForm({...form, assignmentId: e.target.value})}
                   >
@@ -186,7 +186,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                   <input
                     type="file"
                     accept=".mp3,.wav,.m4a"
-                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                     onChange={handleFileChange}
                   />
                 )}
@@ -199,7 +199,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                   Choose from Google Drive
                 </button>
               </div>
-              <div className={lockAssignment ? '' : 'col-span-2'}>
+              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
                 {driveArtworkFile ? (
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-xl">
@@ -213,7 +213,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                   <input
                     type="file"
                     accept="image/*"
-                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                    className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
                     onChange={handleArtworkChange}
                   />
                 )}
@@ -234,7 +234,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
               <textarea
                 required
                 placeholder="Verse 1: ..."
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-64 font-serif text-sm"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-64 font-serif text-base"
                 value={form.lyrics}
                 onChange={e => setForm({...form, lyrics: e.target.value})}
               ></textarea>
@@ -243,12 +243,14 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
               <textarea
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-base"
                 value={form.details}
                 onChange={e => setForm({...form, details: e.target.value})}
               ></textarea>
             </div>
+          </div>
 
+          <div className="p-6 border-t border-slate-100 shrink-0">
             <button
               type="submit"
               disabled={isUploading}
@@ -266,8 +268,8 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 </>
               )}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>,
     document.body

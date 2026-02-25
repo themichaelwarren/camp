@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Prompt, Assignment, Submission, Event, PlayableTrack, ViewState, Boca, StatusUpdate, Comment } from '../types';
-import { getPromptStatus } from '../utils';
+import { getPromptStatus, DateFormat, formatDate } from '../utils';
 
 interface DashboardProps {
   prompts: Prompt[];
@@ -16,6 +16,7 @@ interface DashboardProps {
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
   comments?: Comment[];
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -23,7 +24,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions, events, campersCount, isSyncing, onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], comments = [], dateFormat }) => {
   const stats = [
     { label: 'Active Prompts', value: prompts.filter(p => getPromptStatus(p.id, assignments) === 'Active').length, icon: 'fa-lightbulb', color: 'bg-amber-100 text-amber-600', view: 'prompts' },
     { label: 'Live Assignments', value: assignments.filter(a => a.status === 'Open').length, icon: 'fa-tasks', color: 'bg-indigo-100 text-indigo-600', view: 'assignments' },
@@ -153,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-400 mt-1">{formatDate(item.date, dateFormat)}</p>
                           </div>
                           {track && (
                             <button
@@ -179,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                             <p className="text-sm font-medium text-slate-700">
                               New prompt: <span className="text-indigo-600 font-semibold">"{p.title}"</span>
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-400 mt-1">{formatDate(item.date, dateFormat)}</p>
                           </div>
                         </div>
                       );
@@ -196,7 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                               <span className="font-bold">{su.camperName}</span> updated their status
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5 italic truncate">"{su.status}"</p>
-                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-400 mt-1">{formatDate(item.date, dateFormat)}</p>
                           </div>
                         </div>
                       );
@@ -219,7 +220,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                               <span className="font-bold">{c.author}</span> {c.parentId ? 'replied on' : 'commented on'} <span className="text-indigo-600 font-semibold">"{entityLabel}"</span>
                             </p>
                             <p className="text-xs text-slate-500 mt-0.5 truncate italic">"{c.text}"</p>
-                            <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-400 mt-1">{formatDate(item.date, dateFormat)}</p>
                           </div>
                         </div>
                       );
@@ -234,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({ prompts, assignments, submissions
                           <p className="text-sm font-medium text-slate-700">
                             New assignment: <span className="text-indigo-600 font-semibold">"{a.title}"</span>
                           </p>
-                          <p className="text-xs text-slate-400 mt-1">{new Date(item.date).toLocaleDateString()}</p>
+                          <p className="text-xs text-slate-400 mt-1">{formatDate(item.date, dateFormat)}</p>
                         </div>
                       </div>
                     );

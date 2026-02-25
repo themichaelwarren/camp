@@ -127,7 +127,7 @@ export const findOrCreateDatabase = async () => {
     'Submissions!A1:O1',
     'Users!A1:H1',
     'PromptUpvotes!A1:E1',
-    'Comments!A1:I1',
+    'Comments!A1:J1',
     'Tags!A1:C1',
     'Events!A1:M1',
     'BOCAs!A1:D1',
@@ -219,7 +219,7 @@ export const findOrCreateDatabase = async () => {
   }
 
   const commentsHeader = headerValues[5]?.values?.[0] || [];
-  if (commentsHeader.length < 9) {
+  if (commentsHeader.length < 10) {
     await updateSheetRows(SPREADSHEET_ID, 'Comments!A1', [[
       'id',
       'entityType',
@@ -229,7 +229,8 @@ export const findOrCreateDatabase = async () => {
       'authorEmail',
       'text',
       'timestamp',
-      'reactions'
+      'reactions',
+      'editedAt'
     ]]);
   }
 
@@ -759,17 +760,23 @@ export const fetchDriveFile = async (fileId: string) => {
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const fetchOpts = { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' as RequestCache };
 
-  // Try OAuth token (with one automatic retry to handle transient 404s)
-  let response = await fetch(url, fetchOpts);
-  if (!response.ok && (response.status === 403 || response.status === 404)) {
-    // Brief retry — handles cached 404s and Drive API eventual consistency
-    await new Promise(r => setTimeout(r, 500));
-    response = await fetch(url, fetchOpts);
+  // Try OAuth token (with automatic retries for transient errors)
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await fetch(url, fetchOpts);
+      if (response.ok) return response.blob();
+      // Only retry on potentially transient errors (429, 500, 502, 503, 504)
+      if (![429, 500, 502, 503, 504].includes(response.status)) break;
+    } catch {
+      // Network error — retry
+      if (attempt === 2) break;
+    }
+    await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
   }
-  if (response.ok) return response.blob();
 
   // Fallback: try API key for publicly shared files
-  if (response.status === 403 || response.status === 404) {
+  if (response && (response.status === 403 || response.status === 404)) {
     const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
     try {
       const publicResponse = await fetch(publicUrl, { cache: 'no-store' });
@@ -779,22 +786,26 @@ export const fetchDriveFile = async (fileId: string) => {
     }
     throw new DriveAccessError(fileId, response.status);
   }
-  throw new Error('Failed to fetch Drive file');
+  throw response ? new Error(`Failed to fetch Drive file (${response.status})`) : new Error('Failed to fetch Drive file (network error)');
 };
 
 // Comments functions
-const parseCommentRow = (row: any[]): Comment => ({
-  id: row[0] || '',
-  entityType: row[1] as 'song' | 'prompt' | 'assignment',
-  entityId: row[2] || '',
-  parentId: row[3] || null,
-  author: row[4] || 'Anonymous',
-  authorEmail: row[5] || '',
-  text: row[6] || '',
-  timestamp: row[7] || new Date().toISOString(),
-  reactions: row[8] ? JSON.parse(row[8]) : {},
-  editedAt: row[9] || undefined,
-});
+const parseCommentRow = (row: any[]): Comment => {
+  let reactions: Record<string, string[]> = {};
+  try { if (row[8]) reactions = JSON.parse(row[8]); } catch { /* corrupted JSON */ }
+  return {
+    id: row[0] || '',
+    entityType: row[1] as 'song' | 'prompt' | 'assignment',
+    entityId: row[2] || '',
+    parentId: row[3] || null,
+    author: row[4] || 'Anonymous',
+    authorEmail: row[5] || '',
+    text: row[6] || '',
+    timestamp: row[7] || new Date().toISOString(),
+    reactions,
+    editedAt: row[9] || undefined,
+  };
+};
 
 export const fetchComments = async (
   spreadsheetId: string,
@@ -894,7 +905,7 @@ export const toggleReaction = async (
   emoji: string,
   userEmail: string
 ): Promise<Comment> => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:I5000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === commentId);
@@ -903,18 +914,7 @@ export const toggleReaction = async (
     throw new Error('Comment not found');
   }
 
-  const row = rows[rowIndex];
-  const comment: Comment = {
-    id: row[0],
-    entityType: row[1] as 'song' | 'prompt' | 'assignment',
-    entityId: row[2],
-    parentId: row[3] || null,
-    author: row[4],
-    authorEmail: row[5],
-    text: row[6],
-    timestamp: row[7],
-    reactions: row[8] ? JSON.parse(row[8]) : {}
-  };
+  const comment = parseCommentRow(rows[rowIndex]);
 
   // Toggle the reaction
   if (!comment.reactions[emoji]) {

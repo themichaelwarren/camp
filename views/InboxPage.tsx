@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Prompt, Assignment, Submission, Comment as CommentType, PlayableTrack, ViewState, Boca, CamperProfile, StatusUpdate } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface InboxPageProps {
@@ -14,6 +15,7 @@ interface InboxPageProps {
   playingTrackId?: string | null;
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
+  dateFormat: DateFormat;
 }
 
 type ActivityItem =
@@ -83,7 +85,7 @@ const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; si
   );
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [] }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], dateFormat }) => {
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
   const [showFilters, setShowFilters] = useState(false);
@@ -188,7 +190,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    return formatDate(date, dateFormat);
   };
 
 
@@ -408,7 +410,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                   <p className="text-sm text-slate-700">
                     New assignment: <span className="font-semibold text-indigo-600">"{a.title}"</span>
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">Due {a.dueDate} &middot; {a.status}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Due {formatDate(a.dueDate, dateFormat)} &middot; {a.status}</p>
                   <div className="flex items-center gap-2 mt-1.5 sm:hidden">
                     <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                       <i className="fa-solid fa-tasks text-[8px]"></i>

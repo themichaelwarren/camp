@@ -167,7 +167,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
         <input
           ref={inputRef}
           type="text"
-          className="flex-1 min-w-[140px] outline-none text-sm bg-transparent"
+          className="flex-1 min-w-[140px] outline-none text-base bg-transparent"
           placeholder={selectedPrompts.length === 0 ? placeholder : 'Add more...'}
           value={searchTerm}
           onChange={e => {
@@ -264,7 +264,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                   value={newPrompt.title}
                   onChange={e => setNewPrompt(prev => ({ ...prev, title: e.target.value }))}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreatePrompt(); } }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -274,7 +274,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
                   placeholder="Description (optional)"
                   value={newPrompt.description}
                   onChange={e => setNewPrompt(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
                   rows={2}
                 />
               </div>

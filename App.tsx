@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
+import { DateFormat } from './utils';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import PromptsPage from './views/PromptsPage';
@@ -76,6 +77,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   } | null>(null);
@@ -88,6 +90,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }[]>([]);
@@ -101,6 +104,13 @@ const App: React.FC = () => {
     const stored = window.localStorage.getItem('camp-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored;
+    }
+    return 'system';
+  });
+  const [dateFormat, setDateFormat] = useState<DateFormat>(() => {
+    const stored = window.localStorage.getItem('camp-date-format');
+    if (stored === 'yyyy-mm-dd' || stored === 'mm/dd/yyyy' || stored === 'dd/mm/yyyy' || stored === 'short' || stored === 'system') {
+      return stored as DateFormat;
     }
     return 'system';
   });
@@ -170,6 +180,10 @@ const App: React.FC = () => {
   useEffect(() => {
     window.localStorage.setItem('camp-theme', themePreference);
   }, [themePreference]);
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-date-format', dateFormat);
+  }, [dateFormat]);
 
   useEffect(() => {
     window.localStorage.setItem('camp-remember', rememberMe ? '1' : '0');
@@ -765,16 +779,25 @@ const App: React.FC = () => {
     }
   };
 
+  const getAssignmentTitle = (submissionId?: string): string | undefined => {
+    if (!submissionId) return undefined;
+    const sub = submissions.find(s => s.id === submissionId);
+    if (!sub?.assignmentId) return undefined;
+    return assignments.find(a => a.id === sub.assignmentId)?.title;
+  };
+
   const handlePlayTrack = async (track: {
     versionId: string;
     title: string;
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
     setPlayingTrackId(track.versionId);
+    const assignmentTitle = track.assignmentTitle || getAssignmentTitle(track.submissionId);
     // Show player immediately with track info while audio loads
     setPlayer({
       src: '',
@@ -782,6 +805,7 @@ const App: React.FC = () => {
       artist: track.artist,
       camperId: track.camperId,
       submissionId: track.submissionId,
+      assignmentTitle,
       artworkFileId: track.artworkFileId,
       artworkUrl: track.artworkUrl
     });
@@ -799,6 +823,7 @@ const App: React.FC = () => {
         artist: track.artist,
         camperId: track.camperId,
         submissionId: track.submissionId,
+        assignmentTitle,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
       });
@@ -841,6 +866,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
@@ -848,12 +874,14 @@ const App: React.FC = () => {
     try {
       const blob = await googleService.fetchDriveFile(track.versionId);
       const url = URL.createObjectURL(blob);
+      const assignmentTitle = track.assignmentTitle || getAssignmentTitle(track.submissionId);
       setQueue(prev => [...prev, {
         src: url,
         title: track.title,
         artist: track.artist,
         camperId: track.camperId,
         submissionId: track.submissionId,
+        assignmentTitle,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
       }]);
@@ -1024,6 +1052,7 @@ const App: React.FC = () => {
             bocas={bocas}
             statusUpdates={statusUpdates}
             comments={comments}
+            dateFormat={dateFormat}
           />
         );
       case 'inbox':
@@ -1039,6 +1068,7 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
+            dateFormat={dateFormat}
           />
         );
       case 'prompts':
@@ -1087,6 +1117,7 @@ const App: React.FC = () => {
             onSortByChange={setAssignmentsSortBy}
             semesterFilter={assignmentsSemesterFilter}
             onSemesterFilterChange={setAssignmentsSemesterFilter}
+            dateFormat={dateFormat}
           />
         ) : null;
       case 'submissions':
@@ -1116,6 +1147,7 @@ const App: React.FC = () => {
             semesterFilter={submissionsSemesterFilter}
             onSemesterFilterChange={setSubmissionsSemesterFilter}
             bocas={bocas}
+            dateFormat={dateFormat}
           />
         );
       case 'events':
@@ -1153,6 +1185,7 @@ const App: React.FC = () => {
             spreadsheetId={spreadsheetId}
             bocas={bocas}
             campers={campers}
+            dateFormat={dateFormat}
           />
         ) : null;
       case 'assignment-detail':
@@ -1180,6 +1213,7 @@ const App: React.FC = () => {
             availableTags={availableTags}
             bocas={bocas}
             campers={campers}
+            dateFormat={dateFormat}
           />
         ) : null;
       case 'song-detail':
@@ -1201,6 +1235,7 @@ const App: React.FC = () => {
             currentUserEmail={userProfile.email || ''}
             onGiveBoca={handleGiveBoca}
             campers={campers}
+            dateFormat={dateFormat}
           />
         ) : null;
       case 'bocas':
@@ -1219,6 +1254,7 @@ const App: React.FC = () => {
             onSearchTermChange={setBocasSearch}
             sortBy={bocasSortBy}
             onSortByChange={setBocasSortBy}
+            dateFormat={dateFormat}
           />
         );
       case 'semesters':
@@ -1253,6 +1289,7 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
+            dateFormat={dateFormat}
           />
         ) : null;
       }
@@ -1265,11 +1302,13 @@ const App: React.FC = () => {
             onProfileUpdate={handleProfileUpdate}
             rememberMe={rememberMe}
             onRememberMeChange={setRememberMe}
+            dateFormat={dateFormat}
+            onDateFormatChange={setDateFormat}
             submissions={submissions}
           />
         );
       case 'campers':
-        return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} />;
+        return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} dateFormat={dateFormat} />;
       case 'camper-detail':
         const camper = campers.find((item) => item.id === selectedId || item.email === selectedId);
         return camper ? (
@@ -1291,6 +1330,7 @@ const App: React.FC = () => {
             selectedTags={camperDetailSelectedTags}
             onSelectedTagsChange={setCamperDetailSelectedTags}
             bocas={bocas}
+            dateFormat={dateFormat}
           />
         ) : null;
       default:
@@ -1308,6 +1348,7 @@ const App: React.FC = () => {
             bocas={bocas}
             statusUpdates={statusUpdates}
             comments={comments}
+            dateFormat={dateFormat}
           />
         );
     }

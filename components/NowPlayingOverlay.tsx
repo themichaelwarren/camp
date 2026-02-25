@@ -8,6 +8,7 @@ interface Track {
   artist: string;
   camperId?: string;
   submissionId?: string;
+  assignmentTitle?: string;
   artworkFileId?: string;
   artworkUrl?: string;
 }
@@ -237,6 +238,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 ) : (
                   <p className="text-slate-500 text-sm xl:text-base font-medium truncate mt-0.5">{player.artist}</p>
                 )}
+                {player.assignmentTitle && (
+                  <p className="text-slate-400 text-xs xl:text-sm truncate mt-0.5">{player.assignmentTitle}</p>
+                )}
                 {!!bocaCount && bocaCount > 0 && (
                   <span className="inline-flex items-center gap-0.5 mt-2 text-amber-500">
                     {Array.from({ length: bocaCount }, (_, i) => (
@@ -369,7 +373,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                           ) : (
                             <p className="text-slate-800 text-sm font-medium truncate">{track.title}</p>
                           )}
-                          <p className="text-slate-500 text-xs truncate">{track.artist}</p>
+                          <p className="text-slate-500 text-xs truncate">{track.artist}{track.assignmentTitle ? ` · ${track.assignmentTitle}` : ''}</p>
                         </div>
                         <button
                           onClick={() => onRemoveFromQueue(i)}

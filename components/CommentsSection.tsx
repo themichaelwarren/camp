@@ -88,7 +88,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       authorEmail: currentUser.email,
       text
     });
-    setComments([...comments, newComment]);
+    setComments(prev => [...prev, newComment]);
   };
 
   const handleReply = async (parentId: string, text: string) => {
@@ -100,7 +100,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       authorEmail: currentUser.email,
       text
     });
-    setComments([...comments, newComment]);
+    setComments(prev => [...prev, newComment]);
   };
 
   const handleToggleReaction = async (commentId: string, emoji: string) => {
@@ -111,7 +111,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
         emoji,
         currentUser.email
       );
-      setComments(comments.map((c) => (c.id === commentId ? updatedComment : c)));
+      setComments(prev => prev.map((c) => (c.id === commentId ? updatedComment : c)));
     } catch (error) {
       console.error('Failed to toggle reaction', error);
       alert('Failed to update reaction. Please try again.');
@@ -121,13 +121,14 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   const handleEditComment = async (commentId: string, newText: string) => {
     const comment = comments.find(c => c.id === commentId);
     if (!comment) return;
+    const previousComments = comments;
     const updated = { ...comment, text: newText, editedAt: new Date().toISOString() };
-    setComments(comments.map(c => c.id === commentId ? updated : c));
+    setComments(prev => prev.map(c => c.id === commentId ? updated : c));
     try {
       await googleService.updateCommentRow(spreadsheetId, updated);
     } catch (error) {
       console.error('Failed to edit comment', error);
-      setComments(comments);
+      setComments(previousComments);
       alert('Failed to save edit. Please try again.');
     }
   };

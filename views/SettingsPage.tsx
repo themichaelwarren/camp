@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as googleService from '../services/googleService';
 import { Submission } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 const ADMIN_USER_ID = '107401200819936745460';
@@ -8,6 +9,8 @@ const ADMIN_USER_ID = '107401200819936745460';
 interface SettingsPageProps {
   themePreference: 'light' | 'dark' | 'system';
   onThemeChange: (value: 'light' | 'dark' | 'system') => void;
+  dateFormat: DateFormat;
+  onDateFormatChange: (value: DateFormat) => void;
   userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null;
   onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => void;
   rememberMe: boolean;
@@ -15,7 +18,7 @@ interface SettingsPageProps {
   submissions?: Submission[];
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [] }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [] }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -131,7 +134,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               <input
                 type="file"
                 accept="image/*"
-                className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
                 onChange={handlePhotoChange}
               />
             )}
@@ -150,7 +153,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
               <input
                 type="text"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="City, Country"
@@ -160,7 +163,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Current Status</label>
               <input
                 type="text"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 placeholder="Writing, recording, experimenting..."
@@ -240,6 +243,38 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               </p>
             </label>
           ))}
+        </div>
+        <div className="mt-8">
+          <h4 className="text-sm font-bold text-slate-800 mb-1">Date Format</h4>
+          <p className="text-slate-500 text-xs mb-4">Choose how dates are displayed throughout the app.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {([
+              { value: 'system' as DateFormat, label: 'System Default', example: formatDate(new Date(), 'system') },
+              { value: 'yyyy-mm-dd' as DateFormat, label: 'ISO', example: formatDate(new Date(), 'yyyy-mm-dd') },
+              { value: 'mm/dd/yyyy' as DateFormat, label: 'US', example: formatDate(new Date(), 'mm/dd/yyyy') },
+              { value: 'dd/mm/yyyy' as DateFormat, label: 'International', example: formatDate(new Date(), 'dd/mm/yyyy') },
+              { value: 'short' as DateFormat, label: 'Readable', example: formatDate(new Date(), 'short') },
+            ]).map((opt) => (
+              <label
+                key={opt.value}
+                className={`border rounded-2xl p-4 cursor-pointer transition-all ${
+                  dateFormat === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-200'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-800">{opt.label}</span>
+                  <input
+                    type="radio"
+                    name="dateFormat"
+                    value={opt.value}
+                    checked={dateFormat === opt.value}
+                    onChange={() => onDateFormatChange(opt.value)}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2 font-mono">{opt.example}</p>
+              </label>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CamperProfile, ViewState } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CampersPageProps {
@@ -7,9 +8,10 @@ interface CampersPageProps {
   onNavigate: (view: ViewState, id?: string) => void;
   viewMode: 'list' | 'cards';
   onViewModeChange: (value: 'list' | 'cards') => void;
+  dateFormat: DateFormat;
 }
 
-const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode, onViewModeChange }) => {
+const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode, onViewModeChange, dateFormat }) => {
 
   return (
     <div className="space-y-6">
@@ -89,7 +91,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                   <td className="px-6 py-4 text-sm text-slate-600">{camper.location || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{camper.status || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-500">
-                    {camper.lastSignedInAt ? new Date(camper.lastSignedInAt).toLocaleDateString() : '—'}
+                    {camper.lastSignedInAt ? formatDate(camper.lastSignedInAt, dateFormat) : '—'}
                   </td>
                 </tr>
               ))}

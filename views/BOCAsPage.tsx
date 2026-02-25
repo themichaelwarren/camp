@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Boca, Submission, PlayableTrack, ViewState } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 type BocasSortOption = 'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent';
@@ -19,6 +20,7 @@ interface BOCAsPageProps {
   onSearchTermChange: (value: string) => void;
   sortBy: BocasSortOption;
   onSortByChange: (value: BocasSortOption) => void;
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -26,7 +28,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -65,7 +67,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
   const monthlyUsed = bocas.filter(b => b.fromEmail === currentUserEmail && new Date(b.awardedAt) >= currentMonthStart && new Date(b.awardedAt) < currentMonthEnd).length;
   const remaining = Math.max(0, 2 - monthlyUsed);
   const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const resetLabel = nextReset.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const resetLabel = formatDate(nextReset, dateFormat);
 
   // Aggregate: submissionId -> count
   const rankedSongs = useMemo(() => {
@@ -151,7 +153,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
               placeholder="Search songs or campers..."
               value={searchTerm}
               onChange={e => onSearchTermChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
           <button
@@ -172,7 +174,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 {availableMonths.map(m => (
                   <option key={m} value={m}>{formatMonth(m)}</option>
@@ -184,7 +186,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
               <select
                 value={sortBy}
                 onChange={e => onSortByChange(e.target.value as BocasSortOption)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <option value="count-desc">Most BOCAs First</option>
                 <option value="count-asc">Fewest BOCAs First</option>

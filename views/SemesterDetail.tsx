@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState } from '../types';
-import { getPromptStatus, getPromptStatusStyle } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface SemesterDetailProps {
@@ -15,6 +15,7 @@ interface SemesterDetailProps {
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -22,7 +23,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId }) => {
+const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, dateFormat }) => {
 
   // Unique prompts used this semester (from assignments' promptIds)
   const semesterPrompts = useMemo(() => {
@@ -100,7 +101,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                     <p className="font-semibold text-slate-900 truncate">{a.title}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="text-xs text-slate-500">
-                        Due {new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        Due {formatDate(a.dueDate, dateFormat)}
                       </span>
                       {promptTitles.map((title, i) => (
                         <span key={i} className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-semibold truncate max-w-[160px]">{title}</span>
@@ -187,7 +188,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                       </button>
                     )}
                     <span className="text-xs text-slate-400 w-16 text-right">
-                      {new Date(getSubmissionDate(sub)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {formatDate(getSubmissionDate(sub), dateFormat)}
                     </span>
                   </div>
                 </div>

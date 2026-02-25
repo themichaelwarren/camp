@@ -131,6 +131,7 @@ export interface PlayableTrack {
   artist: string;
   camperId?: string;
   submissionId?: string;
+  assignmentTitle?: string;
   artworkFileId?: string;
   artworkUrl?: string;
 }

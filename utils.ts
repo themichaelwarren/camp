@@ -32,3 +32,20 @@ export function getPromptStatusStyle(status: PromptStatus): string {
     default: return 'bg-amber-100 text-amber-700';
   }
 }
+
+export type DateFormat = 'system' | 'yyyy-mm-dd' | 'mm/dd/yyyy' | 'dd/mm/yyyy' | 'short';
+
+export function formatDate(input: string | Date, format: DateFormat): string {
+  const date = typeof input === 'string' ? new Date(input.includes('T') ? input : input + 'T00:00:00') : input;
+  if (isNaN(date.getTime())) return String(input);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  switch (format) {
+    case 'yyyy-mm-dd': return `${y}-${m}-${d}`;
+    case 'mm/dd/yyyy': return `${m}/${d}/${y}`;
+    case 'dd/mm/yyyy': return `${d}/${m}/${y}`;
+    case 'short': return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    case 'system': default: return date.toLocaleDateString();
+  }
+}

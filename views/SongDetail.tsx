@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile } from '../types';
+import { DateFormat, formatDate } from '../utils';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -21,9 +22,10 @@ interface SongDetailProps {
   currentUserEmail?: string;
   onGiveBoca?: (submissionId: string) => Promise<void>;
   campers?: CamperProfile[];
+  dateFormat: DateFormat;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [] }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -168,7 +170,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       {/* Hero section — album-page style */}
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
         {/* Artwork */}
-        <div className="relative w-full max-w-[280px] mx-auto md:mx-0 flex-shrink-0">
+        <div className="relative w-full md:max-w-[280px] mx-auto md:mx-0 flex-shrink-0">
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center border border-slate-200 shadow-sm group">
             <ArtworkImage
               fileId={submission.artworkFileId}
@@ -318,7 +320,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                       <span className="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100 uppercase">
                         {idx === 0 ? 'Latest' : `v${submission.versions.length - idx}`}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-bold">{new Date(v.timestamp).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{formatDate(v.timestamp, dateFormat)}</span>
                     </div>
                     <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
                     <p className="text-[10px] text-slate-500 italic mb-3">"{v.notes}"</p>
@@ -395,83 +397,87 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       </div>
       {showEdit && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
               <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                />
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                  <input
+                    required
+                    type="text"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
+                  <textarea
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-base"
+                    value={editForm.lyrics}
+                    onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
+                  <textarea
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-base"
+                    value={editForm.details}
+                    onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
+                    onChange={handleArtworkChange}
+                  />
+                  <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lyrics</label>
-                <textarea
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-48 font-serif text-sm"
-                  value={editForm.lyrics}
-                  onChange={(e) => setEditForm({ ...editForm, lyrics: e.target.value })}
-                />
+              <div className="p-6 border-t border-slate-100 shrink-0 space-y-3">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-check"></i>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
+                    onUpdate({
+                      ...submission,
+                      deletedAt: new Date().toISOString(),
+                      deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+                    });
+                    onNavigate('submissions');
+                  }}
+                  className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
+                >
+                  Delete Song
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
-                <textarea
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-sm"
-                  value={editForm.details}
-                  onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
-                  onChange={handleArtworkChange}
-                />
-                <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
-              </div>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-check"></i>
-                  Save Changes
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
-                onUpdate({
-                  ...submission,
-                  deletedAt: new Date().toISOString(),
-                  deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
-                });
-                onNavigate('submissions');
-              }}
-              className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
-            >
-              Delete Song
-            </button>
-          </form>
+            </form>
         </div>
       </div>
     )}

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Submission, Assignment, Prompt, PlayableTrack, Boca } from '../types';
-import { getTerm, getTermSortKey } from '../utils';
+import { getTerm, getTermSortKey, DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
 
@@ -30,6 +30,7 @@ interface SubmissionsPageProps {
   semesterFilter: string;
   onSemesterFilterChange: (value: string) => void;
   bocas: Boca[];
+  dateFormat: DateFormat;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -39,7 +40,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -205,7 +206,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         <div className="mt-4 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
           <span className="flex items-center gap-1">
             <i className="fa-solid fa-calendar"></i>
-            {new Date(getSubmissionDate(sub)).toLocaleDateString()}
+            {formatDate(getSubmissionDate(sub), dateFormat)}
           </span>
           <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-semibold">{getTerm(getSubmissionDate(sub))}</span>
         </div>
@@ -247,7 +248,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       </td>
       <td className="px-4 py-3 text-sm text-slate-600 truncate hidden md:table-cell">{assignmentTitle}</td>
       <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-        <div>{new Date(getSubmissionDate(sub)).toLocaleDateString()}</div>
+        <div>{formatDate(getSubmissionDate(sub), dateFormat)}</div>
         <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(getSubmissionDate(sub))}</span>
       </td>
       <td className="px-4 py-3">
@@ -318,7 +319,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               placeholder="Search by title or camper..."
               value={searchTerm}
               onChange={e => onSearchTermChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <button
@@ -339,7 +340,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               <select
                 value={semesterFilter}
                 onChange={e => onSemesterFilterChange(e.target.value)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">All Semesters</option>
                 {availableSemesters.map(t => (
@@ -352,7 +353,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               <select
                 value={assignmentFilter}
                 onChange={e => onAssignmentFilterChange(e.target.value)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">All Assignments</option>
                 {assignments.map(a => (
@@ -365,7 +366,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               <select
                 value={promptFilter}
                 onChange={e => onPromptFilterChange(e.target.value)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">All Prompts</option>
                 {usedPrompts.map(p => (
@@ -378,7 +379,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               <select
                 value={sortBy}
                 onChange={e => onSortByChange(e.target.value as SortOption)}
-                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="date-desc">Newest First</option>
                 <option value="date-asc">Oldest First</option>

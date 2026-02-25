@@ -53,7 +53,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         {activeTab === 'write' ? (
           <textarea
             required={required}
-            className={`w-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${minHeight}`}
+            className={`w-full px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${minHeight}`}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
