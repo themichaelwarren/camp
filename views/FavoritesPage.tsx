@@ -34,6 +34,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
 
 const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
   const getSubmissionDate = (sub: Submission): string => {
     return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;
@@ -132,6 +133,81 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
     );
   };
 
+  const renderRow = (sub: Submission, assignmentTitle: string, track: PlayableTrack | null, bocaCount: number) => (
+    <tr
+      key={sub.id}
+      onClick={() => onViewDetail(sub.id)}
+      className="cursor-pointer hover:bg-slate-50 transition-colors group"
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+            <ArtworkImage
+              fileId={sub.artworkFileId}
+              fallbackUrl={sub.artworkUrl}
+              alt={`${sub.title} artwork`}
+              className="w-full h-full object-cover"
+              containerClassName="w-full h-full flex items-center justify-center"
+              fallback={<i className="fa-solid fa-compact-disc text-indigo-400 text-sm"></i>}
+            />
+          </div>
+          <div className="min-w-0 flex items-center gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
+              <p className="text-xs text-slate-500 truncate">{sub.camperName}</p>
+            </div>
+            {bocaCount > 0 && (
+              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                <i className="fa-solid fa-star text-[8px]"></i>
+                {bocaCount}
+              </span>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-slate-600 truncate hidden md:table-cell">{assignmentTitle}</td>
+      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+        <div>{formatDate(getSubmissionDate(sub), dateFormat)}</div>
+        <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(getSubmissionDate(sub))}</span>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex gap-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(sub.id); }}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              favoritedSubmissionIds.includes(sub.id)
+                ? 'bg-red-50 text-red-500'
+                : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+            }`}
+            title={favoritedSubmissionIds.includes(sub.id) ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <i className={`${favoritedSubmissionIds.includes(sub.id) ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+          </button>
+          {track && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                disabled={playingTrackId === track.versionId}
+                className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                title="Play"
+              >
+                <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                disabled={queueingTrackId === track.versionId}
+                className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                title="Add to queue"
+              >
+                <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+              </button>
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -148,17 +224,25 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
         {submissions.length > 0 && (
           <div className="flex items-center gap-3 self-start md:self-auto">
             <button
-              onClick={() => { if (allTracks.length > 0) onStartJukebox(allTracks); }}
+              onClick={async () => {
+                if (allTracks.length === 0) return;
+                await onPlayTrack(allTracks[0]);
+                for (let i = 1; i < allTracks.length; i++) {
+                  onAddToQueue(allTracks[i]);
+                }
+              }}
               className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
             >
               <i className="fa-solid fa-play"></i>
               Play All
             </button>
             <button
-              onClick={() => {
-                if (allTracks.length > 0) {
-                  const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-                  onStartJukebox(shuffled);
+              onClick={async () => {
+                if (allTracks.length === 0) return;
+                const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
+                await onPlayTrack(shuffled[0]);
+                for (let i = 1; i < shuffled.length; i++) {
+                  onAddToQueue(shuffled[i]);
                 }
               }}
               className="bg-amber-500 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-amber-600 transition-all flex items-center gap-2"
@@ -173,7 +257,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
       {submissions.length > 0 ? (
         <>
           {/* Toolbar */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="relative flex-1">
                 <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
@@ -185,25 +269,73 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
                   className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              <div className="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                {([3, 4, 5] as const).map(n => (
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
                   <button
-                    key={n}
-                    onClick={() => onGridSizeChange(n)}
-                    className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${gridSize === n ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => setViewMode('cards')}
+                    className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                      viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                    }`}
                   >
-                    {n}
+                    Cards
                   </button>
-                ))}
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                      viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    List
+                  </button>
+                </div>
+                {viewMode === 'cards' && (
+                  <div className="hidden md:flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                    {([3, 4, 5] as const).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => onGridSizeChange(n)}
+                        className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${gridSize === n ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+              <span className="text-xs text-slate-400 font-semibold">{filteredSubmissions.length} song{filteredSubmissions.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
 
-          {/* Grid */}
+          {/* Songs */}
           {filteredSubmissions.length > 0 ? (
-            <div className={`grid ${gridClasses[gridSize]} gap-4`}>
-              {filteredSubmissions.map(sub => renderCard(sub))}
-            </div>
+            viewMode === 'cards' ? (
+              <div className={`grid ${gridClasses[gridSize]} gap-4`}>
+                {filteredSubmissions.map(sub => renderCard(sub))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Song</th>
+                      <th className="px-4 py-3 hidden md:table-cell">Assignment</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSubmissions.map(sub => {
+                      const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
+                      const track = trackFromSubmission(sub);
+                      const bocaCount = bocas.filter(b => b.submissionId === sub.id).length;
+                      return renderRow(sub, assignmentTitle, track, bocaCount);
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : (
             <div className="text-center py-16 text-slate-400">
               <i className="fa-solid fa-magnifying-glass text-3xl mb-3 block"></i>

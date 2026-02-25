@@ -168,17 +168,25 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
           {submissions.length > 0 && (
             <div className="flex items-center gap-3 self-start md:self-auto">
               <button
-                onClick={() => { if (allTracks.length > 0) onStartJukebox(allTracks); }}
+                onClick={async () => {
+                  if (allTracks.length === 0) return;
+                  await onPlayTrack(allTracks[0]);
+                  for (let i = 1; i < allTracks.length; i++) {
+                    onAddToQueue(allTracks[i]);
+                  }
+                }}
                 className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
               >
                 <i className="fa-solid fa-play"></i>
                 Play All
               </button>
               <button
-                onClick={() => {
-                  if (allTracks.length > 0) {
-                    const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-                    onStartJukebox(shuffled);
+                onClick={async () => {
+                  if (allTracks.length === 0) return;
+                  const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
+                  await onPlayTrack(shuffled[0]);
+                  for (let i = 1; i < shuffled.length; i++) {
+                    onAddToQueue(shuffled[i]);
                   }
                 }}
                 className="bg-amber-500 text-white px-3 py-1.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition-all flex items-center gap-2"

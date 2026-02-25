@@ -19,6 +19,7 @@ interface LayoutProps {
   onPlayNext?: () => void;
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
+  onClearQueue?: () => void;
   onNavigateToSong?: (submissionId: string) => void;
   onNavigateToCamper?: (camperId: string) => void;
   onNavigateToAssignment?: (assignmentId: string) => void;
@@ -31,7 +32,7 @@ interface LayoutProps {
   onToggleFavorite?: (submissionId: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -259,7 +260,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         {player ? (
           collapsed ? (
             <button
-              onClick={() => setShowNowPlaying(true)}
+              onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}
               className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
               title={`${player.title} — ${player.artist}`}
             >
@@ -273,7 +274,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               />
             </button>
           ) : (
-            <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => setShowNowPlaying(true)}>
+            <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <ArtworkImage
@@ -498,9 +499,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onPlayNext={() => onPlayNext?.()}
             onRemoveFromQueue={(i) => onRemoveFromQueue?.(i)}
             onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
-            onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); }}
-            onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); }}
-            onNavigateToAssignment={(id) => { onNavigateToAssignment?.(id); setShowNowPlaying(false); }}
+            onClearQueue={() => onClearQueue?.()}
+            onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); setIsMobileNavOpen(false); }}
+            onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); setIsMobileNavOpen(false); }}
+            onNavigateToAssignment={(id) => { onNavigateToAssignment?.(id); setShowNowPlaying(false); setIsMobileNavOpen(false); }}
             isJukeboxMode={isJukeboxMode}
             onStopJukebox={onStopJukebox}
             bocaCount={currentTrackBocaCount}

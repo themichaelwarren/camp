@@ -977,6 +977,13 @@ const App: React.FC = () => {
     });
   };
 
+  const handleClearQueue = () => {
+    setQueue(prev => {
+      prev.forEach(t => URL.revokeObjectURL(t.src));
+      return [];
+    });
+  };
+
   const handleRemoveFromQueue = (index: number) => {
     setQueue(prev => {
       const removed = prev[index];
@@ -1017,13 +1024,12 @@ const App: React.FC = () => {
     setIsJukeboxMode(true);
     queue.forEach(t => URL.revokeObjectURL(t.src));
     setQueue([]);
-    const randomIndex = Math.floor(Math.random() * tracks.length);
-    const firstTrack = tracks[randomIndex];
-    await handlePlayTrack(firstTrack);
-    const remaining = tracks.filter((_, i) => i !== randomIndex);
-    if (remaining.length > 0) {
-      const nextTrack = remaining[Math.floor(Math.random() * remaining.length)];
-      await handleAddToQueue(nextTrack);
+    // Shuffle and pick up to 10 unique tracks for the initial queue
+    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+    await handlePlayTrack(shuffled[0]);
+    const queueSize = Math.min(9, shuffled.length - 1);
+    for (let i = 1; i <= queueSize; i++) {
+      handleAddToQueue(shuffled[i]);
     }
   };
 
@@ -1488,6 +1494,7 @@ const App: React.FC = () => {
       onPlayNext={handlePlayNext}
       onRemoveFromQueue={handleRemoveFromQueue}
       onReorderQueue={handleReorderQueue}
+      onClearQueue={handleClearQueue}
       onNavigateToSong={(id) => navigateTo('song-detail', id)}
       onNavigateToCamper={(id) => navigateTo('camper-detail', id)}
       onNavigateToAssignment={(id) => navigateTo('assignment-detail', id)}

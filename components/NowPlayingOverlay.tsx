@@ -22,6 +22,7 @@ interface NowPlayingOverlayProps {
   onPlayNext: () => void;
   onRemoveFromQueue: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
+  onClearQueue?: () => void;
   onNavigateToSong?: (submissionId: string) => void;
   onNavigateToCamper?: (camperId: string) => void;
   onNavigateToAssignment?: (assignmentId: string) => void;
@@ -48,6 +49,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onPlayNext,
   onRemoveFromQueue,
   onReorderQueue,
+  onClearQueue,
   onNavigateToSong,
   onNavigateToCamper,
   onNavigateToAssignment,
@@ -64,6 +66,12 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+
+  // Prevent background page scroll while overlay is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -369,7 +377,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
             {/* Right: Queue — toggleable, keep column mounted in jukebox mode to avoid layout shift */}
             {showQueue && (queue.length > 0 || isJukeboxMode) && (
               <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Up Next</p>
+                  {queue.length > 0 && onClearQueue && (
+                    <button
+                      onClick={onClearQueue}
+                      className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-red-500 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 {queue.length > 0 ? (
                   <div className="space-y-1">
                     {queue.map((track, i) => (
