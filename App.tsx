@@ -219,7 +219,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isLoggedIn || !spreadsheetId) return;
 
-    const POLL_INTERVAL = 10000; // 10 seconds
+    const POLL_INTERVAL = 30000; // 30 seconds
     let intervalId: NodeJS.Timeout | null = null;
     let isPageVisible = !document.hidden;
 
@@ -276,19 +276,21 @@ const App: React.FC = () => {
       } else {
         window.localStorage.removeItem('camp-auth');
       }
-      const data = await googleService.fetchAllData(sId);
+      const data = await googleService.fetchAllData(sId, profile?.email);
       setPrompts(data.prompts);
       setAssignments(data.assignments);
       setSubmissions(data.submissions);
       setComments(data.comments);
-      const campersData = await googleService.fetchCampers(sId);
-      setCampers(campersData);
-      const eventsData = await googleService.fetchEvents(sId);
-      setEvents(eventsData);
-      const tagsData = await googleService.fetchTags(sId);
-      setAvailableTags(tagsData);
+      setCampers(data.campers);
+      setEvents(data.events);
+      setAvailableTags(data.tags);
+      setCollaborations(data.collaborations);
+      setBocas(data.bocas);
+      setStatusUpdates(data.statusUpdates);
       if (profile?.email) {
-        const match = campersData.find((camper) => camper.email === profile.email);
+        setUpvotedPromptIds(data.upvotedPromptIds);
+        setFavoritedSubmissionIds(data.favoritedSubmissionIds);
+        const match = data.campers.find((camper) => camper.email === profile.email);
         if (match) {
           setUserProfile((prev) => ({
             ...prev,
@@ -297,22 +299,24 @@ const App: React.FC = () => {
             pictureOverrideUrl: match.pictureOverrideUrl
           }));
         }
-      }
-      if (profile?.email) {
-        const upvoted = await googleService.fetchUserUpvotes(sId, profile.email);
-        setUpvotedPromptIds(upvoted);
-        const favs = await googleService.fetchUserFavorites(sId, profile.email);
-        setFavoritedSubmissionIds(favs);
       } else {
         setUpvotedPromptIds([]);
         setFavoritedSubmissionIds([]);
       }
-      const collabs = await googleService.fetchAllCollaborations(sId);
-      setCollaborations(collabs);
-      const bocasData = await googleService.fetchBocas(sId);
-      setBocas(bocasData);
-      const statusUpdatesData = await googleService.fetchStatusUpdates(sId);
-      setStatusUpdates(statusUpdatesData);
+
+      // Sync events from Google Calendar (initial load only)
+      const syncedEvents = await Promise.allSettled(
+        data.events
+          .filter(event => !event.deletedAt)
+          .map(event => googleService.syncEventFromCalendar(sId, event))
+      );
+      const updatedEvents = syncedEvents.map((result, index) => {
+        if (result.status === 'fulfilled') return result.value;
+        return data.events.filter(e => !e.deletedAt)[index];
+      });
+      // Merge synced events with deleted ones
+      const deletedEvents = data.events.filter(e => e.deletedAt);
+      setEvents([...updatedEvents, ...deletedEvents]);
     } catch (e) {
       console.error('Initial sync failed', e);
     } finally {
@@ -324,42 +328,22 @@ const App: React.FC = () => {
     if (!spreadsheetId || !isLoggedIn) return;
 
     try {
-      const data = await googleService.fetchAllData(spreadsheetId);
+      const data = await googleService.fetchAllData(spreadsheetId, userProfile?.email);
       setPrompts(data.prompts);
       setAssignments(data.assignments);
       setSubmissions(data.submissions);
       setComments(data.comments);
-
-      const campersData = await googleService.fetchCampers(spreadsheetId);
-      setCampers(campersData);
-
-      const eventsData = await googleService.fetchEvents(spreadsheetId);
-
-      // Sync each event from Google Calendar to get latest changes
-      const syncedEvents = await Promise.allSettled(
-        eventsData
-          .filter(event => !event.deletedAt)
-          .map(event => googleService.syncEventFromCalendar(spreadsheetId, event))
-      );
-
-      // Update events state with synced data (ignore failed syncs)
-      const updatedEvents = syncedEvents
-        .map((result, index) => {
-          if (result.status === 'fulfilled') {
-            return result.value;
-          } else {
-            console.warn(`Failed to sync event ${eventsData[index].id}:`, result.reason);
-            return eventsData[index]; // Fall back to sheet data if sync fails
-          }
-        });
-
-      setEvents(updatedEvents);
-
-      const tagsData = await googleService.fetchTags(spreadsheetId);
-      setAvailableTags(tagsData);
+      setCampers(data.campers);
+      setEvents(data.events);
+      setAvailableTags(data.tags);
+      setCollaborations(data.collaborations);
+      setBocas(data.bocas);
+      setStatusUpdates(data.statusUpdates);
 
       if (userProfile?.email) {
-        const match = campersData.find((camper) => camper.email === userProfile.email);
+        setUpvotedPromptIds(data.upvotedPromptIds);
+        setFavoritedSubmissionIds(data.favoritedSubmissionIds);
+        const match = data.campers.find((camper) => camper.email === userProfile.email);
         if (match) {
           setUserProfile((prev) => ({
             ...prev,
@@ -368,20 +352,7 @@ const App: React.FC = () => {
             pictureOverrideUrl: match.pictureOverrideUrl
           }));
         }
-
-        const upvoted = await googleService.fetchUserUpvotes(spreadsheetId, userProfile.email);
-        setUpvotedPromptIds(upvoted);
-        const favs = await googleService.fetchUserFavorites(spreadsheetId, userProfile.email);
-        setFavoritedSubmissionIds(favs);
       }
-
-      const collabs = await googleService.fetchAllCollaborations(spreadsheetId);
-      setCollaborations(collabs);
-
-      const bocasData = await googleService.fetchBocas(spreadsheetId);
-      setBocas(bocasData);
-      const statusUpdatesData = await googleService.fetchStatusUpdates(spreadsheetId);
-      setStatusUpdates(statusUpdatesData);
     } catch (e) {
       console.error('Background sync failed', e);
     }

@@ -276,15 +276,15 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Prompt Meta</h3>
             <div className="space-y-4">
-              <div className="py-2 border-b border-slate-50">
+              <div className="py-2 border-b border-slate-100">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Created By</span>
                 <span className="text-sm text-slate-800 font-bold break-words">{prompt.createdBy}</span>
               </div>
-              <div className="py-2 border-b border-slate-50">
+              <div className="py-2 border-b border-slate-100">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Creation Date</span>
                 <span className="text-sm text-slate-800 font-bold">{formatDate(prompt.createdAt, dateFormat)}</span>
               </div>
-              <div className="py-2 border-b border-slate-50">
+              <div className="py-2 border-b border-slate-100">
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Status</span>
                 {(() => {
                   const cs = getPromptStatus(prompt.id, assignments);

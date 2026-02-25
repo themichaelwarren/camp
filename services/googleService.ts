@@ -419,14 +419,37 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
-export const fetchAllData = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?ranges=Prompts!A2:J1000&ranges=Assignments!A2:M1000&ranges=Submissions!A2:O1000&ranges=Comments!A2:J5000`;
+export const fetchAllData = async (spreadsheetId: string, userEmail?: string) => {
+  const ranges = [
+    'Prompts!A2:J1000',
+    'Assignments!A2:M1000',
+    'Submissions!A2:O1000',
+    'Comments!A2:J5000',
+    'Users!A2:I1000',
+    'Events!A2:O5000',
+    'Tags!A2:C1000',
+    'PromptUpvotes!A2:E5000',
+    'Favorites!A2:D5000',
+    'Collaborators!A2:F5000',
+    'BOCAs!A2:D5000',
+    'StatusUpdates!A2:E5000'
+  ];
+  const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${rangeParams}`;
   const result = await callGoogleApi(url);
 
   const promptsRaw = result.valueRanges[0].values || [];
   const assignmentsRaw = result.valueRanges[1].values || [];
   const submissionsRaw = result.valueRanges[2].values || [];
   const commentsRaw = result.valueRanges[3].values || [];
+  const campersRaw = result.valueRanges[4].values || [];
+  const eventsRaw = result.valueRanges[5].values || [];
+  const tagsRaw = result.valueRanges[6].values || [];
+  const upvotesRaw = result.valueRanges[7].values || [];
+  const favoritesRaw = result.valueRanges[8].values || [];
+  const collaboratorsRaw = result.valueRanges[9].values || [];
+  const bocasRaw = result.valueRanges[10].values || [];
+  const statusUpdatesRaw = result.valueRanges[11].values || [];
 
   const prompts: Prompt[] = promptsRaw.map((row: any[]) => ({
     id: row[0] || Math.random().toString(36).substr(2, 9),
@@ -504,7 +527,73 @@ export const fetchAllData = async (spreadsheetId: string) => {
 
   const comments: Comment[] = commentsRaw.map(parseCommentRow);
 
-  return { prompts, assignments, submissions, comments };
+  const campers: CamperProfile[] = campersRaw.map((row: any[]) => ({
+    id: row[0] || '',
+    name: row[1] || '',
+    email: row[2] || '',
+    picture: row[3] || '',
+    lastSignedInAt: row[4] || '',
+    location: row[5] || '',
+    status: row[6] || '',
+    pictureOverrideUrl: row[7] || '',
+    statusUpdatedAt: row[8] || ''
+  }));
+
+  const events: Event[] = eventsRaw.map((row: any[]) => ({
+    id: row[0] || '',
+    assignmentId: row[1] || null,
+    calendarEventId: row[2] || '',
+    title: row[3] || '',
+    description: row[4] || '',
+    startDateTime: row[5] || '',
+    endDateTime: row[6] || '',
+    location: row[7] || '',
+    meetLink: row[8] || '',
+    attendees: row[9] ? JSON.parse(row[9]) : [],
+    createdBy: row[10] || '',
+    createdAt: row[11] || '',
+    updatedAt: row[12] || '',
+    deletedAt: row[13] || undefined,
+    deletedBy: row[14] || undefined
+  }));
+
+  const tags: string[] = tagsRaw.map((row: any[]) => row[1] || '').filter(Boolean);
+
+  const upvotedPromptIds: string[] = userEmail
+    ? upvotesRaw.filter((row: any[]) => row[2] === userEmail).map((row: any[]) => row[1]).filter(Boolean)
+    : [];
+
+  const favoritedSubmissionIds: string[] = userEmail
+    ? favoritesRaw.filter((row: any[]) => row[1] === userEmail).map((row: any[]) => row[2]).filter(Boolean)
+    : [];
+
+  const collaborations: Collaboration[] = collaboratorsRaw
+    .filter((row: any[]) => row[0] && row[1])
+    .map((row: any[]) => ({
+      id: row[0],
+      submissionId: row[1],
+      camperId: row[2] || '',
+      camperName: row[3] || '',
+      role: (row[4] || '') as CollaboratorRole,
+      createdAt: row[5] || ''
+    }));
+
+  const bocas = bocasRaw.map((row: any[]) => ({
+    id: row[0] || '',
+    fromEmail: row[1] || '',
+    submissionId: row[2] || '',
+    awardedAt: row[3] || ''
+  }));
+
+  const statusUpdates = statusUpdatesRaw.map((row: any[]) => ({
+    id: row[0] || '',
+    camperEmail: row[1] || '',
+    camperName: row[2] || '',
+    status: row[3] || '',
+    timestamp: row[4] || ''
+  }));
+
+  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates };
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
