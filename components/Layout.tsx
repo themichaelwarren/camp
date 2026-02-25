@@ -221,7 +221,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-4`}>
+      <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-4'} py-4`}>
         {menuGroups.map((group, gi) => (
           <div key={group.label}>
             {collapsed ? (
@@ -254,7 +254,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       </nav>
 
       {/* Bottom panel */}
-      <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto relative ${collapsed ? 'space-y-3 flex flex-col items-center' : 'space-y-4'}`}>
+      <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto ${collapsed ? 'space-y-3 flex flex-col items-center' : 'space-y-4'}`}>
         {player ? (
           collapsed ? (
             <button
@@ -356,7 +356,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           )
         )}
         {isLoggedIn ? (
-          <>
+          <div className="relative">
             <button
               onClick={() => setIsUserMenuOpen((open) => !open)}
               className={`${collapsed ? '' : 'w-full'} flex items-center ${collapsed ? 'justify-center' : 'gap-3 text-left'}`}
@@ -395,7 +395,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               )}
             </button>
             {isUserMenuOpen && (
-              <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-4 right-4'}`}>
+              <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-0 right-0'}`}>
                 <button
                   onClick={() => handleNavigate('settings')}
                   className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
@@ -428,7 +428,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 )}
               </div>
             )}
-          </>
+          </div>
         ) : (
           !collapsed && (
             <div className="text-center p-2">
