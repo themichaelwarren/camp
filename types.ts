@@ -152,5 +152,6 @@ export type ViewState =
   | 'event-detail'
   | 'camper-detail'
   | 'bocas'
+  | 'favorites'
   | 'semesters'
   | 'semester-detail';

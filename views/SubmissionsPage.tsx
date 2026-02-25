@@ -33,6 +33,8 @@ interface SubmissionsPageProps {
   dateFormat: DateFormat;
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
+  favoritedSubmissionIds: string[];
+  onToggleFavorite: (submissionId: string) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -48,7 +50,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -163,7 +165,9 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
     return Object.entries(groups);
   }, [filteredSubmissions, isSemesterSort]);
 
-  const renderCard = (sub: Submission, assignmentTitle: string, track: PlayableTrack | null, bocaCount: number) => (
+  const renderCard = (sub: Submission, assignmentTitle: string, track: PlayableTrack | null, bocaCount: number) => {
+    const isFavorited = favoritedSubmissionIds.includes(sub.id);
+    return (
     <div
       key={sub.id}
       onClick={() => onViewDetail(sub.id)}
@@ -177,6 +181,17 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
           className="w-full h-full object-contain bg-slate-100"
           fallback={<i className="fa-solid fa-compact-disc text-4xl text-indigo-400"></i>}
         />
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(sub.id); }}
+          className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all z-10 ${
+            isFavorited
+              ? 'bg-red-500 text-white shadow-md'
+              : 'bg-black/30 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-black/50'
+          }`}
+          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-sm`}></i>
+        </button>
         {bocaCount > 0 && (
           <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 shadow-md z-10">
             <i className="fa-solid fa-star text-[8px]"></i>
@@ -221,6 +236,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       </div>
     </div>
   );
+  };
 
   const renderRow = (sub: Submission, assignmentTitle: string, track: PlayableTrack | null, bocaCount: number) => (
     <tr
@@ -260,26 +276,39 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(getSubmissionDate(sub))}</span>
       </td>
       <td className="px-4 py-3">
-        {track && (
-          <div className="flex gap-1.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-              disabled={playingTrackId === track.versionId}
-              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-              title="Play"
-            >
-              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-              disabled={queueingTrackId === track.versionId}
-              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
-              title="Add to queue"
-            >
-              <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
-            </button>
-          </div>
-        )}
+        <div className="flex gap-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(sub.id); }}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              favoritedSubmissionIds.includes(sub.id)
+                ? 'bg-red-50 text-red-500'
+                : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+            }`}
+            title={favoritedSubmissionIds.includes(sub.id) ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <i className={`${favoritedSubmissionIds.includes(sub.id) ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+          </button>
+          {track && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                disabled={playingTrackId === track.versionId}
+                className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                title="Play"
+              >
+                <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                disabled={queueingTrackId === track.versionId}
+                className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                title="Add to queue"
+              >
+                <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+              </button>
+            </>
+          )}
+        </div>
       </td>
     </tr>
   );

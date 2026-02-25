@@ -106,7 +106,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callGoogleApi(metadataUrl);
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -131,7 +131,8 @@ export const findOrCreateDatabase = async () => {
     'Tags!A1:C1',
     'Events!A1:M1',
     'BOCAs!A1:D1',
-    'StatusUpdates!A1:E1'
+    'StatusUpdates!A1:E1',
+    'Favorites!A1:D1'
   ];
   const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
   const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
@@ -282,6 +283,16 @@ export const findOrCreateDatabase = async () => {
       'camperName',
       'status',
       'timestamp'
+    ]]);
+  }
+
+  const favoritesHeader = headerValues[10]?.values?.[0] || [];
+  if (favoritesHeader.length < 4) {
+    await updateSheetRows(SPREADSHEET_ID, 'Favorites!A1', [[
+      'id',
+      'userEmail',
+      'submissionId',
+      'createdAt'
     ]]);
   }
 
@@ -585,6 +596,67 @@ export const appendPromptUpvote = async (
     now
   ]];
   return appendSheetRow(spreadsheetId, 'PromptUpvotes!A1', row);
+};
+
+// --- Favorites ---
+
+export const fetchUserFavorites = async (spreadsheetId: string, userEmail: string): Promise<string[]> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Favorites!A2:D5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  return rows
+    .filter((row: any[]) => row[1] === userEmail)
+    .map((row: any[]) => row[2])
+    .filter(Boolean);
+};
+
+export const appendFavorite = async (
+  spreadsheetId: string,
+  data: { userEmail: string; submissionId: string }
+) => {
+  const now = new Date().toISOString();
+  const row = [[
+    Math.random().toString(36).substr(2, 9),
+    data.userEmail,
+    data.submissionId,
+    now
+  ]];
+  return appendSheetRow(spreadsheetId, 'Favorites!A1', row);
+};
+
+export const removeFavorite = async (
+  spreadsheetId: string,
+  userEmail: string,
+  submissionId: string
+): Promise<void> => {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Favorites!A2:D5000`;
+  const result = await callGoogleApi(url);
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[1] === userEmail && row[2] === submissionId);
+  if (rowIndex === -1) return;
+
+  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
+  const metadata = await callGoogleApi(metadataUrl);
+  const favSheet = metadata.sheets.find((s: any) => s.properties.title === 'Favorites');
+  const sheetId = favSheet.properties.sheetId;
+
+  const sheetRow = rowIndex + 1; // +1 for header
+  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+  await callGoogleApi(batchUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRow,
+            endIndex: sheetRow + 1
+          }
+        }
+      }]
+    })
+  });
 };
 
 export const fetchUserProfile = async () => {

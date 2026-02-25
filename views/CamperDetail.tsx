@@ -14,14 +14,19 @@ interface CamperDetailProps {
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
+  onStartJukebox: (tracks: PlayableTrack[]) => void;
   songsView: 'cards' | 'list';
   onSongsViewChange: (value: 'cards' | 'list') => void;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   selectedTags: string[];
   onSelectedTagsChange: (value: string[] | ((prev: string[]) => string[])) => void;
+  favoritedSubmissionIds: string[];
+  onToggleFavorite: (submissionId: string) => void;
   bocas?: Boca[];
   dateFormat: DateFormat;
+  gridSize: 3 | 4 | 5;
+  onGridSizeChange: (value: 3 | 4 | 5) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -51,7 +56,13 @@ const getFirstVersionDate = (sub: Submission): number => {
   return new Date(sub.updatedAt).getTime() || 0;
 };
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, bocas = [], dateFormat }) => {
+const gridClasses: Record<3 | 4 | 5, string> = {
+  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
+};
+
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -85,6 +96,12 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       }
     });
   }, [submissions, assignments, allPrompts, searchTerm, selectedTags, sortBy]);
+
+  const allTracks = useMemo(() => {
+    return filteredSubmissions
+      .map(s => trackFromSubmission(s))
+      .filter((t): t is PlayableTrack => t !== null);
+  }, [filteredSubmissions]);
 
   return (
     <div className="space-y-6">
@@ -141,11 +158,36 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       </section>
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
-          <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-            {filteredSubmissions.length !== submissions.length ? `${filteredSubmissions.length} / ${submissions.length}` : submissions.length}
-          </span>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-800">Songs Uploaded</h3>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+              {filteredSubmissions.length !== submissions.length ? `${filteredSubmissions.length} / ${submissions.length}` : submissions.length}
+            </span>
+          </div>
+          {submissions.length > 0 && (
+            <div className="flex items-center gap-3 self-start md:self-auto">
+              <button
+                onClick={() => { if (allTracks.length > 0) onStartJukebox(allTracks); }}
+                className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+              >
+                <i className="fa-solid fa-play"></i>
+                Play All
+              </button>
+              <button
+                onClick={() => {
+                  if (allTracks.length > 0) {
+                    const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
+                    onStartJukebox(shuffled);
+                  }
+                }}
+                className="bg-amber-500 text-white px-3 py-1.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition-all flex items-center gap-2"
+              >
+                <i className="fa-solid fa-shuffle"></i>
+                Shuffle
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4 mb-5">
@@ -210,78 +252,104 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit mb-5">
-          <button
-            onClick={() => onSongsViewChange('cards')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              songsView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Cards
-          </button>
-          <button
-            onClick={() => onSongsViewChange('list')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              songsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            List
-          </button>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+            <button
+              onClick={() => onSongsViewChange('cards')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                songsView === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => onSongsViewChange('list')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                songsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              List
+            </button>
+          </div>
+          {songsView === 'cards' && (
+            <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+              {([3, 4, 5] as const).map(n => (
+                <button
+                  key={n}
+                  onClick={() => onGridSizeChange(n)}
+                  className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${
+                    gridSize === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                  title={`${n} per row`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {songsView === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className={`grid ${gridClasses[gridSize]} gap-4`}>
             {filteredSubmissions.map((submission) => {
               const track = trackFromSubmission(submission);
               const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
+              const isFavorited = favoritedSubmissionIds.includes(submission.id);
               return (
                 <div
                   key={submission.id}
                   onClick={() => onNavigate('song-detail', submission.id)}
-                  className="text-left bg-slate-50 border border-slate-100 rounded-2xl p-4 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer"
+                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
                 >
-                  <div className={`w-full aspect-square rounded-2xl overflow-hidden flex items-center justify-center text-2xl mb-4 relative ${
-                    bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'
-                  }`}>
+                  <div className="w-full aspect-square bg-slate-100 flex items-center justify-center overflow-hidden relative">
                     <ArtworkImage
                       fileId={submission.artworkFileId}
                       fallbackUrl={submission.artworkUrl}
                       alt={`${submission.title} artwork`}
-                      className="w-full h-full object-cover"
-                      fallback={<i className={`fa-solid fa-compact-disc ${bocaCount > 0 ? 'text-amber-500' : ''}`}></i>}
+                      className="w-full h-full object-contain bg-slate-100"
+                      fallback={<i className="fa-solid fa-compact-disc text-4xl text-indigo-400"></i>}
                     />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(submission.id); }}
+                      className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all z-10 ${
+                        isFavorited
+                          ? 'bg-red-500 text-white shadow-md'
+                          : 'bg-black/30 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-black/50'
+                      }`}
+                      title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-sm`}></i>
+                    </button>
                     {bocaCount > 0 && (
                       <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full font-bold text-[10px] flex items-center gap-1 shadow-md z-10">
                         <i className="fa-solid fa-star text-[8px]"></i>
                         {bocaCount} BOCA{bocaCount !== 1 ? 's' : ''}
                       </div>
                     )}
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{submission.title}</p>
-                      <p className="text-xs text-slate-500">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</p>
-                    </div>
                     {track && (
-                      <div className="flex gap-1.5 flex-shrink-0">
+                      <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                         <button
                           onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
                           disabled={playingTrackId === track.versionId}
-                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                          className="w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all disabled:opacity-70"
                           title="Play"
                         >
-                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-lg ml-0.5`}></i>
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
                           disabled={queueingTrackId === track.versionId}
-                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                          className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 flex items-center justify-center shadow-lg hover:bg-white hover:scale-105 transition-all disabled:opacity-70"
                           title="Add to queue"
                         >
-                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-sm`}></i>
                         </button>
                       </div>
                     )}
+                  </div>
+                  <div className="p-4">
+                    <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{submission.title}</h4>
+                    <p className="text-xs text-slate-500 mt-1">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</p>
                   </div>
                 </div>
               );
@@ -298,79 +366,93 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             )}
           </div>
         ) : (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-left">
               <thead className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3">Song</th>
                   <th className="px-4 py-3">Uploaded</th>
-                  <th className="px-4 py-3">Artwork</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-100">
                 {filteredSubmissions.map((submission) => {
                   const track = trackFromSubmission(submission);
                   const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
+                  const isFavorited = favoritedSubmissionIds.includes(submission.id);
                   return (
                     <tr
                       key={submission.id}
                       onClick={() => onNavigate('song-detail', submission.id)}
-                      className="cursor-pointer hover:bg-white transition-colors"
+                      className="cursor-pointer hover:bg-slate-50 transition-colors group"
                     >
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-700">{submission.title}</span>
-                          {bocaCount > 0 && (
-                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
-                              <i className="fa-solid fa-star text-[8px]"></i>
-                              {bocaCount}
-                            </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
+                            <ArtworkImage
+                              fileId={submission.artworkFileId}
+                              fallbackUrl={submission.artworkUrl}
+                              alt={`${submission.title} artwork`}
+                              className="w-full h-full object-cover"
+                              containerClassName="w-full h-full flex items-center justify-center"
+                              fallback={<i className="fa-solid fa-compact-disc text-indigo-400 text-sm"></i>}
+                            />
+                          </div>
+                          <div className="min-w-0 flex items-center gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 truncate">{submission.title}</p>
+                            </div>
+                            {bocaCount > 0 && (
+                              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                                <i className="fa-solid fa-star text-[8px]"></i>
+                                {bocaCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(submission.id); }}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                              isFavorited
+                                ? 'bg-red-50 text-red-500'
+                                : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+                            }`}
+                            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                          </button>
+                          {track && (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                                disabled={playingTrackId === track.versionId}
+                                className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                                title="Play"
+                              >
+                                <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                                disabled={queueingTrackId === track.versionId}
+                                className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                                title="Add to queue"
+                              >
+                                <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                              </button>
+                            </>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</td>
-                      <td className="px-4 py-3">
-                        <div className={`w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center ${
-                          bocaCount > 0 ? 'bg-amber-100 text-amber-500 ring-2 ring-amber-400' : 'bg-indigo-100 text-indigo-600'
-                        }`}>
-                          <ArtworkImage
-                            fileId={submission.artworkFileId}
-                            fallbackUrl={submission.artworkUrl}
-                            alt={`${submission.title} artwork`}
-                            className="w-full h-full object-cover"
-                            fallback={<i className={`fa-solid fa-compact-disc text-sm ${bocaCount > 0 ? 'text-amber-500' : ''}`}></i>}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {track && (
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                              disabled={playingTrackId === track.versionId}
-                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-                              title="Play"
-                            >
-                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-                              disabled={queueingTrackId === track.versionId}
-                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
-                              title="Add to queue"
-                            >
-                              <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
-                            </button>
-                          </div>
-                        )}
                       </td>
                     </tr>
                   );
                 })}
                 {filteredSubmissions.length === 0 && (
                   <tr>
-                    <td className="px-4 py-6 text-center text-slate-400" colSpan={4}>
+                    <td className="px-4 py-6 text-center text-slate-400" colSpan={3}>
                       {submissions.length > 0 ? (
                         <>
                           <p>No songs match your filters.</p>

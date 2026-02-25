@@ -23,9 +23,11 @@ interface SongDetailProps {
   onGiveBoca?: (submissionId: string) => Promise<void>;
   campers?: CamperProfile[];
   dateFormat: DateFormat;
+  isFavorited?: boolean;
+  onToggleFavorite?: (submissionId: string) => void;
 }
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat, isFavorited = false, onToggleFavorite }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -203,7 +205,22 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         {/* Metadata */}
         <div className="flex-1 min-w-0 w-full space-y-4 overflow-hidden">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
+              {onToggleFavorite && (
+                <button
+                  onClick={() => onToggleFavorite(submission.id)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                    isFavorited
+                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                      : 'bg-slate-100 text-slate-300 hover:text-red-400 hover:bg-red-50'
+                  }`}
+                  title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
+                </button>
+              )}
+            </div>
             <p className="text-sm mt-1">
               By{' '}
               <button

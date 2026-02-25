@@ -16,6 +16,7 @@ import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import InboxPage from './views/InboxPage';
 import BOCAsPage from './views/BOCAsPage';
+import FavoritesPage from './views/FavoritesPage';
 import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
 import * as googleService from './services/googleService';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
+  const [favoritedSubmissionIds, setFavoritedSubmissionIds] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bocas, setBocas] = useState<Boca[]>([]);
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
@@ -298,8 +300,11 @@ const App: React.FC = () => {
       if (profile?.email) {
         const upvoted = await googleService.fetchUserUpvotes(sId, profile.email);
         setUpvotedPromptIds(upvoted);
+        const favs = await googleService.fetchUserFavorites(sId, profile.email);
+        setFavoritedSubmissionIds(favs);
       } else {
         setUpvotedPromptIds([]);
+        setFavoritedSubmissionIds([]);
       }
       const bocasData = await googleService.fetchBocas(sId);
       setBocas(bocasData);
@@ -363,6 +368,8 @@ const App: React.FC = () => {
 
         const upvoted = await googleService.fetchUserUpvotes(spreadsheetId, userProfile.email);
         setUpvotedPromptIds(upvoted);
+        const favs = await googleService.fetchUserFavorites(spreadsheetId, userProfile.email);
+        setFavoritedSubmissionIds(favs);
       }
 
       const bocasData = await googleService.fetchBocas(spreadsheetId);
@@ -606,6 +613,31 @@ const App: React.FC = () => {
       setPrompts(prev => prev.map(p => p.id === prompt.id ? prompt : p));
       setUpvotedPromptIds(prev => prev.filter(id => id !== prompt.id));
       alert('Upvote failed to sync. Please try again.');
+    }
+  };
+
+  const handleToggleFavorite = async (submissionId: string) => {
+    if (!userProfile?.email || !spreadsheetId) return;
+    const isFavorited = favoritedSubmissionIds.includes(submissionId);
+    if (isFavorited) {
+      setFavoritedSubmissionIds(prev => prev.filter(id => id !== submissionId));
+      try {
+        await googleService.removeFavorite(spreadsheetId, userProfile.email, submissionId);
+      } catch (error) {
+        console.error('Failed to remove favorite', error);
+        setFavoritedSubmissionIds(prev => [...prev, submissionId]);
+      }
+    } else {
+      setFavoritedSubmissionIds(prev => [...prev, submissionId]);
+      try {
+        await googleService.appendFavorite(spreadsheetId, {
+          userEmail: userProfile.email,
+          submissionId
+        });
+      } catch (error) {
+        console.error('Failed to add favorite', error);
+        setFavoritedSubmissionIds(prev => prev.filter(id => id !== submissionId));
+      }
     }
   };
 
@@ -1086,7 +1118,11 @@ const App: React.FC = () => {
             comments={comments}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
             bocas={bocas}
             statusUpdates={statusUpdates}
             dateFormat={dateFormat}
@@ -1171,6 +1207,8 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
           />
         );
       case 'events':
@@ -1209,6 +1247,8 @@ const App: React.FC = () => {
             bocas={bocas}
             campers={campers}
             dateFormat={dateFormat}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
           />
         ) : null;
       case 'assignment-detail':
@@ -1237,6 +1277,8 @@ const App: React.FC = () => {
             bocas={bocas}
             campers={campers}
             dateFormat={dateFormat}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
           />
         ) : null;
       case 'song-detail':
@@ -1259,6 +1301,8 @@ const App: React.FC = () => {
             onGiveBoca={handleGiveBoca}
             campers={campers}
             dateFormat={dateFormat}
+            isFavorited={favoritedSubmissionIds.includes(s.id)}
+            onToggleFavorite={handleToggleFavorite}
           />
         ) : null;
       case 'bocas':
@@ -1278,6 +1322,25 @@ const App: React.FC = () => {
             sortBy={bocasSortBy}
             onSortByChange={setBocasSortBy}
             dateFormat={dateFormat}
+          />
+        );
+      case 'favorites':
+        return (
+          <FavoritesPage
+            submissions={submissions.filter(s => !s.deletedAt && favoritedSubmissionIds.includes(s.id))}
+            assignments={assignments.filter(a => !a.deletedAt)}
+            onViewDetail={(id) => navigateTo('song-detail', id)}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
+            onStartJukebox={handleStartJukebox}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
+            bocas={bocas}
+            dateFormat={dateFormat}
+            gridSize={submissionsGridSize}
+            onGridSizeChange={setSubmissionsGridSize}
           />
         );
       case 'semesters':
@@ -1312,7 +1375,12 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
+            onStartJukebox={handleStartJukebox}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
             dateFormat={dateFormat}
+            gridSize={submissionsGridSize}
+            onGridSizeChange={setSubmissionsGridSize}
           />
         ) : null;
       }
@@ -1346,14 +1414,19 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
+            onStartJukebox={handleStartJukebox}
             songsView={camperDetailSongsView}
             onSongsViewChange={setCamperDetailSongsView}
             searchTerm={camperDetailSearch}
             onSearchTermChange={setCamperDetailSearch}
             selectedTags={camperDetailSelectedTags}
             onSelectedTagsChange={setCamperDetailSelectedTags}
+            favoritedSubmissionIds={favoritedSubmissionIds}
+            onToggleFavorite={handleToggleFavorite}
             bocas={bocas}
             dateFormat={dateFormat}
+            gridSize={submissionsGridSize}
+            onGridSizeChange={setSubmissionsGridSize}
           />
         ) : null;
       default:
@@ -1435,6 +1508,8 @@ const App: React.FC = () => {
         if (tracks.length > 0) handleStartJukebox(tracks);
       }}
       currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}
+      isCurrentTrackFavorited={player?.submissionId ? favoritedSubmissionIds.includes(player.submissionId) : false}
+      onToggleFavorite={handleToggleFavorite}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

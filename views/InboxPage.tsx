@@ -12,7 +12,11 @@ interface InboxPageProps {
   comments?: CommentType[];
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
+  queueingTrackId?: string | null;
+  favoritedSubmissionIds: string[];
+  onToggleFavorite: (submissionId: string) => void;
   bocas?: Boca[];
   statusUpdates?: StatusUpdate[];
   dateFormat: DateFormat;
@@ -85,7 +89,7 @@ const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; si
   );
 };
 
-const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, playingTrackId, bocas = [], statusUpdates = [], dateFormat }) => {
+const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, favoritedSubmissionIds, onToggleFavorite, bocas = [], statusUpdates = [], dateFormat }) => {
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
   const [showFilters, setShowFilters] = useState(false);
@@ -286,6 +290,34 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                   </p>
                   {version.notes && <p className="text-xs text-slate-400 truncate mt-0.5">{version.notes}</p>}
                   <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(sub.id); }}
+                      className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                        favoritedSubmissionIds.includes(sub.id)
+                          ? 'text-red-500'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      <i className={`${favoritedSubmissionIds.includes(sub.id) ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                    </button>
+                    {track && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          disabled={playingTrackId === track.versionId}
+                          className="w-7 h-7 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center"
+                        >
+                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-[10px]`}></i>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          disabled={queueingTrackId === track.versionId}
+                          className="w-7 h-7 rounded-md text-slate-400 flex items-center justify-center"
+                        >
+                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-[10px]`}></i>
+                        </button>
+                      </>
+                    )}
                     <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                       <i className="fa-solid fa-music text-[8px]"></i>
                       Song
@@ -294,16 +326,39 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                   </div>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-                  {track && (
+                  <div className="flex gap-1">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                      disabled={playingTrackId === track.versionId}
-                      className={`w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors ${playingTrackId === track.versionId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                      title="Play"
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(sub.id); }}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        favoritedSubmissionIds.includes(sub.id)
+                          ? 'bg-red-50 text-red-500'
+                          : 'text-slate-300 hover:text-red-400 hover:bg-red-50 opacity-0 group-hover:opacity-100'
+                      }`}
+                      title={favoritedSubmissionIds.includes(sub.id) ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                      <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                      <i className={`${favoritedSubmissionIds.includes(sub.id) ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
                     </button>
-                  )}
+                    {track && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                          disabled={playingTrackId === track.versionId}
+                          className={`w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors ${playingTrackId === track.versionId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                          title="Play"
+                        >
+                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                          disabled={queueingTrackId === track.versionId}
+                          className={`w-8 h-8 rounded-lg text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors ${queueingTrackId === track.versionId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                          title="Add to queue"
+                        >
+                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-music text-[8px]"></i>
                     Song

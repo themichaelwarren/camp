@@ -27,9 +27,11 @@ interface LayoutProps {
   onLogout?: () => void;
   onStartJukebox?: () => void;
   currentTrackBocaCount?: number;
+  isCurrentTrackFavorited?: boolean;
+  onToggleFavorite?: (submissionId: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -53,6 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
     { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
     { id: 'submissions', label: 'Songs', icon: 'fa-music' },
+    { id: 'favorites', label: 'Favorites', icon: 'fa-heart' },
     { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
     { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
     { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
@@ -501,6 +504,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             isJukeboxMode={isJukeboxMode}
             onStopJukebox={onStopJukebox}
             bocaCount={currentTrackBocaCount}
+            isFavorited={isCurrentTrackFavorited}
+            onToggleFavorite={onToggleFavorite}
           />
         )}
 

@@ -26,6 +26,8 @@ interface PromptDetailProps {
   bocas?: Boca[];
   campers?: CamperProfile[];
   dateFormat: DateFormat;
+  favoritedSubmissionIds: string[];
+  onToggleFavorite: (submissionId: string) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -33,7 +35,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -198,6 +200,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
               {submissions.map(s => {
                 const track = trackFromSubmission(s);
                 const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
+                const isFavorited = favoritedSubmissionIds.includes(s.id);
                 return (
                   <div
                     key={s.id}
@@ -219,27 +222,40 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                       </div>
                       <p className="text-xs text-slate-500">by {s.camperName}</p>
                     </div>
-                    {track && (
-                      <div className="flex gap-1.5 flex-shrink-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                          disabled={playingTrackId === track.versionId}
-                          className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-                          title="Play"
-                        >
-                          <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-                          disabled={queueingTrackId === track.versionId}
-                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
-                          title="Add to queue"
-                        >
-                          <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
-                        </button>
-                      </div>
-                    )}
-                    <div className="text-right flex-shrink-0">
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          isFavorited
+                            ? 'bg-red-50 text-red-500'
+                            : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+                        }`}
+                        title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                      </button>
+                      {track && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                            disabled={playingTrackId === track.versionId}
+                            className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                            title="Play"
+                          >
+                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                            disabled={queueingTrackId === track.versionId}
+                            className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                            title="Add to queue"
+                          >
+                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0 hidden sm:block">
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Last Update</p>
                       <p className="text-xs font-semibold text-slate-700">{formatDate(s.updatedAt, dateFormat)}</p>
                     </div>

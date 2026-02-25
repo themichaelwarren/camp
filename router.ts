@@ -41,6 +41,7 @@ const VIEW_TO_SEGMENT: Record<string, string> = {
   campers: 'campers',
   settings: 'settings',
   bocas: 'bocas',
+  favorites: 'favorites',
   semesters: 'semesters',
 };
 
@@ -63,6 +64,7 @@ const SEGMENT_TO_VIEW: Record<string, ViewState> = {
   campers: 'campers',
   settings: 'settings',
   bocas: 'bocas',
+  favorites: 'favorites',
   semesters: 'semesters',
 };
 
@@ -174,6 +176,7 @@ const VIEW_TITLES: Record<string, string> = {
   campers: 'Campers',
   settings: 'Settings',
   bocas: 'BOCAs',
+  favorites: 'Favorites',
   semesters: 'Semesters',
 };
 

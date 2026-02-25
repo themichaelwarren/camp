@@ -33,6 +33,8 @@ interface AssignmentDetailProps {
   bocas?: Boca[];
   campers?: CamperProfile[];
   dateFormat: DateFormat;
+  favoritedSubmissionIds: string[];
+  onToggleFavorite: (submissionId: string) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -40,7 +42,7 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
   return { versionId: sub.versions[0].id, title: sub.title, artist: sub.camperName, camperId: sub.camperId, submissionId: sub.id, artworkFileId: sub.artworkFileId, artworkUrl: sub.artworkUrl };
 };
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -312,6 +314,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               {submissions.map(s => {
                 const track = trackFromSubmission(s);
                 const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
+                const isFavorited = favoritedSubmissionIds.includes(s.id);
                 return (
                   <div
                     key={s.id}
@@ -334,26 +337,39 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                         </div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase">{s.camperName}</p>
                       </div>
-                      {track && (
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                            disabled={playingTrackId === track.versionId}
-                            className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-                            title="Play"
-                          >
-                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-                            disabled={queueingTrackId === track.versionId}
-                            className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
-                            title="Add to queue"
-                          >
-                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                            isFavorited
+                              ? 'bg-red-50 text-red-500'
+                              : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+                          }`}
+                          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                        </button>
+                        {track && (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              disabled={playingTrackId === track.versionId}
+                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
+                              title="Play"
+                            >
+                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
+                              disabled={queueingTrackId === track.versionId}
+                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                              title="Add to queue"
+                            >
+                              <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 h-16 overflow-hidden">
                       <p className="text-[10px] font-serif italic text-slate-500 line-clamp-2">

@@ -28,6 +28,8 @@ interface NowPlayingOverlayProps {
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
   bocaCount?: number;
+  isFavorited?: boolean;
+  onToggleFavorite?: (submissionId: string) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -51,9 +53,12 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onNavigateToAssignment,
   isJukeboxMode,
   onStopJukebox,
-  bocaCount
+  bocaCount,
+  isFavorited,
+  onToggleFavorite
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showQueue, setShowQueue] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -252,25 +257,51 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     <p className="text-slate-400 text-xs xl:text-sm truncate mt-0.5">{player.assignmentTitle}</p>
                   )
                 )}
-                {!!bocaCount && bocaCount > 0 && (
-                  <span className="inline-flex items-center gap-0.5 mt-2 text-amber-500">
-                    {Array.from({ length: bocaCount }, (_, i) => (
-                      <i key={i} className="fa-solid fa-star text-sm"></i>
-                    ))}
-                  </span>
-                )}
+                {/* Action row — BOCA, heart, queue toggle, jukebox — all inline */}
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  {!!bocaCount && bocaCount > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-amber-500">
+                      {Array.from({ length: bocaCount }, (_, i) => (
+                        <i key={i} className="fa-solid fa-star text-sm"></i>
+                      ))}
+                    </span>
+                  )}
+                  {onToggleFavorite && player.submissionId && (
+                    <button
+                      onClick={() => onToggleFavorite(player.submissionId!)}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                        isFavorited
+                          ? 'text-red-500 hover:bg-red-50'
+                          : 'text-slate-300 hover:text-red-400 hover:bg-red-50'
+                      }`}
+                      title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-base`}></i>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowQueue(prev => !prev)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                      showQueue
+                        ? 'text-indigo-600 hover:bg-indigo-50'
+                        : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                    }`}
+                    title={showQueue ? 'Hide queue' : 'Show queue'}
+                  >
+                    <i className="fa-solid fa-list text-sm"></i>
+                  </button>
+                  {isJukeboxMode && (
+                    <button
+                      onClick={onStopJukebox}
+                      className="flex items-center gap-1.5 bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[10px] font-bold hover:bg-amber-100 transition-colors"
+                    >
+                      <i className="fa-solid fa-shuffle text-[10px]"></i>
+                      Jukebox
+                      <i className="fa-solid fa-xmark text-[9px]"></i>
+                    </button>
+                  )}
+                </div>
               </div>
-
-              {isJukeboxMode && (
-                <button
-                  onClick={onStopJukebox}
-                  className="mt-2 flex items-center gap-2 bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors"
-                >
-                  <i className="fa-solid fa-shuffle"></i>
-                  Jukebox Mode
-                  <i className="fa-solid fa-xmark ml-1"></i>
-                </button>
-              )}
 
               {/* Seek Bar */}
               <div className="w-full mt-4 xl:mt-5">
@@ -335,8 +366,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               </div>
             </div>
 
-            {/* Right: Queue — keep column mounted in jukebox mode to avoid layout shift */}
-            {(queue.length > 0 || isJukeboxMode) && (
+            {/* Right: Queue — toggleable, keep column mounted in jukebox mode to avoid layout shift */}
+            {showQueue && (queue.length > 0 || isJukeboxMode) && (
               <div className="w-full max-w-sm border-t border-slate-200 pt-4 mt-2 md:border-t-0 md:border-l md:pt-0 md:mt-0 md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-w-none md:flex-shrink-0 md:max-h-[70vh] md:overflow-y-auto md:py-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Up Next</p>
                 {queue.length > 0 ? (
