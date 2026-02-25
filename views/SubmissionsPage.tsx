@@ -31,6 +31,8 @@ interface SubmissionsPageProps {
   onSemesterFilterChange: (value: string) => void;
   bocas: Boca[];
   dateFormat: DateFormat;
+  gridSize: 3 | 4 | 5;
+  onGridSizeChange: (value: 3 | 4 | 5) => void;
 }
 
 const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
@@ -40,7 +42,13 @@ const trackFromSubmission = (sub: Submission): PlayableTrack | null => {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat }) => {
+const gridClasses: Record<3 | 4 | 5, string> = {
+  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
+};
+
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -397,25 +405,43 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         </div>
       </div>
 
-      {/* View toggle + results count */}
+      {/* View toggle + grid size + results count */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
-          <button
-            onClick={() => onViewModeChange('cards')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Cards
-          </button>
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            List
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+            <button
+              onClick={() => onViewModeChange('cards')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => onViewModeChange('list')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              List
+            </button>
+          </div>
+          {viewMode === 'cards' && (
+            <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+              {([3, 4, 5] as const).map(n => (
+                <button
+                  key={n}
+                  onClick={() => onGridSizeChange(n)}
+                  className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${
+                    gridSize === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                  title={`${n} per row`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {hasActiveFilters && (
           <p className="text-xs text-slate-400 font-medium">
@@ -459,7 +485,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             groupedBySemester.map(([term, items]) => (
               <React.Fragment key={term}>
                 <div className="text-sm font-bold text-slate-400 uppercase tracking-widest pt-4 first:pt-0">{term}</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className={`grid ${gridClasses[gridSize]} gap-4`}>
                   {items.map(sub => {
                     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
                     const track = trackFromSubmission(sub);
@@ -470,7 +496,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               </React.Fragment>
             ))
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className={`grid ${gridClasses[gridSize]} gap-4`}>
               {filteredSubmissions.map(sub => {
                 const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
                 const track = trackFromSubmission(sub);

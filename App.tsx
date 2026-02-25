@@ -57,6 +57,11 @@ const App: React.FC = () => {
   const [assignmentsSortBy, setAssignmentsSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc'>('due-asc');
   const [assignmentsSemesterFilter, setAssignmentsSemesterFilter] = useState('all');
   const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('list');
+  const [submissionsGridSize, setSubmissionsGridSize] = useState<3 | 4 | 5>(() => {
+    const stored = window.localStorage.getItem('camp-songs-grid');
+    if (stored === '3' || stored === '4' || stored === '5') return Number(stored) as 3 | 4 | 5;
+    return 3;
+  });
   const [submissionsSearch, setSubmissionsSearch] = useState('');
   const [submissionsAssignmentFilter, setSubmissionsAssignmentFilter] = useState('all');
   const [submissionsPromptFilter, setSubmissionsPromptFilter] = useState('all');
@@ -77,6 +82,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentId?: string;
     assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -90,6 +96,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentId?: string;
     assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -184,6 +191,10 @@ const App: React.FC = () => {
   useEffect(() => {
     window.localStorage.setItem('camp-date-format', dateFormat);
   }, [dateFormat]);
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-songs-grid', String(submissionsGridSize));
+  }, [submissionsGridSize]);
 
   useEffect(() => {
     window.localStorage.setItem('camp-remember', rememberMe ? '1' : '0');
@@ -779,11 +790,12 @@ const App: React.FC = () => {
     }
   };
 
-  const getAssignmentTitle = (submissionId?: string): string | undefined => {
-    if (!submissionId) return undefined;
+  const getAssignmentInfo = (submissionId?: string): { id?: string; title?: string } => {
+    if (!submissionId) return {};
     const sub = submissions.find(s => s.id === submissionId);
-    if (!sub?.assignmentId) return undefined;
-    return assignments.find(a => a.id === sub.assignmentId)?.title;
+    if (!sub?.assignmentId) return {};
+    const a = assignments.find(a => a.id === sub.assignmentId);
+    return a ? { id: a.id, title: a.title } : {};
   };
 
   const handlePlayTrack = async (track: {
@@ -792,12 +804,15 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentId?: string;
     assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
     setPlayingTrackId(track.versionId);
-    const assignmentTitle = track.assignmentTitle || getAssignmentTitle(track.submissionId);
+    const info = getAssignmentInfo(track.submissionId);
+    const assignmentId = track.assignmentId || info.id;
+    const assignmentTitle = track.assignmentTitle || info.title;
     // Show player immediately with track info while audio loads
     setPlayer({
       src: '',
@@ -805,6 +820,7 @@ const App: React.FC = () => {
       artist: track.artist,
       camperId: track.camperId,
       submissionId: track.submissionId,
+      assignmentId,
       assignmentTitle,
       artworkFileId: track.artworkFileId,
       artworkUrl: track.artworkUrl
@@ -823,6 +839,7 @@ const App: React.FC = () => {
         artist: track.artist,
         camperId: track.camperId,
         submissionId: track.submissionId,
+        assignmentId,
         assignmentTitle,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
@@ -866,6 +883,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    assignmentId?: string;
     assignmentTitle?: string;
     artworkFileId?: string;
     artworkUrl?: string;
@@ -874,13 +892,16 @@ const App: React.FC = () => {
     try {
       const blob = await googleService.fetchDriveFile(track.versionId);
       const url = URL.createObjectURL(blob);
-      const assignmentTitle = track.assignmentTitle || getAssignmentTitle(track.submissionId);
+      const info = getAssignmentInfo(track.submissionId);
+      const assignmentId = track.assignmentId || info.id;
+      const assignmentTitle = track.assignmentTitle || info.title;
       setQueue(prev => [...prev, {
         src: url,
         title: track.title,
         artist: track.artist,
         camperId: track.camperId,
         submissionId: track.submissionId,
+        assignmentId,
         assignmentTitle,
         artworkFileId: track.artworkFileId,
         artworkUrl: track.artworkUrl
@@ -1148,6 +1169,8 @@ const App: React.FC = () => {
             onSemesterFilterChange={setSubmissionsSemesterFilter}
             bocas={bocas}
             dateFormat={dateFormat}
+            gridSize={submissionsGridSize}
+            onGridSizeChange={setSubmissionsGridSize}
           />
         );
       case 'events':
@@ -1394,6 +1417,7 @@ const App: React.FC = () => {
       onReorderQueue={handleReorderQueue}
       onNavigateToSong={(id) => navigateTo('song-detail', id)}
       onNavigateToCamper={(id) => navigateTo('camper-detail', id)}
+      onNavigateToAssignment={(id) => navigateTo('assignment-detail', id)}
       isJukeboxMode={isJukeboxMode}
       onStopJukebox={handleStopJukebox}
       onStartJukebox={() => {

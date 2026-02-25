@@ -24,6 +24,7 @@ interface NowPlayingOverlayProps {
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
   onNavigateToCamper?: (camperId: string) => void;
+  onNavigateToAssignment?: (assignmentId: string) => void;
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
   bocaCount?: number;
@@ -47,6 +48,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onReorderQueue,
   onNavigateToSong,
   onNavigateToCamper,
+  onNavigateToAssignment,
   isJukeboxMode,
   onStopJukebox,
   bocaCount
@@ -239,7 +241,16 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                   <p className="text-slate-500 text-sm xl:text-base font-medium truncate mt-0.5">{player.artist}</p>
                 )}
                 {player.assignmentTitle && (
-                  <p className="text-slate-400 text-xs xl:text-sm truncate mt-0.5">{player.assignmentTitle}</p>
+                  player.assignmentId ? (
+                    <button
+                      onClick={() => onNavigateToAssignment?.(player.assignmentId!)}
+                      className="text-slate-400 text-xs xl:text-sm truncate block mx-auto hover:text-indigo-600 hover:underline max-w-full mt-0.5"
+                    >
+                      {player.assignmentTitle}
+                    </button>
+                  ) : (
+                    <p className="text-slate-400 text-xs xl:text-sm truncate mt-0.5">{player.assignmentTitle}</p>
+                  )
                 )}
                 {!!bocaCount && bocaCount > 0 && (
                   <span className="inline-flex items-center gap-0.5 mt-2 text-amber-500">

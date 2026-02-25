@@ -14,13 +14,14 @@ interface LayoutProps {
   isLoggedIn?: boolean;
   isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
-  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
-  queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
+  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
+  queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onNavigateToSong?: (submissionId: string) => void;
   onNavigateToCamper?: (camperId: string) => void;
+  onNavigateToAssignment?: (assignmentId: string) => void;
   isJukeboxMode?: boolean;
   onStopJukebox?: () => void;
   onLogout?: () => void;
@@ -28,7 +29,7 @@ interface LayoutProps {
   currentTrackBocaCount?: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -496,6 +497,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
             onNavigateToSong={(id) => { onNavigateToSong?.(id); setShowNowPlaying(false); }}
             onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); }}
+            onNavigateToAssignment={(id) => { onNavigateToAssignment?.(id); setShowNowPlaying(false); }}
             isJukeboxMode={isJukeboxMode}
             onStopJukebox={onStopJukebox}
             bocaCount={currentTrackBocaCount}
