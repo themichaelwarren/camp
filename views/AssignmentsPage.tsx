@@ -485,7 +485,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="overflow-hidden">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
                     <input
                       type="date"
@@ -494,7 +494,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                       onChange={e => setForm({...form, startDate: e.target.value})}
                     />
                   </div>
-                  <div>
+                  <div className="overflow-hidden">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
                     <input
                       required

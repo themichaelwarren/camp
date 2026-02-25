@@ -29,6 +29,14 @@
         h1, h2, h3, .font-display {
             font-family: 'Outfit', sans-serif;
         }
+        /* iOS Safari: prevent native date picker from overflowing container */
+        input[type="date"],
+        input[type="datetime-local"] {
+            max-width: 100%;
+            min-width: 0;
+            -webkit-appearance: none;
+            appearance: none;
+        }
         .animate-pulse-slow {
             animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }

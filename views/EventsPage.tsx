@@ -454,7 +454,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="overflow-hidden">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
                     <input
                       required
@@ -465,7 +465,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                     />
                   </div>
 
-                  <div>
+                  <div className="overflow-hidden">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
                     <input
                       required
