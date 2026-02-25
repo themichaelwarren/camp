@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration } from '../types';
+import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration, CamperProfile } from '../types';
 import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -10,6 +10,7 @@ interface SemesterDetailProps {
   submissions: Submission[];
   prompts: Prompt[];
   bocas: Boca[];
+  campers: CamperProfile[];
   onNavigate: (view: ViewState, id?: string | null) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
@@ -30,7 +31,7 @@ const gridClasses: Record<3 | 4 | 5, string> = {
   5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, campers, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   // Unique prompts used this semester (from assignments' promptIds)
@@ -47,6 +48,33 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
     [...assignments].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
     [assignments]
   );
+
+  // Campers who participated this semester (submitted at least one song)
+  const semesterCampers = useMemo((): CamperProfile[] => {
+    const matched: CamperProfile[] = [];
+    const matchedIds = new Set<string>();
+    const allCamperIds = new Set(submissions.map(s => s.camperId || s.camperName));
+
+    allCamperIds.forEach(cid => {
+      const profile = campers.find(c => c.email === cid || c.id === cid || c.name === cid);
+      if (profile) {
+        if (!matchedIds.has(profile.email)) {
+          matched.push(profile);
+          matchedIds.add(profile.email);
+        }
+      } else {
+        // Camper submitted but has no profile (hasn't signed in)
+        const sub = submissions.find(s => (s.camperId || s.camperName) === cid);
+        matched.push({
+          id: cid,
+          name: sub?.camperName || cid,
+          email: cid,
+          lastSignedInAt: '',
+        });
+      }
+    });
+    return matched;
+  }, [submissions, campers]);
 
   const getSubmissionDate = (sub: Submission): string => {
     return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;
@@ -245,11 +273,56 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{semester}</h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              {new Set(submissions.map(s => s.camperId || s.camperName)).size} camper{new Set(submissions.map(s => s.camperId || s.camperName)).size !== 1 ? 's' : ''} · {assignments.length} assignment{assignments.length !== 1 ? 's' : ''} · {submissions.length} song{submissions.length !== 1 ? 's' : ''} · {semesterPrompts.length} prompt{semesterPrompts.length !== 1 ? 's' : ''}
+              {semesterCampers.length} camper{semesterCampers.length !== 1 ? 's' : ''} · {assignments.length} assignment{assignments.length !== 1 ? 's' : ''} · {submissions.length} song{submissions.length !== 1 ? 's' : ''} · {semesterPrompts.length} prompt{semesterPrompts.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Campers Section */}
+      {semesterCampers.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <i className="fa-solid fa-users text-indigo-500 text-sm"></i>
+            Campers
+            <span className="text-sm font-normal text-slate-400">({semesterCampers.length})</span>
+          </h2>
+          <div className="flex flex-wrap gap-4">
+            {semesterCampers.map(c => {
+              const songCount = submissions.filter(s => s.camperId === c.email || s.camperId === c.id).length;
+              return (
+                <button
+                  key={c.id || c.email}
+                  onClick={() => onNavigate('camper-detail', c.id || c.email)}
+                  className="flex flex-col items-center gap-2 w-24 group"
+                >
+                  {c.pictureOverrideUrl || c.picture ? (
+                    <ArtworkImage
+                      fileId={undefined}
+                      fallbackUrl={c.pictureOverrideUrl || c.picture}
+                      alt={c.name}
+                      className="w-16 h-16 rounded-full object-cover ring-2 ring-slate-100 group-hover:ring-indigo-300 transition-all group-hover:scale-105"
+                      fallback={
+                        <div className="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold ring-2 ring-slate-100">
+                          {c.name?.[0] || 'C'}
+                        </div>
+                      }
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold ring-2 ring-slate-100 group-hover:ring-indigo-300 transition-all group-hover:scale-105">
+                      {c.name?.[0] || 'C'}
+                    </div>
+                  )}
+                  <div className="text-center min-w-0 w-full">
+                    <p className="text-xs font-semibold text-slate-800 truncate">{c.name || 'Unknown'}</p>
+                    <p className="text-[10px] text-slate-400">{songCount} song{songCount !== 1 ? 's' : ''}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Assignments Section */}
       <section className="mb-10">

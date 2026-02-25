@@ -1,4 +1,5 @@
 import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole } from '../types';
+import { getTerm } from '../utils';
 
 // Global declaration for the Google Identity Services script
 declare var google: any;
@@ -197,7 +198,7 @@ export const findOrCreateDatabase = async () => {
   }
 
   const usersHeader = headerValues[3]?.values?.[0] || [];
-  if (usersHeader.length < 9) {
+  if (usersHeader.length < 10) {
     await updateSheetRows(SPREADSHEET_ID, 'Users!A1', [[
       'id',
       'name',
@@ -207,7 +208,8 @@ export const findOrCreateDatabase = async () => {
       'location',
       'status',
       'pictureOverrideUrl',
-      'statusUpdatedAt'
+      'statusUpdatedAt',
+      'intakeSemester'
     ]]);
   }
 
@@ -451,7 +453,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'Assignments!A2:M1000',
     'Submissions!A2:Q1000',
     'Comments!A2:J5000',
-    'Users!A2:I1000',
+    'Users!A2:J1000',
     'Events!A2:O5000',
     'Tags!A2:C1000',
     'PromptUpvotes!A2:E5000',
@@ -564,7 +566,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     location: row[5] || '',
     status: row[6] || '',
     pictureOverrideUrl: row[7] || '',
-    statusUpdatedAt: row[8] || ''
+    statusUpdatedAt: row[8] || '',
+    intakeSemester: row[9] || ''
   }));
 
   const events: Event[] = eventsRaw.map((row: any[]) => ({
@@ -625,12 +628,13 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
   const now = new Date().toISOString();
   const existingRow = rowIndex === -1 ? [] : rows[rowIndex];
+  const isNew = rowIndex === -1;
   const rowValues = [[
     profile.id,
     profile.name,
@@ -640,20 +644,21 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
     existingRow[5] || '',
     existingRow[6] || '',
     existingRow[7] || '',
-    existingRow[8] || ''
+    existingRow[8] || '',
+    isNew ? getTerm(now) : (existingRow[9] || '')
   ]];
 
-  if (rowIndex === -1) {
+  if (isNew) {
     return appendSheetRow(spreadsheetId, 'Users!A1', rowValues);
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:I${sheetRow}`;
+  const range = `Users!A${sheetRow}:J${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
   const result = await callGoogleApi(url);
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
@@ -665,15 +670,16 @@ export const fetchCampers = async (spreadsheetId: string) => {
     location: row[5] || '',
     status: row[6] || '',
     pictureOverrideUrl: row[7] || '',
-    statusUpdatedAt: row[8] || ''
+    statusUpdatedAt: row[8] || '',
+    intakeSemester: row[9] || ''
   }));
 };
 
 export const updateUserProfileDetails = async (
   spreadsheetId: string,
-  data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string }
+  data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }
 ) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:I1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === data.id || row[2] === data.email);
@@ -695,11 +701,12 @@ export const updateUserProfileDetails = async (
     data.location || existingRow[5] || '',
     newStatus,
     data.pictureOverrideUrl || existingRow[7] || '',
-    statusUpdatedAt
+    statusUpdatedAt,
+    data.intakeSemester || existingRow[9] || ''
   ]];
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:I${sheetRow}`;
+  const range = `Users!A${sheetRow}:J${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 

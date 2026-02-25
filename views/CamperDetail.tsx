@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, Collaboration } from '../types';
-import { getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { getTerm, getTermSortKey, isCurrentOrFutureTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -61,6 +61,15 @@ const gridClasses: Record<3 | 4 | 5, string> = {
 const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
+
+  const earnedSemesters = useMemo(() => {
+    const terms = new Set<string>();
+    submissions.forEach(sub => {
+      const a = assignments.find(a => a.id === sub.assignmentId);
+      if (a) terms.add(getTerm(a.dueDate));
+    });
+    return Array.from(terms).sort((a, b) => getTermSortKey(a) - getTermSortKey(b));
+  }, [submissions, assignments]);
 
   const allSubmissionTags = useMemo(() => {
     const tags = new Set<string>();
@@ -135,7 +144,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <h3 className="text-lg font-bold text-slate-800">Profile</h3>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Location</p>
             <p className="text-slate-700 font-semibold mt-2">{camper.location || '—'}</p>
@@ -145,12 +154,42 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             <p className="text-slate-700 font-semibold mt-2">{camper.status || '—'}</p>
           </div>
           <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Intake Semester</p>
+            <p className="text-slate-700 font-semibold mt-2 flex items-center gap-1.5">
+              <i className="fa-solid fa-graduation-cap text-indigo-400 text-xs"></i>
+              {camper.intakeSemester || '—'}
+            </p>
+          </div>
+          <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Last Signed In</p>
             <p className="text-slate-700 font-semibold mt-2">
               {camper.lastSignedInAt ? new Date(camper.lastSignedInAt).toLocaleString() : '—'}
             </p>
           </div>
         </div>
+        {earnedSemesters.length > 0 && (
+          <div className="mt-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Semesters</p>
+            <div className="flex flex-wrap gap-2">
+              {earnedSemesters.map(term => {
+                const isIntake = term === camper.intakeSemester;
+                const style = getSeasonStyle(term);
+                return (
+                  <button
+                    key={term}
+                    onClick={() => onNavigate('semester-detail', term)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text} ${
+                      isIntake ? 'ring-2 ring-offset-1 ring-current' : ''
+                    }`}
+                  >
+                    <i className={`fa-solid ${isIntake ? 'fa-seedling' : style.icon} text-xs`}></i>
+                    {term}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">

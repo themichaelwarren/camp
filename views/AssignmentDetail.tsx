@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, isCurrentOrFutureTerm } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -40,6 +40,7 @@ interface AssignmentDetailProps {
 }
 
 const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [], onAddCollaborators }) => {
+  const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -224,13 +225,21 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowSubmitModal(true)}
-            className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-cloud-arrow-up"></i>
-            Submit Song
-          </button>
+          {!isPastSemester && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-cloud-arrow-up"></i>
+              Submit Song
+            </button>
+          )}
+          {isPastSemester && (
+            <span className="flex items-center gap-2 text-slate-400 text-sm font-medium px-4 py-2.5">
+              <i className="fa-solid fa-lock text-xs"></i>
+              Past semester
+            </span>
+          )}
           <button
             onClick={() => setShowEditModal(true)}
             className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"

@@ -73,6 +73,7 @@ export interface CamperProfile {
   status?: string;
   pictureOverrideUrl?: string;
   statusUpdatedAt?: string;
+  intakeSemester?: string;
 }
 
 export interface Comment {

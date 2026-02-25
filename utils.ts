@@ -26,6 +26,21 @@ export function getTermSortKey(term: string): number {
   return parseInt(year) * 10 + (SEASON_ORDER[season] ?? 0);
 }
 
+export function isCurrentOrFutureTerm(term: string): boolean {
+  return getTermSortKey(term) >= getTermSortKey(getTerm(new Date().toISOString()));
+}
+
+export function getSeasonStyle(term: string): { bg: string; text: string; icon: string } {
+  const season = term.split(' ')[0];
+  switch (season) {
+    case 'Winter': return { bg: 'bg-sky-100', text: 'text-sky-700', icon: 'fa-snowflake' };
+    case 'Spring': return { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'fa-leaf' };
+    case 'Summer': return { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'fa-sun' };
+    case 'Fall':   return { bg: 'bg-orange-100', text: 'text-orange-700', icon: 'fa-wind' };
+    default:       return { bg: 'bg-slate-100', text: 'text-slate-600', icon: 'fa-calendar' };
+  }
+}
+
 export function getPromptStatus(promptId: string, assignments: Assignment[]): PromptStatus {
   const relevant = assignments.filter(
     a => !a.deletedAt && (a.promptIds?.includes(promptId) || a.promptId === promptId)

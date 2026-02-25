@@ -53,6 +53,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                 <th className="px-6 py-4">Camper</th>
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Intake</th>
                 <th className="px-6 py-4">Last Seen</th>
               </tr>
             </thead>
@@ -90,6 +91,14 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{camper.location || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{camper.status || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {camper.intakeSemester ? (
+                      <span className="inline-flex items-center gap-1">
+                        <i className="fa-solid fa-graduation-cap text-indigo-400 text-[10px]"></i>
+                        {camper.intakeSemester}
+                      </span>
+                    ) : '—'}
+                  </td>
                   <td className="px-6 py-4 text-sm text-slate-500">
                     {camper.lastSignedInAt ? formatDate(camper.lastSignedInAt, dateFormat) : '—'}
                   </td>
@@ -97,7 +106,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
               ))}
               {campers.length === 0 && (
                 <tr>
-                  <td className="px-6 py-10 text-center text-slate-400" colSpan={4}>
+                  <td className="px-6 py-10 text-center text-slate-400" colSpan={5}>
                     No campers found yet.
                   </td>
                 </tr>
@@ -144,6 +153,17 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Status</span>
                   <span className="text-slate-600">{camper.status || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Intake</span>
+                  <span className="text-slate-600">
+                    {camper.intakeSemester ? (
+                      <span className="inline-flex items-center gap-1">
+                        <i className="fa-solid fa-graduation-cap text-indigo-400 text-[10px]"></i>
+                        {camper.intakeSemester}
+                      </span>
+                    ) : '—'}
+                  </span>
                 </div>
               </div>
             </div>

@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [favoritedSubmissionIds, setFavoritedSubmissionIds] = useState<string[]>([]);
@@ -294,11 +294,28 @@ const App: React.FC = () => {
         setFavoritedSubmissionIds(data.favoritedSubmissionIds);
         const match = data.campers.find((camper) => camper.email === profile.email);
         if (match) {
+          let intakeSemester = match.intakeSemester;
+          // Backfill: if no intake semester, compute from earliest submission
+          if (!intakeSemester) {
+            const userSubs = data.submissions.filter(s => s.camperId === profile.email && !s.deletedAt);
+            if (userSubs.length > 0) {
+              const earliest = userSubs.reduce((min, s) => {
+                const date = s.versions?.length ? s.versions[0].timestamp : s.updatedAt;
+                return date < min ? date : min;
+              }, userSubs[0].versions?.length ? userSubs[0].versions[0].timestamp : userSubs[0].updatedAt);
+              intakeSemester = getTerm(earliest);
+            } else {
+              intakeSemester = getTerm(new Date().toISOString());
+            }
+            // Persist to sheet
+            googleService.updateUserProfileDetails(sId, { id: match.id, email: match.email, intakeSemester }).catch(() => {});
+          }
           setUserProfile((prev) => ({
             ...prev,
             location: match.location,
             status: match.status,
-            pictureOverrideUrl: match.pictureOverrideUrl
+            pictureOverrideUrl: match.pictureOverrideUrl,
+            intakeSemester
           }));
         }
       } else {
@@ -354,7 +371,8 @@ const App: React.FC = () => {
             ...prev,
             location: match.location,
             status: match.status,
-            pictureOverrideUrl: match.pictureOverrideUrl
+            pictureOverrideUrl: match.pictureOverrideUrl,
+            intakeSemester: match.intakeSemester || prev?.intakeSemester
           }));
         }
       }
@@ -1054,7 +1072,7 @@ const App: React.FC = () => {
     jukeboxPoolRef.current = [];
   };
 
-  const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => {
+  const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }) => {
     if (!spreadsheetId || !userProfile?.email) return;
     try {
       await googleService.updateUserProfileDetails(spreadsheetId, {
@@ -1063,13 +1081,15 @@ const App: React.FC = () => {
         name: userProfile.name,
         location: updates.location,
         status: updates.status,
-        pictureOverrideUrl: updates.pictureOverrideUrl
+        pictureOverrideUrl: updates.pictureOverrideUrl,
+        intakeSemester: updates.intakeSemester
       });
       setUserProfile((prev) => ({
         ...prev,
         location: updates.location ?? prev?.location,
         status: updates.status ?? prev?.status,
-        pictureOverrideUrl: updates.pictureOverrideUrl ?? prev?.pictureOverrideUrl
+        pictureOverrideUrl: updates.pictureOverrideUrl ?? prev?.pictureOverrideUrl,
+        intakeSemester: updates.intakeSemester ?? prev?.intakeSemester
       }));
       const statusChanged = updates.status !== undefined && updates.status !== userProfile?.status;
       setCampers((prev) =>
@@ -1080,6 +1100,7 @@ const App: React.FC = () => {
                 location: updates.location ?? camper.location,
                 status: updates.status ?? camper.status,
                 pictureOverrideUrl: updates.pictureOverrideUrl ?? camper.pictureOverrideUrl,
+                intakeSemester: updates.intakeSemester ?? camper.intakeSemester,
               }
             : camper
         )
@@ -1405,6 +1426,7 @@ const App: React.FC = () => {
             submissions={semSubmissions}
             prompts={prompts.filter(p => !p.deletedAt)}
             bocas={bocas}
+            campers={campers}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -1432,6 +1454,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             onDateFormatChange={setDateFormat}
             submissions={submissions}
+            allSemesters={allSemesters}
           />
         );
       case 'changelog':

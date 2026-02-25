@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Submission, SongVersion, CamperProfile, CollaboratorRole } from '../types';
+import { getTerm, isCurrentOrFutureTerm } from '../utils';
 import * as googleService from '../services/googleService';
 
 interface SubmitSongModalProps {
@@ -176,7 +177,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                     onChange={e => setForm({...form, assignmentId: e.target.value})}
                   >
                     <option value="">Select project...</option>
-                    {assignments.map(a => (
+                    {assignments.filter(a => isCurrentOrFutureTerm(getTerm(a.dueDate))).map(a => (
                       <option key={a.id} value={a.id}>{a.title}</option>
                     ))}
                   </select>

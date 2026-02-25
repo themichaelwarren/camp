@@ -12,16 +12,18 @@ interface SettingsPageProps {
   onThemeChange: (value: 'light' | 'dark' | 'system') => void;
   dateFormat: DateFormat;
   onDateFormatChange: (value: DateFormat) => void;
-  userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string } | null;
-  onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string }) => void;
+  userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null;
+  onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }) => void;
   rememberMe: boolean;
   onRememberMeChange: (value: boolean) => void;
   submissions?: Submission[];
+  allSemesters?: string[];
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [] }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [], allSemesters = [] }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
+  const [intakeSemester, setIntakeSemester] = useState(userProfile?.intakeSemester || '');
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [driveProfilePhoto, setDriveProfilePhoto] = useState<{ id: string; name: string; url: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,7 +34,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
   useEffect(() => {
     setLocation(userProfile?.location || '');
     setStatus(userProfile?.status || '');
-  }, [userProfile?.location, userProfile?.status]);
+    setIntakeSemester(userProfile?.intakeSemester || '');
+  }, [userProfile?.location, userProfile?.status, userProfile?.intakeSemester]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +52,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
       await Promise.resolve(onProfileUpdate({
         location: location.trim(),
         status: status.trim(),
-        pictureOverrideUrl: pictureOverrideUrl || undefined
+        pictureOverrideUrl: pictureOverrideUrl || undefined,
+        intakeSemester: intakeSemester || undefined
       }));
       setProfileFile(null);
       setDriveProfilePhoto(null);
@@ -149,7 +153,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
             </button>
             <p className="text-[10px] text-slate-400 mt-1">Overrides your Google profile photo. Max size 5MB.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
               <input
@@ -169,6 +173,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
                 onChange={(e) => setStatus(e.target.value)}
                 placeholder="Writing, recording, experimenting..."
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Intake Semester</label>
+              <select
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                value={intakeSemester}
+                onChange={(e) => setIntakeSemester(e.target.value)}
+              >
+                <option value="">Not set</option>
+                {allSemesters.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button
