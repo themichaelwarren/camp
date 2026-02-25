@@ -170,4 +170,5 @@ export type ViewState =
   | 'favorites'
   | 'semesters'
   | 'semester-detail'
-  | 'changelog';
+  | 'changelog'
+  | 'about';

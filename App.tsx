@@ -13,6 +13,7 @@ import AssignmentDetail from './views/AssignmentDetail';
 import SongDetail from './views/SongDetail';
 import SettingsPage from './views/SettingsPage';
 import ChangelogPage from './views/ChangelogPage';
+import AboutPage from './views/AboutPage';
 import CampersPage from './views/CampersPage';
 import CamperDetail from './views/CamperDetail';
 import InboxPage from './views/InboxPage';
@@ -1435,6 +1436,8 @@ const App: React.FC = () => {
         );
       case 'changelog':
         return <ChangelogPage />;
+      case 'about':
+        return <AboutPage />;
       case 'campers':
         return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} dateFormat={dateFormat} />;
       case 'camper-detail':

@@ -50,17 +50,25 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     try { localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed)); } catch {}
   }, [isSidebarCollapsed]);
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
-    { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
-    { id: 'submissions', label: 'Songs', icon: 'fa-music' },
-    { id: 'favorites', label: 'Favorites', icon: 'fa-heart' },
-    { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
-    { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
-    { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
-    { id: 'semesters', label: 'Semesters', icon: 'fa-graduation-cap' },
-    { id: 'bocas', label: 'BOCAs', icon: 'fa-star' },
-    { id: 'campers', label: 'Campers', icon: 'fa-users' },
+  const menuGroups = [
+    { label: 'Activity', items: [
+      { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
+      { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
+    ]},
+    { label: 'Music', items: [
+      { id: 'submissions', label: 'Songs', icon: 'fa-music' },
+      { id: 'favorites', label: 'Favorites', icon: 'fa-heart' },
+      { id: 'bocas', label: 'BOCAs', icon: 'fa-star' },
+    ]},
+    { label: 'Program', items: [
+      { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
+      { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
+      { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
+      { id: 'semesters', label: 'Semesters', icon: 'fa-graduation-cap' },
+    ]},
+    { label: 'Community', items: [
+      { id: 'campers', label: 'Campers', icon: 'fa-users' },
+    ]},
   ];
 
   const handleNavigate = (view: ViewState) => {
@@ -213,22 +221,35 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-4 space-y-1`}>
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => handleNavigate(item.id as ViewState)}
-            disabled={!isLoggedIn && item.id !== 'dashboard'}
-            title={collapsed ? item.label : undefined}
-            className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
-              activeView === item.id
-                ? 'bg-indigo-700 text-white shadow-lg'
-                : 'text-indigo-100 hover:bg-indigo-800'
-            } ${!isLoggedIn && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
-          >
-            <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
-            {!collapsed && <span className="font-medium">{item.label}</span>}
-          </button>
+      <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-4`}>
+        {menuGroups.map((group, gi) => (
+          <div key={group.label}>
+            {collapsed ? (
+              gi > 0 && <div className="my-2 mx-2 border-t border-indigo-700/50"></div>
+            ) : (
+              <p className={`text-[10px] font-bold text-indigo-400/60 uppercase tracking-widest px-4 ${gi === 0 ? 'mb-1' : 'mt-4 mb-1'}`}>
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleNavigate(item.id as ViewState)}
+                  disabled={!isLoggedIn && item.id !== 'dashboard'}
+                  title={collapsed ? item.label : undefined}
+                  className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all ${
+                    activeView === item.id
+                      ? 'bg-indigo-700 text-white shadow-lg'
+                      : 'text-indigo-100 hover:bg-indigo-800'
+                  } ${!isLoggedIn && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
+                >
+                  <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                  {!collapsed && <span className="font-medium">{item.label}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
@@ -389,6 +410,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   <i className="fa-solid fa-bolt"></i>
                   What's New
                 </button>
+                <button
+                  onClick={() => handleNavigate('about')}
+                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                >
+                  <i className="fa-solid fa-circle-info"></i>
+                  About Camp
+                </button>
                 {isLoggedIn && (
                   <button
                     onClick={onLogout}
@@ -446,7 +474,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </button>
              <h2 className="text-lg font-semibold text-slate-800 capitalize">
                {(() => {
-                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings' };
+                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp' };
                  return labels[activeView] || activeView.split('-').join(' ');
                })()}
              </h2>
