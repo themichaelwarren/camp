@@ -329,7 +329,7 @@ export const appendSheetRow = async (spreadsheetId: string, range: string, value
 };
 
 export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Prompts!A2:H1000`;
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Prompts!A2:J1000`;
   const rowsResult = await callGoogleApi(rowsUrl);
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === prompt.id);
