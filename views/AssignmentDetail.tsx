@@ -542,7 +542,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               </button>
             </div>
             <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
-              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Title</label>
                   <input
@@ -649,7 +649,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               </button>
             </div>
             <form onSubmit={handleEventEditSubmit} className="flex flex-col flex-1 min-h-0">
-              <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Event Title</label>
                   <input

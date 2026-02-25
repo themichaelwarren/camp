@@ -105,7 +105,7 @@ const TagInput: React.FC<TagInputProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={() => inputValue && setSuggestions(availableTags.filter(t => t.toLowerCase().includes(inputValue.toLowerCase()) && !value.includes(t)))}
           placeholder={value.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[120px] outline-none text-sm"
+          className="flex-1 min-w-[80px] outline-none text-sm"
         />
       </div>
       {showSuggestions && inputValue.trim() && (

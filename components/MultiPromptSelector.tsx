@@ -167,7 +167,7 @@ const MultiPromptSelector: React.FC<MultiPromptSelectorProps> = ({
         <input
           ref={inputRef}
           type="text"
-          className="flex-1 min-w-[140px] outline-none text-base bg-transparent"
+          className="flex-1 min-w-[100px] outline-none text-base bg-transparent"
           placeholder={selectedPrompts.length === 0 ? placeholder : 'Add more...'}
           value={searchTerm}
           onChange={e => {

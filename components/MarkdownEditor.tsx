@@ -19,7 +19,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <div className="border border-slate-200 rounded-xl overflow-hidden min-w-0">
       {/* Tabs */}
       <div className="flex border-b border-slate-200 bg-slate-50">
         <button
