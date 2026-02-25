@@ -15,7 +15,49 @@ let accessToken: string | null = null;
 let tokenClient: any = null;
 let authReadyCallback: (() => void) | null = null;
 
+const TOKEN_CACHE_KEY = 'camp-token';
+const TOKEN_EXPIRY_KEY = 'camp-token-expiry';
+
+const cacheToken = (token: string, expiresIn: number) => {
+  try {
+    // Store with a 5-minute buffer so we don't use nearly-expired tokens
+    const expiry = Date.now() + (expiresIn - 300) * 1000;
+    sessionStorage.setItem(TOKEN_CACHE_KEY, token);
+    sessionStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
+  } catch { /* storage full or unavailable */ }
+};
+
+const clearCachedToken = () => {
+  try {
+    sessionStorage.removeItem(TOKEN_CACHE_KEY);
+    sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+  } catch {}
+};
+
+const getCachedToken = (): string | null => {
+  try {
+    const token = sessionStorage.getItem(TOKEN_CACHE_KEY);
+    const expiry = sessionStorage.getItem(TOKEN_EXPIRY_KEY);
+    if (token && expiry && Date.now() < Number(expiry)) {
+      return token;
+    }
+    clearCachedToken();
+  } catch {}
+  return null;
+};
+
 export const getAccessToken = () => accessToken;
+
+/** Try to restore a cached token without any popup. Returns true if successful. */
+export const tryCachedSignIn = (onAuthSuccess: (token: string) => void): boolean => {
+  const cached = getCachedToken();
+  if (cached) {
+    accessToken = cached;
+    onAuthSuccess(cached);
+    return true;
+  }
+  return false;
+};
 
 export const initGoogleAuth = (onAuthSuccess: (token: string) => void) => {
   if (typeof google === 'undefined') {
@@ -35,6 +77,7 @@ export const initGoogleAuth = (onAuthSuccess: (token: string) => void) => {
         }
         if (response.access_token) {
           accessToken = response.access_token;
+          cacheToken(response.access_token, response.expires_in || 3600);
           onAuthSuccess(accessToken!);
         }
       },
@@ -67,6 +110,7 @@ export const trySilentSignIn = (hint?: string) => {
 };
 
 export const logout = () => {
+  clearCachedToken();
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {
       accessToken = null;

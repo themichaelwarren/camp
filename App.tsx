@@ -128,29 +128,47 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    const onAuthSuccess = () => {
+      setIsLoggedIn(true);
+      googleService.fetchUserProfile()
+        .then((profile) => {
+          const normalized = {
+            id: profile.sub || profile.id,
+            name: profile.name,
+            email: profile.email,
+            picture: profile.picture
+          };
+          setUserProfile(normalized);
+          window.localStorage.setItem('camp-auth', '1');
+          if (normalized.email) {
+            window.localStorage.setItem('camp-last-email', normalized.email);
+          }
+          handleInitialSync(normalized);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch user profile', err);
+          handleInitialSync(null);
+        });
+    };
+
+    // Try cached token immediately (no popup needed, no GSI script needed)
+    if (window.localStorage.getItem('camp-auth') === '1') {
+      if (googleService.tryCachedSignIn(onAuthSuccess)) {
+        // Token restored from cache — still init GSI in background for future sign-ins
+        const waitForGsi = setInterval(() => {
+          // @ts-ignore
+          if (typeof google !== 'undefined') {
+            clearInterval(waitForGsi);
+            googleService.initGoogleAuth(onAuthSuccess);
+          }
+        }, 500);
+        return () => clearInterval(waitForGsi);
+      }
+    }
+
+    // No cached token — wait for GSI then try silent sign-in (may show popup)
     const init = () => {
-      googleService.initGoogleAuth(() => {
-        setIsLoggedIn(true);
-        googleService.fetchUserProfile()
-          .then((profile) => {
-            const normalized = {
-              id: profile.sub || profile.id,
-              name: profile.name,
-              email: profile.email,
-              picture: profile.picture
-            };
-            setUserProfile(normalized);
-            window.localStorage.setItem('camp-auth', '1');
-            if (normalized.email) {
-              window.localStorage.setItem('camp-last-email', normalized.email);
-            }
-            handleInitialSync(normalized);
-          })
-          .catch((err) => {
-            console.error('Failed to fetch user profile', err);
-            handleInitialSync(null);
-          });
-      });
+      googleService.initGoogleAuth(onAuthSuccess);
       if (window.localStorage.getItem('camp-auth') === '1') {
         const hint = window.localStorage.getItem('camp-last-email') || undefined;
         googleService.trySilentSignIn(hint);
