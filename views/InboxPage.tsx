@@ -88,6 +88,7 @@ const CamperAvatar: React.FC<{ emailOrName: string; campers: CamperProfile[]; si
 const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions, campers, comments = [], onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, favoritedSubmissionIds, onToggleFavorite, bocas = [], statusUpdates = [], dateFormat, collaborations }) => {
   const [filter, setFilter] = useState<'all' | 'songs' | 'comments' | 'prompts' | 'assignments' | 'bocas' | 'status'>('all');
   const [timeRange, setTimeRange] = useState<TimeRange>('all-time');
+  const [selectedCamper, setSelectedCamper] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
 
   const resolveEntityName = (comment: CommentType): { label: string; view: ViewState; id: string } => {
@@ -157,8 +158,9 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     // Apply time range filter
     const rangeStart = getTimeRangeStart(timeRange);
     const rangeEnd = getTimeRangeEnd(timeRange);
+    let filtered = all;
     if (rangeStart || rangeEnd) {
-      return all.filter(item => {
+      filtered = filtered.filter(item => {
         const t = new Date(item.date).getTime();
         if (rangeStart && t < rangeStart.getTime()) return false;
         if (rangeEnd && t >= rangeEnd.getTime()) return false;
@@ -166,8 +168,24 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
       });
     }
 
-    return all;
-  }, [submissions, comments, prompts, assignments, bocas, statusUpdates, filter, timeRange]);
+    // Apply camper filter
+    if (selectedCamper) {
+      filtered = filtered.filter(item => {
+        switch (item.type) {
+          case 'song-version': return item.submission.camperId === selectedCamper || collaborations.some(c => c.submissionId === item.submission.id && c.camperId === selectedCamper);
+          case 'comment': return item.comment.authorEmail === selectedCamper;
+          case 'reaction': return item.comment.authorEmail === selectedCamper;
+          case 'prompt': return item.prompt.createdBy === selectedCamper || item.prompt.createdBy === campers.find(c => c.email === selectedCamper)?.name;
+          case 'boca': return item.boca.fromEmail === selectedCamper;
+          case 'status-update': return item.statusUpdate.camperEmail === selectedCamper;
+          case 'assignment': return true; // assignments aren't camper-specific
+          default: return true;
+        }
+      });
+    }
+
+    return filtered;
+  }, [submissions, comments, prompts, assignments, bocas, statusUpdates, filter, timeRange, selectedCamper, collaborations, campers]);
 
   const filters = [
     { key: 'all', label: 'All', icon: 'fa-stream' },
@@ -178,6 +196,36 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     { key: 'bocas', label: 'BOCAs', icon: 'fa-star' },
     { key: 'status', label: 'Status', icon: 'fa-circle-info' },
   ] as const;
+
+  const getDateGroup = (dateStr: string): string => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+    const startOfWeek = new Date(startOfToday.getTime() - 7 * 86400000);
+    const startOfMonth = new Date(startOfToday.getTime() - 30 * 86400000);
+    const t = date.getTime();
+    if (t >= startOfToday.getTime()) return 'Today';
+    if (t >= startOfYesterday.getTime()) return 'Yesterday';
+    if (t >= startOfWeek.getTime()) return 'This Week';
+    if (t >= startOfMonth.getTime()) return 'This Month';
+    return 'Older';
+  };
+
+  const groupedItems = useMemo(() => {
+    const groups: { label: string; items: typeof items }[] = [];
+    const groupMap = new Map<string, typeof items>();
+    for (const item of items) {
+      const label = getDateGroup(item.date);
+      if (!groupMap.has(label)) {
+        const arr: typeof items = [];
+        groupMap.set(label, arr);
+        groups.push({ label, items: arr });
+      }
+      groupMap.get(label)!.push(item);
+    }
+    return groups;
+  }, [items]);
 
   const formatRelativeTime = (dateStr: string) => {
     const now = new Date();
@@ -214,7 +262,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
         >
           <i className="fa-solid fa-sliders"></i>
           Filters
-          {(filter !== 'all' || timeRange !== 'all-time') && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
+          {(filter !== 'all' || timeRange !== 'all-time' || selectedCamper) && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>}
           <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
         </button>
 
@@ -252,11 +300,33 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
               </button>
             ))}
           </div>
+          <select
+            value={selectedCamper}
+            onChange={(e) => setSelectedCamper(e.target.value)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-colors appearance-none bg-no-repeat bg-right pr-7 ${
+              selectedCamper ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundPosition: 'right 8px center' }}
+          >
+            <option value="">All Campers</option>
+            {campers
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(c => (
+                <option key={c.email} value={c.email}>{c.name}</option>
+              ))
+            }
+          </select>
         </div>
       </div>
 
       <div className="space-y-1">
-        {items.map((item, idx) => {
+        {groupedItems.map((group) => (
+          <div key={group.label}>
+            <div className="sticky top-0 z-10 py-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">{group.label}</span>
+            </div>
+            {group.items.map((item, idx) => {
           if (item.type === 'song-version') {
             const sub = item.submission;
             const version = sub.versions[item.versionIndex];
@@ -556,6 +626,8 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
 
           return null;
         })}
+          </div>
+        ))}
 
         {items.length === 0 && (
           <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">

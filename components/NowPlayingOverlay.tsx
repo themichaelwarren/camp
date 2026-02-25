@@ -66,6 +66,12 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [isMobile] = useState(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+
+  // Swipe-to-remove state for queue items
+  const swipeStartX = useRef<number | null>(null);
+  const [swipeOffsets, setSwipeOffsets] = useState<Record<number, number>>({});
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
 
   // Prevent background page scroll while overlay is open
   useEffect(() => {
@@ -125,6 +131,34 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     audio.volume = vol;
     setVolume(vol);
   }, [audioRef]);
+
+  // Swipe-to-remove handlers for queue items
+  const handleSwipeStart = useCallback((e: React.TouchEvent, index: number) => {
+    swipeStartX.current = e.touches[0].clientX;
+    setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
+  }, []);
+
+  const handleSwipeMove = useCallback((e: React.TouchEvent, index: number) => {
+    if (swipeStartX.current === null) return;
+    const delta = e.touches[0].clientX - swipeStartX.current;
+    // Only allow left swipe
+    setSwipeOffsets(prev => ({ ...prev, [index]: Math.min(0, delta) }));
+  }, []);
+
+  const handleSwipeEnd = useCallback((index: number) => {
+    const offset = swipeOffsets[index] || 0;
+    if (offset < -80) {
+      setRemovingIndex(index);
+      setTimeout(() => {
+        onRemoveFromQueue(index);
+        setRemovingIndex(null);
+        setSwipeOffsets(prev => { const next = { ...prev }; delete next[index]; return next; });
+      }, 200);
+    } else {
+      setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
+    }
+    swipeStartX.current = null;
+  }, [swipeOffsets, onRemoveFromQueue]);
 
   // Close on Escape
   useEffect(() => {
@@ -355,23 +389,30 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 </button>
               </div>
 
-              {/* Volume */}
-              <div className="flex items-center gap-3 w-full pb-2">
-                <i className="fa-solid fa-volume-low text-slate-400 text-xs"></i>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  className="flex-1 h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
-                  style={{
-                    background: `linear-gradient(to right, var(--np-accent) ${volume * 100}%, var(--np-track) ${volume * 100}%)`
-                  }}
-                />
-                <i className="fa-solid fa-volume-high text-slate-400 text-xs"></i>
-              </div>
+              {/* Volume — hidden on mobile where hardware buttons control volume */}
+              {isMobile ? (
+                <p className="text-[10px] text-slate-400 text-center pb-2">
+                  <i className="fa-solid fa-volume-high mr-1"></i>
+                  Use device volume buttons
+                </p>
+              ) : (
+                <div className="flex items-center gap-3 w-full pb-2">
+                  <i className="fa-solid fa-volume-low text-slate-400 text-xs"></i>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    className="flex-1 h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600"
+                    style={{
+                      background: `linear-gradient(to right, var(--np-accent) ${volume * 100}%, var(--np-track) ${volume * 100}%)`
+                    }}
+                  />
+                  <i className="fa-solid fa-volume-high text-slate-400 text-xs"></i>
+                </div>
+              )}
             </div>
 
             {/* Right: Queue — toggleable, keep column mounted in jukebox mode to avoid layout shift */}
@@ -393,7 +434,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     {queue.map((track, i) => (
                       <div
                         key={i}
-                        draggable
+                        draggable={!isMobile}
                         onDragStart={() => setDragIndex(i)}
                         onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
                         onDragEnd={() => {
@@ -403,11 +444,20 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                           setDragIndex(null);
                           setDragOverIndex(null);
                         }}
+                        onTouchStart={(e) => handleSwipeStart(e, i)}
+                        onTouchMove={(e) => handleSwipeMove(e, i)}
+                        onTouchEnd={() => handleSwipeEnd(i)}
                         className={`flex items-center gap-3 group rounded-lg px-2 py-1.5 transition-all ${
                           dragIndex === i ? 'opacity-40' : ''
-                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
+                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}${
+                          removingIndex === i ? ' opacity-0 -translate-x-full' : ''
+                        }`}
+                        style={{
+                          transform: swipeOffsets[i] ? `translateX(${swipeOffsets[i]}px)` : undefined,
+                          transition: swipeOffsets[i] ? 'none' : 'all 0.2s ease'
+                        }}
                       >
-                        <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>
+                        {!isMobile && <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>}
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
                           <ArtworkImage
                             fileId={track.artworkFileId}
