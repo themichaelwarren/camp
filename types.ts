@@ -136,6 +136,8 @@ export interface Collaboration {
   createdAt: string;
 }
 
+export type DocTextSegment = { text: string; bold?: boolean; italic?: boolean };
+
 export interface PlayableTrack {
   versionId: string;
   title: string;

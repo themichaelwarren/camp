@@ -279,7 +279,7 @@ const App: React.FC = () => {
       const data = await googleService.fetchAllData(sId, profile?.email);
       setPrompts(data.prompts);
       setAssignments(data.assignments);
-      setSubmissions(data.submissions);
+      setSubmissions(data.submissions.map(s => s.lyricsDocUrl ? { ...s, lyrics: '' } : s));
       setComments(data.comments);
       setCampers(data.campers);
       setEvents(data.events);
@@ -303,6 +303,9 @@ const App: React.FC = () => {
         setUpvotedPromptIds([]);
         setFavoritedSubmissionIds([]);
       }
+
+      // One-time: clear lyrics from sheet for songs that have a Google Doc
+      googleService.clearLyricsForDocSongs(sId).catch(e => console.error('Failed to clear lyrics', e));
 
       // Sync events from Google Calendar (initial load only)
       const syncedEvents = await Promise.allSettled(
@@ -331,7 +334,7 @@ const App: React.FC = () => {
       const data = await googleService.fetchAllData(spreadsheetId, userProfile?.email);
       setPrompts(data.prompts);
       setAssignments(data.assignments);
-      setSubmissions(data.submissions);
+      setSubmissions(data.submissions.map(s => s.lyricsDocUrl ? { ...s, lyrics: '' } : s));
       setComments(data.comments);
       setCampers(data.campers);
       setEvents(data.events);

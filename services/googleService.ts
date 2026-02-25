@@ -419,6 +419,28 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
+export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
+  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:O1000`;
+  const rowsResult = await callGoogleApi(rowsUrl);
+  const rows = rowsResult.values || [];
+  // Column F (index 5) = lyrics, Column J (index 9) = lyricsDocUrl
+  const updates: { range: string; values: string[][] }[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const lyricsDocUrl = rows[i][9] || '';
+    const lyrics = rows[i][5] || '';
+    if (lyricsDocUrl && lyrics) {
+      updates.push({ range: `Submissions!F${i + 2}`, values: [['']] });
+    }
+  }
+  if (updates.length === 0) return 0;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`;
+  await callGoogleApi(url, {
+    method: 'POST',
+    body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data: updates })
+  });
+  return updates.length;
+};
+
 export const fetchAllData = async (spreadsheetId: string, userEmail?: string) => {
   const ranges = [
     'Prompts!A2:J1000',
@@ -926,14 +948,13 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
 
   const docId = docFile.id as string;
   const docsUrl = `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`;
-  const nowLabel = `v1 ${new Date().toISOString().slice(0, 10)}`;
   await callGoogleApi(docsUrl, {
     method: 'POST',
     body: JSON.stringify({
       requests: [{
         insertText: {
           location: { index: 1 },
-          text: `${nowLabel}\n${lyrics || ''}`
+          text: lyrics || ''
         }
       }]
     })
@@ -967,6 +988,64 @@ export const appendLyricsRevision = async (
         }
       }]
     })
+  });
+};
+
+export const extractDocIdFromUrl = (url: string): string | null => {
+  const match = url.match(/document\/d\/([^/]+)/);
+  return match ? match[1] : null;
+};
+
+export const fetchDocContent = async (docId: string): Promise<import('../types').DocTextSegment[]> => {
+  const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
+  const segments: import('../types').DocTextSegment[] = [];
+  const content = doc.body?.content || [];
+  for (let i = 0; i < content.length; i++) {
+    const block = content[i];
+    if (block.paragraph) {
+      if (i > 1) segments.push({ text: '\n' });
+      for (const el of block.paragraph.elements || []) {
+        if (el.textRun) {
+          const text = el.textRun.content?.replace(/\n$/, '') || '';
+          if (text) {
+            segments.push({
+              text,
+              bold: el.textRun.textStyle?.bold || false,
+              italic: el.textRun.textStyle?.italic || false
+            });
+          }
+        }
+      }
+    }
+  }
+  return segments;
+};
+
+export const replaceDocContent = async (docId: string, newText: string): Promise<void> => {
+  const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
+  const content = doc.body?.content || [];
+  const last = content[content.length - 1];
+  const endIndex = last?.endIndex ? last.endIndex - 1 : 1;
+
+  const requests: any[] = [];
+  if (endIndex > 1) {
+    requests.push({
+      deleteContentRange: {
+        range: { startIndex: 1, endIndex }
+      }
+    });
+  }
+  requests.push({
+    insertText: {
+      location: { index: 1 },
+      text: newText || ''
+    }
+  });
+
+  const docsUrl = `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`;
+  await callGoogleApi(docsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ requests })
   });
 };
 

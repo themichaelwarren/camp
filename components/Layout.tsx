@@ -137,13 +137,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       navigator.mediaSession.metadata = new MediaMetadata({
         title: player.title,
         artist: player.artist,
-        album: 'Camp',
+        album: player.assignmentTitle || 'Camp',
         artwork,
       });
     } else {
       navigator.mediaSession.metadata = null;
     }
-  }, [player?.title, player?.artist, mediaSessionArtwork]);
+  }, [player?.title, player?.artist, player?.assignmentTitle, mediaSessionArtwork]);
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;

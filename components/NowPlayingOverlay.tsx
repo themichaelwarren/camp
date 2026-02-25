@@ -334,7 +334,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               {/* Transport Controls */}
               <div className="flex items-center justify-center gap-6 xl:gap-8 py-3 w-full">
                 <button
-                  className="w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center text-slate-300 cursor-not-allowed"
+                  className="w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center text-slate-400 cursor-not-allowed"
                   disabled
                 >
                   <i className="fa-solid fa-backward-step text-xl"></i>
@@ -348,7 +348,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 </button>
                 <button
                   onClick={onPlayNext}
-                  className={`w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 active:scale-95' : 'text-slate-300 cursor-not-allowed'}`}
+                  className={`w-11 h-11 xl:w-12 xl:h-12 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 active:scale-95' : 'text-slate-400 cursor-not-allowed'}`}
                   disabled={queue.length === 0}
                 >
                   <i className="fa-solid fa-forward-step text-xl"></i>

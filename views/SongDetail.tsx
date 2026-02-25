@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole } from '../types';
+import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment } from '../types';
 import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment } from '../utils';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
@@ -139,6 +139,9 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [newArtwork, setNewArtwork] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isGivingBoca, setIsGivingBoca] = useState(false);
+  const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const [isCreatingDoc, setIsCreatingDoc] = useState(false);
 
   const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
   const isOwnSong = currentUserEmail === submission.camperId;
@@ -159,6 +162,17 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       });
     }
   }, [submission, showEdit]);
+
+  React.useEffect(() => {
+    if (!submission.lyricsDocUrl) return;
+    const docId = googleService.extractDocIdFromUrl(submission.lyricsDocUrl);
+    if (!docId) return;
+    setDocLoading(true);
+    googleService.fetchDocContent(docId)
+      .then(setDocLyrics)
+      .catch(() => setDocLyrics(null))
+      .finally(() => setDocLoading(false));
+  }, [submission.lyricsDocUrl]);
 
   const loadAudio = async (versionId: string) => {
     if (activeVersionId === versionId) return;
@@ -189,6 +203,25 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     }
   };
 
+  const handleCreateLyricsDoc = async () => {
+    setIsCreatingDoc(true);
+    try {
+      const userLabel = submission.camperName || 'Anonymous';
+      const created = await googleService.createLyricsDoc(submission.title, userLabel, submission.lyrics, assignment?.driveFolderId);
+      const updated: Submission = { ...submission, lyricsDocUrl: created.webViewLink, lyrics: '' };
+      onUpdate(updated);
+      const docId = googleService.extractDocIdFromUrl(created.webViewLink);
+      if (docId) {
+        googleService.fetchDocContent(docId).then(setDocLyrics).catch(() => {});
+      }
+    } catch (error) {
+      console.error('Failed to create lyrics doc', error);
+      alert('Failed to create lyrics doc. Please try again.');
+    } finally {
+      setIsCreatingDoc(false);
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -196,7 +229,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       let artworkFileId = submission.artworkFileId || '';
       let artworkUrl = submission.artworkUrl || '';
       let lyricsDocUrl = submission.lyricsDocUrl || '';
-      let lyricsRevisionCount = submission.lyricsRevisionCount ?? 0;
       if (newArtwork) {
         const uploaded = await googleService.uploadArtworkToDriveInFolder(newArtwork, assignment?.driveFolderId);
         artworkFileId = uploaded.id;
@@ -209,15 +241,10 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           const userLabel = submission.camperName || 'Anonymous';
           const created = await googleService.createLyricsDoc(editForm.title, userLabel, editForm.lyrics, assignment?.driveFolderId);
           lyricsDocUrl = created.webViewLink;
-          lyricsRevisionCount = 1;
         } else {
-          const match = lyricsDocUrl.match(/document\/d\/([^/]+)/);
-          const docId = match ? match[1] : '';
+          const docId = googleService.extractDocIdFromUrl(lyricsDocUrl);
           if (docId) {
-            const nextCount = Math.max(1, lyricsRevisionCount) + 1;
-            const dateLabel = new Date().toISOString().slice(0, 10);
-            await googleService.appendLyricsRevision(docId, `v${nextCount} ${dateLabel}`, editForm.lyrics);
-            lyricsRevisionCount = nextCount;
+            await googleService.replaceDocContent(docId, editForm.lyrics);
           }
         }
       }
@@ -225,17 +252,22 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       const updated: Submission = {
         ...submission,
         title: editForm.title.trim(),
-        lyrics: editForm.lyrics.trim(),
+        lyrics: lyricsDocUrl ? '' : editForm.lyrics.trim(),
         details: editForm.details.trim(),
         artworkFileId,
         artworkUrl,
         lyricsDocUrl,
-        lyricsRevisionCount,
         updatedAt: new Date().toISOString()
       };
       onUpdate(updated);
       setShowEdit(false);
       setNewArtwork(null);
+      if (lyricsChanged && lyricsDocUrl) {
+        const docId = googleService.extractDocIdFromUrl(lyricsDocUrl);
+        if (docId) {
+          googleService.fetchDocContent(docId).then(setDocLyrics).catch(() => {});
+        }
+      }
     } catch (error) {
       console.error('Failed to update submission', error);
       alert('Failed to update song. Please try again.');
@@ -435,10 +467,48 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         {/* Left column: Lyrics + Production Details */}
         <div className="lg:col-span-2 space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 font-serif">
-            <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest mb-8">Lyrics</h3>
-            <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg">
-              {submission.lyrics || "No lyrics provided yet."}
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest">Lyrics</h3>
+              {submission.lyricsDocUrl ? (
+                <a
+                  href={submission.lyricsDocUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  Open in Google Docs
+                </a>
+              ) : isOwnSong ? (
+                <button
+                  onClick={handleCreateLyricsDoc}
+                  disabled={isCreatingDoc}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 disabled:opacity-50"
+                >
+                  <i className="fa-solid fa-file-circle-plus text-[10px]"></i>
+                  {isCreatingDoc ? 'Creating...' : 'Create Lyrics Doc'}
+                </button>
+              ) : null}
             </div>
+            {docLoading ? (
+              <p className="text-slate-400 italic">Loading lyrics...</p>
+            ) : docLyrics ? (
+              <div className="text-lg text-slate-800 leading-relaxed max-w-lg">
+                {docLyrics.map((seg, i) =>
+                  seg.text === '\n' ? <br key={i} /> :
+                  seg.bold && seg.italic ? <strong key={i}><em>{seg.text}</em></strong> :
+                  seg.bold ? <strong key={i}>{seg.text}</strong> :
+                  seg.italic ? <em key={i}>{seg.text}</em> :
+                  <span key={i}>{seg.text}</span>
+                )}
+              </div>
+            ) : submission.lyrics ? (
+              <div className="text-lg text-slate-800 leading-relaxed whitespace-pre-wrap max-w-lg">
+                {submission.lyrics}
+              </div>
+            ) : (
+              <p className="text-slate-400 font-sans text-sm italic">No lyrics provided yet.</p>
+            )}
           </section>
 
           {submission.details && (
@@ -502,29 +572,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             </div>
           </section>
 
-          <section className="bg-slate-50 p-6 rounded-3xl border border-slate-200 text-slate-800">
-            <h4 className="font-bold mb-4 flex items-center gap-2">
-               <i className="fa-brands fa-google-drive text-green-600"></i>
-               Google Drive Export
-            </h4>
-            <p className="text-slate-500 text-xs mb-6 leading-relaxed">This song is synced to your camp folder in Google Drive. All audio versions are stored securely in your account.</p>
-            {submission.lyricsDocUrl ? (
-              <a
-                href={submission.lyricsDocUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-200"
-              >
-                <i className="fa-solid fa-file-lines text-xs"></i>
-                Open Lyrics Doc
-              </a>
-            ) : (
-              <button className="w-full bg-white text-slate-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200">
-                <i className="fa-solid fa-file-lines text-xs"></i>
-                Lyrics Doc Pending
-              </button>
-            )}
-          </section>
         </div>
       </div>
 
