@@ -337,6 +337,34 @@ async function handlePublicData(env: Env): Promise<Response> {
   });
 }
 
+// --- Drive File Proxy ---
+
+async function handleDriveProxy(fileId: string, env: Env): Promise<Response> {
+  // Validate file ID format (alphanumeric, hyphens, underscores)
+  if (!/^[\w-]+$/.test(fileId)) {
+    return new Response('Invalid file ID', { status: 400, headers: CORS_HEADERS });
+  }
+
+  // Try API key first (works for publicly shared files)
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${env.GOOGLE_API_KEY}`;
+  const resp = await fetch(url);
+
+  if (!resp.ok) {
+    return new Response('File not found', { status: resp.status, headers: CORS_HEADERS });
+  }
+
+  // Stream the response back with CORS headers
+  const contentType = resp.headers.get('Content-Type') || 'application/octet-stream';
+  return new Response(resp.body, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=3600',
+      ...CORS_HEADERS,
+    },
+  });
+}
+
 // --- Main Handler ---
 
 export default {
@@ -356,6 +384,12 @@ export default {
     // Sheets proxy API
     if (url.pathname === '/api/sheets' && request.method === 'POST') {
       return handleSheetsProxy(request, env);
+    }
+
+    // Drive file proxy (for publicly shared files)
+    const driveMatch = url.pathname.match(/^\/api\/drive\/(.+)$/);
+    if (driveMatch) {
+      return handleDriveProxy(driveMatch[1], env);
     }
 
     // Pass through non-HTML requests (assets)
