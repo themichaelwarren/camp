@@ -230,6 +230,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         ) : (
           <>
             <span aria-hidden="true" className="text-xl leading-none">⛺️</span>
+            <p className="text-indigo-300 text-[8px] uppercase tracking-widest font-bold opacity-60">
+              {(() => { const t = getTerm(new Date().toISOString()); const [season, year] = t.split(' '); return `${season[0]}${year?.slice(-2)}`; })()}
+            </p>
             <button
               onClick={() => setIsSidebarCollapsed(false)}
               className="w-6 h-6 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-center text-indigo-200 hover:text-white transition-colors"

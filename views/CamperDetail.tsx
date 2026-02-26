@@ -28,6 +28,9 @@ interface CamperDetailProps {
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   collaborations: Collaboration[];
+  isAdmin?: boolean;
+  allSemesters?: string[];
+  onUpdateCamperIntake?: (camperEmail: string, intakeSemester: string) => void;
 }
 
 const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPrompts: Prompt[]): string[] => {
@@ -53,7 +56,7 @@ const getFirstVersionDate = (sub: Submission): number => {
 };
 
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -150,10 +153,23 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Intake Semester</p>
-            <p className="text-slate-700 font-semibold mt-2 flex items-center gap-1.5">
-              <i className="fa-solid fa-graduation-cap text-indigo-400 text-xs"></i>
-              {camper.intakeSemester || '—'}
-            </p>
+            {isAdmin && onUpdateCamperIntake ? (
+              <select
+                className="mt-2 text-sm font-semibold text-slate-700 bg-transparent border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                value={camper.intakeSemester || ''}
+                onChange={(e) => onUpdateCamperIntake(camper.email, e.target.value)}
+              >
+                <option value="">Not set</option>
+                {allSemesters.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-slate-700 font-semibold mt-2 flex items-center gap-1.5">
+                <i className="fa-solid fa-graduation-cap text-indigo-400 text-xs"></i>
+                {camper.intakeSemester || '—'}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Last Signed In</p>

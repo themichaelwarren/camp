@@ -1537,6 +1537,13 @@ const App: React.FC = () => {
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
             collaborations={collaborations}
+            isAdmin={userProfile?.id === '107401200819936745460'}
+            allSemesters={allSemesters}
+            onUpdateCamperIntake={async (email, semester) => {
+              if (!spreadsheetId) return;
+              await googleService.updateUserProfileDetails(spreadsheetId, { email, intakeSemester: semester });
+              setCampers(prev => prev.map(c => c.email === email ? { ...c, intakeSemester: semester } : c));
+            }}
           />
         ) : null;
       default:
