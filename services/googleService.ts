@@ -1293,10 +1293,16 @@ export class DriveAccessError extends Error {
 
 export const fetchDriveFile = async (fileId: string) => {
   if (!accessToken) {
-    // Try API key for publicly shared files when not yet authenticated
-    const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-    const publicResponse = await fetch(publicUrl, { cache: 'no-store' });
-    if (publicResponse.ok) return publicResponse.blob();
+    // Try no-auth fetch for publicly shared files
+    try {
+      const noAuthResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { cache: 'no-store' });
+      if (noAuthResponse.ok) return noAuthResponse.blob();
+    } catch { /* CORS or network error */ }
+    // Try API key fallback
+    try {
+      const publicResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`, { cache: 'no-store' });
+      if (publicResponse.ok) return publicResponse.blob();
+    } catch { /* CORS or network error */ }
     throw new Error('Not authenticated');
   }
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
@@ -1317,15 +1323,18 @@ export const fetchDriveFile = async (fileId: string) => {
     await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
   }
 
-  // Fallback: try API key for publicly shared files
+  // Fallback: try public access for publicly shared files
   if (response && (response.status === 403 || response.status === 404)) {
-    const publicUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+    // Try without any auth (works for "anyone with the link" files)
     try {
-      const publicResponse = await fetch(publicUrl, { cache: 'no-store' });
+      const noAuthResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { cache: 'no-store' });
+      if (noAuthResponse.ok) return noAuthResponse.blob();
+    } catch { /* CORS or network error */ }
+    // Try with API key
+    try {
+      const publicResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`, { cache: 'no-store' });
       if (publicResponse.ok) return publicResponse.blob();
-    } catch {
-      // CORS or network error on public fetch — fall through to DriveAccessError
-    }
+    } catch { /* CORS or network error */ }
     throw new DriveAccessError(fileId, response.status);
   }
   throw response ? new Error(`Failed to fetch Drive file (${response.status})`) : new Error('Failed to fetch Drive file (network error)');
