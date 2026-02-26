@@ -48,7 +48,7 @@ async function getServiceAccountToken(env: Env): Promise<string> {
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const payload = base64url(JSON.stringify({
     iss: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents.readonly',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
     exp: now + 3600,
@@ -363,6 +363,60 @@ async function handleDriveProxy(fileId: string, env: Env): Promise<Response> {
   });
 }
 
+// --- Lyrics Proxy (Google Docs via service account) ---
+
+interface DocTextSegment {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+async function handleLyricsProxy(docId: string, env: Env): Promise<Response> {
+  if (!/^[\w-]+$/.test(docId)) {
+    return new Response(JSON.stringify({ error: 'Invalid doc ID' }), { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+  }
+
+  try {
+    const token = await getServiceAccountToken(env);
+    const resp = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!resp.ok) {
+      return new Response(JSON.stringify({ error: 'Doc not found' }), { status: resp.status, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+    }
+
+    const doc = await resp.json() as any;
+    const segments: DocTextSegment[] = [];
+    const content = doc.body?.content || [];
+
+    for (let i = 0; i < content.length; i++) {
+      const block = content[i];
+      if (block.paragraph) {
+        if (i > 1) segments.push({ text: '\n' });
+        for (const el of block.paragraph.elements || []) {
+          if (el.textRun) {
+            const text = el.textRun.content?.replace(/\n$/, '') || '';
+            if (text) {
+              segments.push({
+                text,
+                bold: el.textRun.textStyle?.bold || false,
+                italic: el.textRun.textStyle?.italic || false,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return new Response(JSON.stringify(segments), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300', ...CORS_HEADERS },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Failed to fetch lyrics' }), { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+  }
+}
+
 // --- Main Handler ---
 
 export default {
@@ -388,6 +442,12 @@ export default {
     const driveMatch = url.pathname.match(/^\/api\/drive\/(.+)$/);
     if (driveMatch) {
       return handleDriveProxy(driveMatch[1], env);
+    }
+
+    // Lyrics proxy (Google Docs via service account)
+    const lyricsMatch = url.pathname.match(/^\/api\/lyrics\/(.+)$/);
+    if (lyricsMatch) {
+      return handleLyricsProxy(lyricsMatch[1], env);
     }
 
     // Pass through non-HTML requests (assets)

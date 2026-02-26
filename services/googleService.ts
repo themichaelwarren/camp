@@ -1217,6 +1217,12 @@ export const extractDocIdFromUrl = (url: string): string | null => {
 };
 
 export const fetchDocContent = async (docId: string): Promise<import('../types').DocTextSegment[]> => {
+  // Use worker proxy when not authenticated (public mode)
+  if (!accessToken) {
+    const resp = await fetch(`/api/lyrics/${docId}`);
+    if (!resp.ok) throw new Error('Failed to fetch lyrics');
+    return resp.json();
+  }
   const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
   const segments: import('../types').DocTextSegment[] = [];
   const content = doc.body?.content || [];
