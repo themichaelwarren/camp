@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole } from './types';
-import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta } from './router';
+import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta, isPublicView, PUBLIC_DEFAULT_VIEW } from './router';
 import { DateFormat } from './utils';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasPublicData, setHasPublicData] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null>(null);
@@ -189,6 +190,24 @@ const App: React.FC = () => {
     }, 500);
 
     return () => clearInterval(checkGoogle);
+  }, []);
+
+  // Fetch public data immediately (no auth needed) for visitors
+  useEffect(() => {
+    if (isLoggedIn || hasPublicData) return;
+    googleService.fetchPublicData()
+      .then(data => {
+        // Only apply if auth hasn't succeeded in the meantime
+        if (isLoggedIn) return;
+        setAssignments(data.assignments);
+        setSubmissions(data.submissions.map(s => s.lyricsDocUrl ? { ...s, lyrics: '' } : s));
+        setCampers(data.campers);
+        setCollaborations(data.collaborations);
+        setBocas(data.bocas);
+        setStatusUpdates(data.statusUpdates);
+        setHasPublicData(true);
+      })
+      .catch(err => console.error('Public data fetch failed:', err));
   }, []);
 
   useEffect(() => {
@@ -542,7 +561,7 @@ const App: React.FC = () => {
   const hasResolvedUrl = useRef(false);
   useEffect(() => {
     if (hasResolvedUrl.current) return;
-    if (prompts.length === 0 && assignments.length === 0 && submissions.length === 0 && campers.length === 0) return;
+    if (assignments.length === 0 && submissions.length === 0 && campers.length === 0) return;
 
     const parsed = parsePath(window.location.pathname);
     if (!parsed.id) return;
@@ -578,6 +597,14 @@ const App: React.FC = () => {
       updateMetaTags(getPageMeta(parsed.view, resolvedId));
     }
   }, [prompts, assignments, submissions, campers, events]);
+
+  // Route guard: redirect non-public views when in public mode
+  const isPublicMode = !isLoggedIn && hasPublicData;
+  useEffect(() => {
+    if (isPublicMode && !isPublicView(activeView)) {
+      navigateTo(PUBLIC_DEFAULT_VIEW);
+    }
+  }, [isPublicMode, activeView]);
 
   const handleAddPrompt = async (newPrompt: Prompt) => {
     setPrompts(prev => [newPrompt, ...prev]);
@@ -1214,14 +1241,14 @@ const App: React.FC = () => {
           />
         ) : null;
       case 'assignments':
-        return spreadsheetId ? (
+        return (
           <AssignmentsPage
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             campersCount={campers.length}
-            onAdd={handleAddAssignment}
+            onAdd={isLoggedIn ? handleAddAssignment : undefined}
             onViewDetail={(id) => navigateTo('assignment-detail', id)}
-            onAddPrompt={handleAddPrompt}
+            onAddPrompt={isLoggedIn ? handleAddPrompt : undefined}
             userProfile={userProfile}
             spreadsheetId={spreadsheetId}
             availableTags={availableTags}
@@ -1239,14 +1266,14 @@ const App: React.FC = () => {
             onSemesterFilterChange={setAssignmentsSemesterFilter}
             dateFormat={dateFormat}
           />
-        ) : null;
+        );
       case 'submissions':
         return (
           <SubmissionsPage
             submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
-            onAdd={handleAddSubmission}
+            onAdd={isLoggedIn ? handleAddSubmission : undefined}
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -1271,10 +1298,10 @@ const App: React.FC = () => {
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
             favoritedSubmissionIds={favoritedSubmissionIds}
-            onToggleFavorite={handleToggleFavorite}
+            onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
             campers={campers}
-            onAddCollaborators={handleAddCollaborators}
+            onAddCollaborators={isLoggedIn ? handleAddCollaborators : undefined}
           />
         );
       case 'events':
@@ -1320,7 +1347,7 @@ const App: React.FC = () => {
         ) : null;
       case 'assignment-detail':
         const a = assignments.find(as => as.id === selectedId);
-        return a && spreadsheetId ? (
+        return a ? (
           <AssignmentDetail
             assignment={a}
             prompt={prompts.find(pr => pr.id === a.promptId)}
@@ -1330,51 +1357,51 @@ const App: React.FC = () => {
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}
-            onUpdate={handleUpdateAssignment}
+            onUpdate={isLoggedIn ? handleUpdateAssignment : undefined}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
-            onAddSubmission={handleAddSubmission}
-            onCreateEvent={handleCreateEventForAssignment}
-            currentUser={userProfile}
-            spreadsheetId={spreadsheetId}
-            onAddPrompt={handleAddPrompt}
+            onAddSubmission={isLoggedIn ? handleAddSubmission : undefined}
+            onCreateEvent={isLoggedIn ? handleCreateEventForAssignment : undefined}
+            currentUser={isLoggedIn ? userProfile : undefined}
+            spreadsheetId={spreadsheetId || undefined}
+            onAddPrompt={isLoggedIn ? handleAddPrompt : undefined}
             availableTags={availableTags}
             bocas={bocas}
             campers={campers}
             dateFormat={dateFormat}
-            favoritedSubmissionIds={favoritedSubmissionIds}
-            onToggleFavorite={handleToggleFavorite}
+            favoritedSubmissionIds={isLoggedIn ? favoritedSubmissionIds : undefined}
+            onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
-            onAddCollaborators={handleAddCollaborators}
+            onAddCollaborators={isLoggedIn ? handleAddCollaborators : undefined}
           />
         ) : null;
       case 'song-detail':
         const s = submissions.find(su => su.id === selectedId);
-        return s && spreadsheetId && userProfile ? (
+        return s ? (
           <SongDetail
             submission={s}
             assignment={assignments.find(as => as.id === s.assignmentId && !as.deletedAt)}
             prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId && !as.deletedAt)?.promptId)}
             onNavigate={navigateTo}
-            onUpdate={handleUpdateSubmission}
+            onUpdate={isLoggedIn ? handleUpdateSubmission : undefined}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
-            currentUser={{ name: userProfile.name || 'Anonymous', email: userProfile.email || '' }}
-            spreadsheetId={spreadsheetId}
+            currentUser={userProfile ? { name: userProfile.name || 'Anonymous', email: userProfile.email || '' } : undefined}
+            spreadsheetId={spreadsheetId || undefined}
             bocas={bocas}
-            currentUserEmail={userProfile.email || ''}
-            onGiveBoca={handleGiveBoca}
+            currentUserEmail={userProfile?.email || ''}
+            onGiveBoca={isLoggedIn ? handleGiveBoca : undefined}
             campers={campers}
             dateFormat={dateFormat}
             isFavorited={favoritedSubmissionIds.includes(s.id)}
-            onToggleFavorite={handleToggleFavorite}
+            onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
-            onAddCollaborator={handleAddCollaborator}
-            onRemoveCollaborator={handleRemoveCollaborator}
+            onAddCollaborator={isLoggedIn ? handleAddCollaborator : undefined}
+            onRemoveCollaborator={isLoggedIn ? handleRemoveCollaborator : undefined}
           />
         ) : null;
       case 'bocas':
@@ -1533,7 +1560,7 @@ const App: React.FC = () => {
     }
   };
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn && !hasPublicData) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
         <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
@@ -1564,7 +1591,9 @@ const App: React.FC = () => {
       onViewChange={(v) => navigateTo(v)}
       isSyncing={isSyncing}
       isLoggedIn={isLoggedIn}
-      hasInitialData={!!spreadsheetId}
+      isPublicMode={isPublicMode}
+      onSignIn={isPublicMode ? googleService.signIn : undefined}
+      hasInitialData={isLoggedIn ? !!spreadsheetId : hasPublicData}
       userProfile={userProfile}
       player={player}
       isPlayerLoading={isPlayerLoading}

@@ -1,5 +1,14 @@
 import { ViewState } from './types';
 
+// --- Public Mode ---
+
+export const PUBLIC_VIEWS: Set<ViewState> = new Set([
+  'assignments', 'submissions', 'campers', 'semesters',
+  'assignment-detail', 'song-detail', 'camper-detail', 'semester-detail',
+]);
+export const PUBLIC_DEFAULT_VIEW: ViewState = 'submissions';
+export function isPublicView(view: ViewState): boolean { return PUBLIC_VIEWS.has(view); }
+
 // --- Base Path ---
 
 // Vite injects BASE_URL from the `base` config: '/camp/' in production, '/' in dev.

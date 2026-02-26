@@ -11,13 +11,13 @@ interface SongDetailProps {
   assignment?: Assignment;
   prompt?: Prompt;
   onNavigate: (view: ViewState, id?: string) => void;
-  onUpdate: (submission: Submission) => void;
+  onUpdate?: (submission: Submission) => void;
   onPlayTrack: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   onAddToQueue?: (track: { versionId: string; title: string; artist: string; submissionId?: string; artworkFileId?: string; artworkUrl?: string }) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   currentUser?: { name: string; email: string };
-  spreadsheetId: string;
+  spreadsheetId?: string;
   bocas?: Boca[];
   currentUserEmail?: string;
   onGiveBoca?: (submissionId: string) => Promise<void>;
@@ -222,7 +222,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       const userLabel = submission.camperName || 'Anonymous';
       const created = await googleService.createLyricsDoc(submission.title, userLabel, submission.lyrics, assignment?.driveFolderId);
       const updated: Submission = { ...submission, lyricsDocUrl: created.webViewLink, lyrics: '' };
-      onUpdate(updated);
+      onUpdate?.(updated);
       const docId = googleService.extractDocIdFromUrl(created.webViewLink);
       if (docId) {
         googleService.fetchDocContent(docId).then(setDocLyrics).catch(() => {});
@@ -253,7 +253,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         versions: [newVersion, ...submission.versions],
         updatedAt: new Date().toISOString()
       };
-      onUpdate(updatedSubmission);
+      onUpdate?.(updatedSubmission);
       setNewVersionFile(null);
       setNewVersionNotes('');
       setShowUploadForm(false);
@@ -266,14 +266,14 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   };
 
   const handleSetPrimary = (versionId: string) => {
-    onUpdate({ ...submission, primaryVersionId: versionId, updatedAt: new Date().toISOString() });
+    onUpdate?.({ ...submission, primaryVersionId: versionId, updatedAt: new Date().toISOString() });
   };
 
   const handleSaveNotes = (versionId: string) => {
     const updatedVersions = submission.versions.map(v =>
       v.id === versionId ? { ...v, notes: editingNotesText.trim() } : v
     );
-    onUpdate({ ...submission, versions: updatedVersions, updatedAt: new Date().toISOString() });
+    onUpdate?.({ ...submission, versions: updatedVersions, updatedAt: new Date().toISOString() });
     setEditingNotesId(null);
     setEditingNotesText('');
   };
@@ -283,7 +283,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     if (!window.confirm('Delete this version? The audio file will remain in Google Drive.')) return;
     const updatedVersions = submission.versions.filter(v => v.id !== versionId);
     const newPrimaryId = submission.primaryVersionId === versionId ? '' : (submission.primaryVersionId || '');
-    onUpdate({ ...submission, versions: updatedVersions, primaryVersionId: newPrimaryId, updatedAt: new Date().toISOString() });
+    onUpdate?.({ ...submission, versions: updatedVersions, primaryVersionId: newPrimaryId, updatedAt: new Date().toISOString() });
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -323,7 +323,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         lyricsDocUrl,
         updatedAt: new Date().toISOString()
       };
-      onUpdate(updated);
+      onUpdate?.(updated);
       setShowEdit(false);
       setNewArtwork(null);
       if (lyricsChanged && lyricsDocUrl) {
@@ -374,7 +374,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   if (!window.confirm('Share this song? It will become visible to all campers.')) return;
                 }
                 const newStatus = submission.status === 'shared' ? 'private' : 'shared';
-                onUpdate({ ...submission, status: newStatus, updatedAt: new Date().toISOString() });
+                onUpdate?.({ ...submission, status: newStatus, updatedAt: new Date().toISOString() });
               }}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${
                 submission.status === 'shared'
@@ -864,7 +864,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   type="button"
                   onClick={() => {
                     if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
-                    onUpdate({
+                    onUpdate?.({
                       ...submission,
                       deletedAt: new Date().toISOString(),
                       deletedBy: currentUser?.email || currentUser?.name || 'Unknown'

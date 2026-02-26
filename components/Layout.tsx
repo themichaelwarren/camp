@@ -31,9 +31,11 @@ interface LayoutProps {
   currentTrackBocaCount?: number;
   isCurrentTrackFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
+  isPublicMode?: boolean;
+  onSignIn?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -50,7 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     try { localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed)); } catch {}
   }, [isSidebarCollapsed]);
 
-  const menuGroups = [
+  const allMenuGroups = [
     { label: 'Activity', items: [
       { id: 'dashboard', label: 'Home', icon: 'fa-campground' },
       { id: 'inbox', label: 'Inbox', icon: 'fa-inbox' },
@@ -70,6 +72,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       { id: 'campers', label: 'Campers', icon: 'fa-users' },
     ]},
   ];
+
+  const PUBLIC_MENU_IDS = new Set(['submissions', 'assignments', 'semesters', 'campers']);
+  const menuGroups = isPublicMode
+    ? allMenuGroups.map(g => ({ ...g, items: g.items.filter(i => PUBLIC_MENU_IDS.has(i.id)) })).filter(g => g.items.length > 0)
+    : allMenuGroups;
 
   const handleNavigate = (view: ViewState) => {
     onViewChange(view);
@@ -236,13 +243,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <button
                   key={item.id}
                   onClick={() => handleNavigate(item.id as ViewState)}
-                  disabled={!isLoggedIn && item.id !== 'dashboard'}
+                  disabled={!isLoggedIn && !isPublicMode && item.id !== 'dashboard'}
                   title={collapsed ? item.label : undefined}
                   className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all ${
                     activeView === item.id
                       ? 'bg-indigo-700 text-white shadow-lg'
                       : 'text-indigo-100 hover:bg-indigo-800'
-                  } ${!isLoggedIn && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
+                  } ${!isLoggedIn && !isPublicMode && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
                 >
                   <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
                   {!collapsed && <span className="font-medium">{item.label}</span>}
@@ -331,7 +338,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               )}
             </div>
           )
-        ) : isLoggedIn && onStartJukebox && (
+        ) : (isLoggedIn || isPublicMode) && onStartJukebox && (
           collapsed ? (
             <button
               onClick={onStartJukebox}
@@ -429,6 +436,27 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               </div>
             )}
           </div>
+        ) : isPublicMode && onSignIn ? (
+          collapsed ? (
+            <button
+              onClick={onSignIn}
+              className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-indigo-200 hover:text-white flex items-center justify-center transition-colors"
+              title="Sign in with Google"
+            >
+              <i className="fa-brands fa-google text-sm"></i>
+            </button>
+          ) : (
+            <div className="text-center p-2 space-y-2">
+              <p className="text-[10px] text-indigo-400 font-bold uppercase">Read-only mode</p>
+              <button
+                onClick={onSignIn}
+                className="text-xs bg-white/10 hover:bg-white/20 w-full py-2.5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <i className="fa-brands fa-google"></i>
+                Sign in with Google
+              </button>
+            </div>
+          )
         ) : (
           !collapsed && (
             <div className="text-center p-2">
@@ -480,7 +508,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </h2>
           </div>
           <div className="flex items-center gap-2">
-            {!player && isLoggedIn && onStartJukebox && (
+            {!player && (isLoggedIn || isPublicMode) && onStartJukebox && (
               <button
                 className="md:hidden text-amber-600 text-sm w-9 h-9 rounded-full border border-amber-200 bg-amber-50 flex items-center justify-center hover:bg-amber-100 transition-colors"
                 onClick={onStartJukebox}

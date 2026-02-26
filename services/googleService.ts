@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, Boca, StatusUpdate } from '../types';
 import { getTerm } from '../utils';
 
 // Global declaration for the Google Identity Services script
@@ -7,9 +7,13 @@ declare var google: any;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const APP_ID = import.meta.env.VITE_GOOGLE_APP_ID;
-const SCOPES = 'openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events';
 const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID;
 const ASSIGNMENTS_PARENT_FOLDER_ID = import.meta.env.VITE_ASSIGNMENTS_PARENT_FOLDER_ID;
+
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const SCOPES = isLocalDev
+  ? 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events'
+  : 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events';
 
 let accessToken: string | null = null;
 let tokenClient: any = null;
@@ -136,34 +140,81 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
   return response.json();
 };
 
+// --- Sheets Proxy (production routes through Worker; local dev uses direct API) ---
+
+const callSheetsProxy = async (action: string, params: Record<string, any> = {}) => {
+  if (!accessToken) throw new Error('Not authenticated');
+  const response = await fetch('/api/sheets', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action, ...params }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    throw new Error(error.error?.message || 'Sheets proxy call failed');
+  }
+  return response.json();
+};
+
+const callSheetsGet = async (range: string) => {
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}`;
+    return callGoogleApi(url);
+  }
+  return callSheetsProxy('get', { range });
+};
+
+const callSheetsBatchGet = async (ranges: string[]) => {
+  if (isLocalDev) {
+    const params = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${params}`;
+    return callGoogleApi(url);
+  }
+  return callSheetsProxy('batchGet', { ranges });
+};
+
+const callSheetsMetadata = async () => {
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
+    return callGoogleApi(url);
+  }
+  return callSheetsProxy('metadata');
+};
+
+const callSheetsBatchUpdate = async (requests: any[]) => {
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`;
+    return callGoogleApi(url, {
+      method: 'POST',
+      body: JSON.stringify({ requests }),
+    });
+  }
+  return callSheetsProxy('batchUpdate', { requests });
+};
+
 export const ensureSpreadsheetAccess = async (): Promise<void> => {
   if (!accessToken) throw new Error('Not authenticated');
-  const testUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?fields=spreadsheetId`;
-  const response = await fetch(testUrl, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
-  });
-  if (response.ok) return;
-  throw new Error('Cannot access Camp spreadsheet. Make sure it has been shared with your account.');
+  try {
+    await callSheetsMetadata();
+  } catch {
+    throw new Error('Cannot access Camp spreadsheet. Make sure it has been shared with your account.');
+  }
 };
 
 export const findOrCreateDatabase = async () => {
-  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
-  const metadata = await callGoogleApi(metadataUrl);
+  const metadata = await callSheetsMetadata();
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
   const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
-    const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`;
-    await callGoogleApi(batchUrl, {
-      method: 'POST',
-      body: JSON.stringify({
-        requests: missingSheets.map((title) => ({
-          addSheet: { properties: { title } }
-        }))
-      })
-    });
+    await callSheetsBatchUpdate(missingSheets.map((title) => ({
+      addSheet: { properties: { title } }
+    })));
   }
 
   const headerRanges = [
@@ -180,9 +231,7 @@ export const findOrCreateDatabase = async () => {
     'Favorites!A1:D1',
     'Collaborators!A1:F1'
   ];
-  const headerParams = headerRanges.map((range) => `ranges=${encodeURIComponent(range)}`).join('&');
-  const headersCheckUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${headerParams}`;
-  const headersResult = await callGoogleApi(headersCheckUrl);
+  const headersResult = await callSheetsBatchGet(headerRanges);
   const headerValues = headersResult.valueRanges || [];
 
   const promptsHeader = headerValues[0]?.values?.[0] || [];
@@ -360,25 +409,24 @@ export const findOrCreateDatabase = async () => {
   return SPREADSHEET_ID;
 };
 
-export const updateSheetRows = async (spreadsheetId: string, range: string, values: any[][]) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`;
-  return callGoogleApi(url, {
-    method: 'PUT',
-    body: JSON.stringify({ values })
-  });
+export const updateSheetRows = async (_spreadsheetId: string, range: string, values: any[][]) => {
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`;
+    return callGoogleApi(url, { method: 'PUT', body: JSON.stringify({ values }) });
+  }
+  return callSheetsProxy('update', { range, values });
 };
 
-export const appendSheetRow = async (spreadsheetId: string, range: string, values: any[][]) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
-  return callGoogleApi(url, {
-    method: 'POST',
-    body: JSON.stringify({ values })
-  });
+export const appendSheetRow = async (_spreadsheetId: string, range: string, values: any[][]) => {
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED`;
+    return callGoogleApi(url, { method: 'POST', body: JSON.stringify({ values }) });
+  }
+  return callSheetsProxy('append', { range, values });
 };
 
 export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Prompts!A2:J1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Prompts!A2:J1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === prompt.id);
   const rowValues = [[
@@ -404,8 +452,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const updateAssignmentRow = async (spreadsheetId: string, assignment: Assignment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Assignments!A2:M1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Assignments!A2:M1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
   // Serialize promptIds as comma-separated, falling back to single promptId
@@ -436,8 +483,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:Q1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Submissions!A2:Q1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
   const rowValues = [[
@@ -470,8 +516,7 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
 };
 
 export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Submissions!A2:Q1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Submissions!A2:Q1000');
   const rows = rowsResult.values || [];
   // Column F (index 5) = lyrics, Column J (index 9) = lyricsDocUrl
   const updates: { range: string; values: string[][] }[] = [];
@@ -483,11 +528,15 @@ export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
     }
   }
   if (updates.length === 0) return 0;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`;
-  await callGoogleApi(url, {
-    method: 'POST',
-    body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data: updates })
-  });
+  if (isLocalDev) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchUpdate`;
+    await callGoogleApi(url, {
+      method: 'POST',
+      body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data: updates })
+    });
+  } else {
+    await callSheetsProxy('batchValueUpdate', { data: updates });
+  }
   return updates.length;
 };
 
@@ -506,9 +555,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'BOCAs!A2:D5000',
     'StatusUpdates!A2:E5000'
   ];
-  const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${rangeParams}`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsBatchGet(ranges);
 
   const promptsRaw = result.valueRanges[0].values || [];
   const assignmentsRaw = result.valueRanges[1].values || [];
@@ -671,9 +718,156 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
   return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates };
 };
 
+// --- Row parsers shared between fetchAllData and fetchPublicData ---
+
+const parseAssignmentRow = (row: any[]): Assignment => {
+  const promptIdRaw = row[1] || '';
+  const promptIdArray = promptIdRaw.split(',').map((id: string) => id.trim()).filter(Boolean);
+  return {
+    id: row[0] || Math.random().toString(36).substr(2, 9),
+    promptId: promptIdArray[0] || '',
+    promptIds: promptIdArray,
+    title: row[2] || 'Untitled Assignment',
+    startDate: row[3] || '',
+    dueDate: row[4] || '',
+    assignedTo: (row[5] || '').split(','),
+    instructions: row[6] || '',
+    status: (row[7] as 'Open' | 'Closed') || 'Open',
+    driveFolderId: row[8] || '',
+    eventId: row[9] || '',
+    deletedAt: row[10] || '',
+    deletedBy: row[11] || '',
+    createdAt: row[12] || ''
+  };
+};
+
+const parseSubmissionRow = (row: any[]): Submission => {
+  const rawRevision = row[10];
+  const rawArtworkId = row[11];
+  const rawArtworkUrl = row[12];
+  const rawDeletedAt = row[13];
+  const rawDeletedBy = row[14];
+  const legacyArtworkId = row[10];
+  const legacyArtworkUrl = row[11];
+  const revisionCount = Number.isFinite(parseInt(rawRevision, 10)) ? parseInt(rawRevision, 10) : 0;
+  let artworkFileId = rawArtworkId || '';
+  let artworkUrl = rawArtworkUrl || '';
+  if (!rawArtworkUrl && typeof rawArtworkId === 'string' && rawArtworkId.includes('http')) {
+    artworkFileId = '';
+    artworkUrl = rawArtworkId;
+  }
+  if (!artworkFileId && !artworkUrl && legacyArtworkId) {
+    artworkFileId = legacyArtworkId;
+    artworkUrl = legacyArtworkUrl || '';
+  }
+  return {
+    id: row[0] || Math.random().toString(36).substr(2, 9),
+    assignmentId: row[1] || '',
+    camperId: row[2] || '',
+    camperName: row[3] || 'Anonymous',
+    title: row[4] || 'Untitled Song',
+    lyrics: row[5] || '',
+    versions: (() => { try { return JSON.parse(row[6] || '[]'); } catch { return []; } })(),
+    details: row[7] || '',
+    updatedAt: row[8] || new Date().toISOString(),
+    lyricsDocUrl: row[9] || '',
+    lyricsRevisionCount: revisionCount,
+    artworkFileId,
+    artworkUrl,
+    deletedAt: rawDeletedAt || '',
+    deletedBy: rawDeletedBy || '',
+    primaryVersionId: row[15] || '',
+    status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined
+  };
+};
+
+const parseCamperRow = (row: any[]): CamperProfile => ({
+  id: row[0] || '',
+  name: row[1] || '',
+  email: row[2] || '',
+  picture: row[3] || '',
+  lastSignedInAt: row[4] || '',
+  location: row[5] || '',
+  status: row[6] || '',
+  pictureOverrideUrl: row[7] || '',
+  statusUpdatedAt: row[8] || '',
+  intakeSemester: row[9] || ''
+});
+
+const parseCollaboratorRow = (row: any[]): Collaboration => ({
+  id: row[0],
+  submissionId: row[1],
+  camperId: row[2] || '',
+  camperName: row[3] || '',
+  role: (row[4] || '') as CollaboratorRole,
+  createdAt: row[5] || ''
+});
+
+const parseBocaRow = (row: any[]): Boca => ({
+  id: row[0] || '',
+  fromEmail: row[1] || '',
+  submissionId: row[2] || '',
+  awardedAt: row[3] || ''
+});
+
+const parseStatusUpdateRow = (row: any[]): StatusUpdate => ({
+  id: row[0] || '',
+  camperEmail: row[1] || '',
+  camperName: row[2] || '',
+  status: row[3] || '',
+  timestamp: row[4] || ''
+});
+
+export const fetchPublicData = async () => {
+  // Try Worker proxy first (hides spreadsheet ID), fall back to direct API for local dev
+  let rawData: { assignments: any[][]; submissions: any[][]; campers: any[][]; collaborators: any[][]; bocas: any[][]; statusUpdates: any[][] };
+
+  try {
+    const resp = await fetch('/api/public-data');
+    if (resp.ok) {
+      rawData = await resp.json();
+    } else {
+      throw new Error('Worker unavailable');
+    }
+  } catch {
+    // Fallback: direct Sheets API for local dev
+    const ranges = [
+      'Assignments!A2:M1000', 'Submissions!A2:Q1000', 'Users!A2:J1000',
+      'Collaborators!A2:F5000', 'BOCAs!A2:D5000', 'StatusUpdates!A2:E5000'
+    ];
+    const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${rangeParams}&key=${API_KEY}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Failed to fetch public data');
+    const result = await resp.json();
+    rawData = {
+      assignments: result.valueRanges[0].values || [],
+      submissions: result.valueRanges[1].values || [],
+      campers: result.valueRanges[2].values || [],
+      collaborators: result.valueRanges[3].values || [],
+      bocas: result.valueRanges[4].values || [],
+      statusUpdates: result.valueRanges[5].values || []
+    };
+  }
+
+  return {
+    prompts: [] as Prompt[],
+    assignments: rawData.assignments.map(parseAssignmentRow),
+    submissions: rawData.submissions.map(parseSubmissionRow),
+    comments: [] as Comment[],
+    campers: rawData.campers.map(parseCamperRow),
+    events: [] as Event[],
+    tags: [] as string[],
+    upvotedPromptIds: [] as string[],
+    favoritedSubmissionIds: [] as string[],
+    collaborations: rawData.collaborators.filter((row: any[]) => row[0] && row[1]).map(parseCollaboratorRow),
+    bocas: rawData.bocas.map(parseBocaRow),
+    statusUpdates: rawData.statusUpdates.map(parseStatusUpdateRow)
+  };
+};
+
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Users!A2:J1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
   const now = new Date().toISOString();
@@ -702,8 +896,7 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Users!A2:J1000');
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
     id: row[0] || '',
@@ -723,8 +916,7 @@ export const updateUserProfileDetails = async (
   spreadsheetId: string,
   data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }
 ) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Users!A2:J1000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Users!A2:J1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === data.id || row[2] === data.email);
   if (rowIndex === -1) {
@@ -755,8 +947,7 @@ export const updateUserProfileDetails = async (
 };
 
 export const fetchUserUpvotes = async (spreadsheetId: string, userEmail: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PromptUpvotes!A2:E5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('PromptUpvotes!A2:E5000');
   const rows = result.values || [];
   return rows
     .filter((row: any[]) => row[2] === userEmail)
@@ -782,8 +973,7 @@ export const appendPromptUpvote = async (
 // --- Favorites ---
 
 export const fetchUserFavorites = async (spreadsheetId: string, userEmail: string): Promise<string[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Favorites!A2:D5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Favorites!A2:D5000');
   const rows = result.values || [];
   return rows
     .filter((row: any[]) => row[1] === userEmail)
@@ -810,41 +1000,27 @@ export const removeFavorite = async (
   userEmail: string,
   submissionId: string
 ): Promise<void> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Favorites!A2:D5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Favorites!A2:D5000');
   const rows = result.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[1] === userEmail && row[2] === submissionId);
   if (rowIndex === -1) return;
 
-  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
-  const metadata = await callGoogleApi(metadataUrl);
+  const metadata = await callSheetsMetadata();
   const favSheet = metadata.sheets.find((s: any) => s.properties.title === 'Favorites');
   const sheetId = favSheet.properties.sheetId;
 
   const sheetRow = rowIndex + 1; // +1 for header
-  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
-  await callGoogleApi(batchUrl, {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId,
-            dimension: 'ROWS',
-            startIndex: sheetRow,
-            endIndex: sheetRow + 1
-          }
-        }
-      }]
-    })
-  });
+  await callSheetsBatchUpdate([{
+    deleteDimension: {
+      range: { sheetId, dimension: 'ROWS', startIndex: sheetRow, endIndex: sheetRow + 1 }
+    }
+  }]);
 };
 
 // --- Collaborators ---
 
 export const fetchAllCollaborations = async (spreadsheetId: string): Promise<Collaboration[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Collaborators!A2:F5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Collaborators!A2:F5000');
   const rows = result.values || [];
   return rows
     .filter((row: any[]) => row[0] && row[1])
@@ -873,34 +1049,21 @@ export const removeCollaborator = async (
   spreadsheetId: string,
   collaboratorId: string
 ): Promise<void> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Collaborators!A2:F5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Collaborators!A2:F5000');
   const rows = result.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === collaboratorId);
   if (rowIndex === -1) return;
 
-  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
-  const metadata = await callGoogleApi(metadataUrl);
+  const metadata = await callSheetsMetadata();
   const collabSheet = metadata.sheets.find((s: any) => s.properties.title === 'Collaborators');
   const sheetId = collabSheet.properties.sheetId;
 
   const sheetRow = rowIndex + 1;
-  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
-  await callGoogleApi(batchUrl, {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId,
-            dimension: 'ROWS',
-            startIndex: sheetRow,
-            endIndex: sheetRow + 1
-          }
-        }
-      }]
-    })
-  });
+  await callSheetsBatchUpdate([{
+    deleteDimension: {
+      range: { sheetId, dimension: 'ROWS', startIndex: sheetRow, endIndex: sheetRow + 1 }
+    }
+  }]);
 };
 
 export const fetchUserProfile = async () => {
@@ -1191,8 +1354,7 @@ export const fetchComments = async (
   entityType: 'song' | 'prompt' | 'assignment',
   entityId: string
 ): Promise<Comment[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Comments!A2:J5000');
   const rows = result.values || [];
 
   return rows
@@ -1203,8 +1365,7 @@ export const fetchComments = async (
 export const fetchAllComments = async (
   spreadsheetId: string
 ): Promise<Comment[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Comments!A2:J5000');
   const rows = result.values || [];
 
   return rows.map(parseCommentRow);
@@ -1251,8 +1412,7 @@ export const createComment = async (
 };
 
 export const updateCommentRow = async (spreadsheetId: string, comment: Comment) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Comments!A2:J5000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === comment.id);
 
@@ -1284,8 +1444,7 @@ export const toggleReaction = async (
   emoji: string,
   userEmail: string
 ): Promise<Comment> => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Comments!A2:J5000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Comments!A2:J5000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === commentId);
 
@@ -1316,8 +1475,7 @@ export const toggleReaction = async (
 
 // Tags functions
 export const fetchTags = async (spreadsheetId: string): Promise<string[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Tags!A2:C1000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Tags!A2:C1000');
   const rows = result.values || [];
   return rows.map((row: any[]) => row[1] || '').filter(Boolean);
 };
@@ -1342,36 +1500,21 @@ export const createTag = async (spreadsheetId: string, tagName: string): Promise
 };
 
 export const deleteTag = async (spreadsheetId: string, tagName: string): Promise<void> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Tags!A2:C1000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Tags!A2:C1000');
   const rows = result.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[1] === tagName);
   if (rowIndex === -1) throw new Error('Tag not found');
 
-  // Get the Tags sheet numeric ID
-  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
-  const metadata = await callGoogleApi(metadataUrl);
+  const metadata = await callSheetsMetadata();
   const tagsSheet = metadata.sheets.find((s: any) => s.properties.title === 'Tags');
   const sheetId = tagsSheet.properties.sheetId;
 
-  // Delete the row (rowIndex is 0-based from row 2, so actual sheet row is rowIndex + 1)
   const sheetRow = rowIndex + 1; // +1 for the header row
-  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
-  await callGoogleApi(batchUrl, {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId,
-            dimension: 'ROWS',
-            startIndex: sheetRow,
-            endIndex: sheetRow + 1
-          }
-        }
-      }]
-    })
-  });
+  await callSheetsBatchUpdate([{
+    deleteDimension: {
+      range: { sheetId, dimension: 'ROWS', startIndex: sheetRow, endIndex: sheetRow + 1 }
+    }
+  }]);
 };
 
 // Calendar API functions
@@ -1489,8 +1632,7 @@ export const fetchCalendarEvent = async (calendarEventId: string): Promise<{
 
 // Events sheet functions
 export const fetchEvents = async (spreadsheetId: string): Promise<Event[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Events!A2:O5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('Events!A2:O5000');
   const rows = result.values || [];
 
   return rows.map((row: any[]) => ({
@@ -1578,8 +1720,7 @@ export const createEvent = async (
 };
 
 export const updateEventRow = async (spreadsheetId: string, event: Event) => {
-  const rowsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Events!A2:O5000`;
-  const rowsResult = await callGoogleApi(rowsUrl);
+  const rowsResult = await callSheetsGet('Events!A2:O5000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === event.id);
 
@@ -1634,8 +1775,7 @@ export const syncEventFromCalendar = async (spreadsheetId: string, event: Event)
 
 // BOCAs
 export const fetchBocas = async (spreadsheetId: string): Promise<{ id: string; fromEmail: string; submissionId: string; awardedAt: string }[]> => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/BOCAs!A2:D5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('BOCAs!A2:D5000');
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
     id: row[0] || '',
@@ -1664,8 +1804,7 @@ export const createBoca = async (
 // --- Status Updates ---
 
 export const fetchStatusUpdates = async (spreadsheetId: string) => {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/StatusUpdates!A2:E5000`;
-  const result = await callGoogleApi(url);
+  const result = await callSheetsGet('StatusUpdates!A2:E5000');
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
     id: row[0] || '',

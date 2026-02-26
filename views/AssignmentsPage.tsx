@@ -13,8 +13,8 @@ interface AssignmentsPageProps {
   assignments: Assignment[];
   prompts: Prompt[];
   campersCount: number;
-  onAdd: (assignment: Assignment) => void;
-  onAddPrompt: (prompt: Prompt) => Promise<void>;
+  onAdd?: (assignment: Assignment) => void;
+  onAddPrompt?: (prompt: Prompt) => Promise<void>;
   onViewDetail: (id: string) => void;
   userProfile?: { name?: string; email?: string } | null;
   spreadsheetId: string | null;
@@ -53,7 +53,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       status: 'Open',
       createdAt: new Date().toISOString()
     };
-    onAdd(assignment);
+    onAdd?.(assignment);
     setShowAdd(false);
     setForm({ title: '', promptIds: [], startDate: '', dueDate: '', instructions: '' });
   };
@@ -271,13 +271,15 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
           </div>
           <p className="text-slate-500 text-sm">Turn prompts into focused creative projects.</p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="self-start md:self-auto bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-        >
-          <i className="fa-solid fa-calendar-plus"></i>
-          Create Assignment
-        </button>
+        {onAdd && (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="self-start md:self-auto bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+          >
+            <i className="fa-solid fa-calendar-plus"></i>
+            Create Assignment
+          </button>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -448,7 +450,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         </div>
       )}
 
-      {showAdd && createPortal(
+      {showAdd && onAdd && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={() => setShowAdd(false)}>
           <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">

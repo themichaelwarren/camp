@@ -495,7 +495,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         onTouchStart={(e) => handleSwipeStart(e, i)}
                         onTouchMove={(e) => handleSwipeMove(e, i)}
                         onTouchEnd={() => handleSwipeEnd(i)}
-                        className={`relative flex items-center gap-3 group rounded-lg px-2 py-1.5 hover:bg-slate-200/50 ${
+                        className={`relative flex items-center gap-3 group rounded-lg px-2 py-1.5 bg-slate-100 hover:bg-slate-200/50 ${
                           dragIndex === i ? 'opacity-40' : ''
                         } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
                         style={{

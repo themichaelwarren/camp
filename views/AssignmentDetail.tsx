@@ -19,27 +19,27 @@ interface AssignmentDetailProps {
   events: Event[];
   campersCount: number;
   onNavigate: (view: ViewState, id?: string) => void;
-  onUpdate: (assignment: Assignment) => void;
-  onAddPrompt: (prompt: Prompt) => Promise<void>;
+  onUpdate?: (assignment: Assignment) => void;
+  onAddPrompt?: (prompt: Prompt) => Promise<void>;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
-  onAddSubmission: (submission: Submission) => void;
-  onCreateEvent: (assignmentId: string) => Promise<void>;
+  onAddSubmission?: (submission: Submission) => void;
+  onCreateEvent?: (assignmentId: string) => Promise<void>;
   currentUser?: { name: string; email: string };
-  spreadsheetId: string;
-  availableTags: string[];
+  spreadsheetId?: string;
+  availableTags?: string[];
   bocas?: Boca[];
   campers?: CamperProfile[];
   dateFormat: DateFormat;
-  favoritedSubmissionIds: string[];
-  onToggleFavorite: (submissionId: string) => void;
+  favoritedSubmissionIds?: string[];
+  onToggleFavorite?: (submissionId: string) => void;
   collaborations: Collaboration[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [], onAddCollaborators }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators }) => {
   const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
@@ -114,18 +114,18 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
       instructions: editForm.instructions.trim(),
       status: editForm.status
     };
-    onUpdate(updatedAssignment);
+    onUpdate?.(updatedAssignment);
     setShowEditModal(false);
   };
 
   const handleCloseAssignment = () => {
     if (!window.confirm('Close this assignment? This will prevent new submissions and mark it as archived.')) return;
-    onUpdate({ ...assignment, status: 'Closed' });
+    onUpdate?.({ ...assignment, status: 'Closed' });
   };
 
   const handleDeleteAssignment = () => {
     if (!window.confirm('Delete this assignment? It will be hidden but can be restored later.')) return;
-    onUpdate({
+    onUpdate?.({
       ...assignment,
       deletedAt: new Date().toISOString(),
       deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
@@ -224,30 +224,32 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!isPastSemester && (
+        {currentUser && (
+          <div className="flex items-center gap-2">
+            {!isPastSemester && (
+              <button
+                onClick={() => setShowSubmitModal(true)}
+                className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-cloud-arrow-up"></i>
+                Submit Song
+              </button>
+            )}
+            {isPastSemester && (
+              <span className="flex items-center gap-2 text-slate-400 text-sm font-medium px-4 py-2.5">
+                <i className="fa-solid fa-lock text-xs"></i>
+                Past semester
+              </span>
+            )}
             <button
-              onClick={() => setShowSubmitModal(true)}
-              className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+              onClick={() => setShowEditModal(true)}
+              className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
             >
-              <i className="fa-solid fa-cloud-arrow-up"></i>
-              Submit Song
+              <i className="fa-solid fa-pen"></i>
+              Edit
             </button>
-          )}
-          {isPastSemester && (
-            <span className="flex items-center gap-2 text-slate-400 text-sm font-medium px-4 py-2.5">
-              <i className="fa-solid fa-lock text-xs"></i>
-              Past semester
-            </span>
-          )}
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-pen"></i>
-            Edit
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -507,7 +509,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 </div>
               </section>
             )
-          ) : assignment.status !== 'Closed' ? (
+          ) : assignment.status !== 'Closed' && currentUser && onCreateEvent ? (
             <section className="bg-white p-6 rounded-3xl border-2 border-dashed border-slate-200 shadow-sm">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <i className="fa-solid fa-calendar-days"></i>
@@ -740,7 +742,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           defaultAssignmentId={assignment.id}
           lockAssignment
           userProfile={currentUser}
-          onAdd={(sub) => { onAddSubmission(sub); setShowSubmitModal(false); }}
+          onAdd={(sub) => { onAddSubmission?.(sub); setShowSubmitModal(false); }}
           onClose={() => setShowSubmitModal(false)}
           campers={campers}
           onAddCollaborators={onAddCollaborators}

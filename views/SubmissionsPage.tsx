@@ -9,7 +9,7 @@ interface SubmissionsPageProps {
   submissions: Submission[];
   assignments: Assignment[];
   prompts: Prompt[];
-  onAdd: (submission: Submission) => void;
+  onAdd?: (submission: Submission) => void;
   onViewDetail: (id: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
@@ -34,7 +34,7 @@ interface SubmissionsPageProps {
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   favoritedSubmissionIds: string[];
-  onToggleFavorite: (submissionId: string) => void;
+  onToggleFavorite?: (submissionId: string) => void;
   collaborations: Collaboration[];
   campers?: CamperProfile[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
@@ -334,13 +334,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             <i className="fa-solid fa-shuffle"></i>
             Jukebox
           </button>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-          >
-            <i className="fa-solid fa-cloud-arrow-up"></i>
-            Submit New Song
-          </button>
+          {onAdd && (
+            <button
+              onClick={() => setShowUpload(true)}
+              className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+            >
+              <i className="fa-solid fa-cloud-arrow-up"></i>
+              Submit New Song
+            </button>
+          )}
         </div>
       </div>
 
@@ -578,7 +580,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         </div>
       )}
 
-      {showUpload && (
+      {showUpload && onAdd && (
         <SubmitSongModal
           assignments={assignments}
           userProfile={userProfile}
