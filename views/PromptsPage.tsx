@@ -151,6 +151,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
             Filters
             <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
           </button>
+          {(searchTerm || statusFilter !== 'all') && (
+            <button
+              onClick={() => { onSearchTermChange(''); onStatusFilterChange('all'); }}
+              className="text-xs text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap"
+            >
+              Clear all
+            </button>
+          )}
         </div>
         <div className={`${showFilters ? 'block' : 'hidden'} space-y-3`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

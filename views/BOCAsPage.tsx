@@ -162,6 +162,14 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
             Filters
             <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
           </button>
+          {searchTerm && (
+            <button
+              onClick={() => onSearchTermChange('')}
+              className="text-xs text-amber-600 hover:text-amber-700 font-semibold whitespace-nowrap"
+            >
+              Clear all
+            </button>
+          )}
         </div>
         <div className={`${showFilters ? 'block' : 'hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

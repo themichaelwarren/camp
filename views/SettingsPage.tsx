@@ -153,7 +153,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
             </button>
             <p className="text-[10px] text-slate-400 mt-1">Overrides your Google profile photo. Max size 5MB.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
               <input
@@ -166,27 +166,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Current Status</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+              <textarea
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500 resize-none"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 placeholder="Writing, recording, experimenting..."
+                rows={2}
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Intake Semester</label>
-              <select
-                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
-                value={intakeSemester}
-                onChange={(e) => setIntakeSemester(e.target.value)}
-              >
-                <option value="">Not set</option>
-                {allSemesters.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+            {isAdmin && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Intake Semester</label>
+                <select
+                  className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                  value={intakeSemester}
+                  onChange={(e) => setIntakeSemester(e.target.value)}
+                >
+                  <option value="">Not set</option>
+                  {allSemesters.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <button
             type="submit"

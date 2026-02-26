@@ -305,6 +305,14 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             Filters
             <i className={`fa-solid fa-chevron-${showFilters ? 'up' : 'down'} text-[10px]`}></i>
           </button>
+          {(searchTerm || semesterFilter !== 'all' || statusFilter !== 'all' || promptFilter !== 'all') && (
+            <button
+              onClick={() => { onSearchTermChange(''); onSemesterFilterChange('all'); onStatusFilterChange('all'); onPromptFilterChange('all'); }}
+              className="text-xs text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap"
+            >
+              Clear all
+            </button>
+          )}
         </div>
         <div className={`${showFilters ? 'block' : 'hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

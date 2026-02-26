@@ -33,11 +33,14 @@ interface LayoutProps {
   onToggleFavorite?: (submissionId: string) => void;
   isPublicMode?: boolean;
   onSignIn?: () => void;
+  themePreference?: 'light' | 'dark' | 'system';
+  onThemeChange?: (value: 'light' | 'dark' | 'system') => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -51,6 +54,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   useEffect(() => {
     try { localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed)); } catch {}
   }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isUserMenuOpen]);
 
   const allMenuGroups = [
     { label: 'Activity', items: [
@@ -363,7 +377,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           )
         )}
         {isLoggedIn ? (
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen((open) => !open)}
               className={`${collapsed ? '' : 'w-full'} flex items-center ${collapsed ? 'justify-center' : 'gap-3 text-left'}`}
@@ -403,6 +417,30 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             </button>
             {isUserMenuOpen && (
               <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-0 right-0'}`}>
+                {onThemeChange && (
+                  <div className="px-3 pt-3 pb-2">
+                    <div className="flex items-center gap-1 bg-white/20 rounded-xl p-1">
+                      {([
+                        { mode: 'light' as const, icon: 'fa-sun', label: 'Light' },
+                        { mode: 'dark' as const, icon: 'fa-moon', label: 'Dark' },
+                        { mode: 'system' as const, icon: 'fa-desktop', label: 'System' },
+                      ]).map(({ mode, icon, label }) => (
+                        <button
+                          key={mode}
+                          onClick={(e) => { e.stopPropagation(); onThemeChange(mode); }}
+                          className={`theme-picker-btn flex-1 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                            themePreference === mode
+                              ? 'bg-indigo-500 theme-picker-active'
+                              : 'opacity-50 hover:opacity-100'
+                          }`}
+                          title={label}
+                        >
+                          <i className={`fa-solid ${icon} text-xs`}></i>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={() => handleNavigate('settings')}
                   className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
@@ -473,7 +511,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className={`camp-sidebar ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'} bg-indigo-900 text-white flex-col hidden md:flex shrink-0 h-screen sticky top-0 transition-[width] duration-200`}>
+      <aside className={`camp-sidebar ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'} bg-indigo-900 text-white flex-col hidden md:flex shrink-0 h-screen sticky top-0 z-20 transition-[width] duration-200`}>
         {renderSidebarContent(isSidebarCollapsed)}
       </aside>
 

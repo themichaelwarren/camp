@@ -30,6 +30,7 @@ type ActivityItem =
   | { type: 'prompt'; date: string; prompt: Prompt }
   | { type: 'assignment'; date: string; assignment: Assignment }
   | { type: 'boca'; date: string; boca: Boca }
+  | { type: 'boca-received'; date: string; boca: Boca }
   | { type: 'status-update'; date: string; statusUpdate: StatusUpdate };
 
 type TimeRange = 'today' | 'yesterday' | 'week' | 'month' | 'all-time';
@@ -143,6 +144,7 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
     if (filter === 'all' || filter === 'bocas') {
       bocas.forEach(b => {
         all.push({ type: 'boca', date: b.awardedAt, boca: b });
+        all.push({ type: 'boca-received', date: b.awardedAt, boca: b });
       });
     }
 
@@ -177,6 +179,10 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
           case 'reaction': return item.comment.authorEmail === selectedCamper;
           case 'prompt': return item.prompt.createdBy === selectedCamper || item.prompt.createdBy === campers.find(c => c.email === selectedCamper)?.name;
           case 'boca': return item.boca.fromEmail === selectedCamper;
+          case 'boca-received': {
+            const sub = submissions.find(s => s.id === item.boca.submissionId);
+            return sub?.camperId === selectedCamper;
+          }
           case 'status-update': return item.statusUpdate.camperEmail === selectedCamper;
           case 'assignment': return true; // assignments aren't camper-specific
           default: return true;
@@ -317,6 +323,14 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
               ))
             }
           </select>
+          {(filter !== 'all' || timeRange !== 'all-time' || selectedCamper) && (
+            <button
+              onClick={() => { setFilter('all'); setTimeRange('all-time'); setSelectedCamper(''); }}
+              className="text-xs text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap"
+            >
+              Clear all
+            </button>
+          )}
         </div>
       </div>
 
@@ -583,6 +597,45 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
                 <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                     <i className="fa-solid fa-star text-[8px]"></i>
+                    BOCA
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.type === 'boca-received') {
+            const b = item.boca;
+            const sub = submissions.find(s => s.id === b.submissionId);
+            const recipientCamper = sub ? findCamper(campers, sub.camperId) : undefined;
+            const recipientName = recipientCamper?.name || sub?.camperName || 'a camper';
+            const giverCamper = findCamper(campers, b.fromEmail);
+            const giverName = giverCamper?.name || b.fromEmail;
+            return (
+              <div
+                key={`boca-recv-${b.id}`}
+                onClick={() => sub ? onNavigate('song-detail', sub.id) : undefined}
+                className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-amber-200 cursor-pointer transition-all"
+              >
+                <CamperAvatar campers={campers} emailOrName={sub?.camperId || ''} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-bold text-slate-800">{recipientName}</span> received a BOCA for{' '}
+                    <span className="font-semibold text-indigo-600">"{sub?.title || 'a song'}"</span>
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">from {giverName}</p>
+                  <div className="flex items-center gap-2 mt-1.5 sm:hidden">
+                    <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <i className="fa-solid fa-trophy text-[8px]"></i>
+                      BOCA
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatRelativeTime(item.date)}</span>
+                  </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                    <i className="fa-solid fa-trophy text-[8px]"></i>
                     BOCA
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{formatRelativeTime(item.date)}</span>

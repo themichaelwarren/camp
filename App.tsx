@@ -1642,6 +1642,8 @@ const App: React.FC = () => {
         }
         googleService.logout();
       }}
+      themePreference={themePreference}
+      onThemeChange={setThemePreference}
     >
       {renderView()}
     </Layout>
