@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Submission, Assignment, Prompt, PlayableTrack, Boca, Collaboration, CamperProfile } from '../types';
-import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
 
@@ -42,11 +42,6 @@ interface SubmissionsPageProps {
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 
-const gridClasses: Record<3 | 4 | 5, string> = {
-  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
-  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-  5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
-};
 
 const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite, collaborations, campers, onAddCollaborators }) => {
   const [showUpload, setShowUpload] = useState(false);
@@ -456,7 +451,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             </button>
           </div>
           {viewMode === 'cards' && (
-            <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+            <div className="hidden xl:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
               {([3, 4, 5] as const).map(n => (
                 <button
                   key={n}
@@ -514,7 +509,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             groupedBySemester.map(([term, items]) => (
               <React.Fragment key={term}>
                 <div className="text-sm font-bold text-slate-400 uppercase tracking-widest pt-4 first:pt-0">{term}</div>
-                <div className={`grid ${gridClasses[gridSize]} gap-4`}>
+                <div className="grid gap-4" style={getGridStyle(gridSize)}>
                   {items.map(sub => {
                     const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
                     const track = trackFromSubmission(sub, collaborations);
@@ -525,7 +520,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               </React.Fragment>
             ))
           ) : (
-            <div className={`grid ${gridClasses[gridSize]} gap-4`}>
+            <div className="grid gap-4" style={getGridStyle(gridSize)}>
               {filteredSubmissions.map(sub => {
                 const assignmentTitle = assignments.find(a => a.id === sub.assignmentId)?.title || 'Independent Work';
                 const track = trackFromSubmission(sub, collaborations);

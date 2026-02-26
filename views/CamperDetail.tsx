@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, Collaboration } from '../types';
-import { getTerm, getTermSortKey, isCurrentOrFutureTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { getTerm, getTermSortKey, isCurrentOrFutureTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface CamperDetailProps {
@@ -52,11 +52,6 @@ const getFirstVersionDate = (sub: Submission): number => {
   return new Date(sub.updatedAt).getTime() || 0;
 };
 
-const gridClasses: Record<3 | 4 | 5, string> = {
-  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
-  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-  5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
-};
 
 const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
@@ -315,7 +310,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             </button>
           </div>
           {songsView === 'cards' && (
-            <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+            <div className="hidden xl:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
               {([3, 4, 5] as const).map(n => (
                 <button
                   key={n}
@@ -333,7 +328,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
         </div>
 
         {songsView === 'cards' ? (
-          <div className={`grid ${gridClasses[gridSize]} gap-4`}>
+          <div className="grid gap-4" style={getGridStyle(gridSize)}>
             {filteredSubmissions.map((submission) => {
               const track = trackFromSubmission(submission, collaborations);
               const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;

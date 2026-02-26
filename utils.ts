@@ -125,6 +125,14 @@ export function getPrimaryVersion(sub: Submission): SongVersion | null {
   return sub.versions[0];
 }
 
+export function getGridStyle(gridSize: 3 | 4 | 5): { gridTemplateColumns: string } {
+  const minWidths: Record<3 | 4 | 5, number> = { 3: 280, 4: 240, 5: 200 };
+  const gaps = gridSize - 1;
+  return {
+    gridTemplateColumns: `repeat(auto-fill, minmax(max(calc((100% - ${gaps}rem) / ${gridSize}), ${minWidths[gridSize]}px), 1fr))`,
+  };
+}
+
 export function trackFromSubmission(sub: Submission, collaborations: Collaboration[]): PlayableTrack | null {
   const primary = getPrimaryVersion(sub);
   if (!primary) return null;

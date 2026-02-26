@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Submission, Assignment, PlayableTrack, Boca, Collaboration } from '../types';
-import { getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface FavoritesPageProps {
@@ -22,11 +22,6 @@ interface FavoritesPageProps {
   collaborations: Collaboration[];
 }
 
-const gridClasses: Record<3 | 4 | 5, string> = {
-  3: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
-  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-  5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
-};
 
 const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -287,7 +282,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
                   </button>
                 </div>
                 {viewMode === 'cards' && (
-                  <div className="hidden md:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+                  <div className="hidden xl:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
                     {([3, 4, 5] as const).map(n => (
                       <button
                         key={n}
@@ -308,7 +303,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
           {/* Songs */}
           {filteredSubmissions.length > 0 ? (
             viewMode === 'cards' ? (
-              <div className={`grid ${gridClasses[gridSize]} gap-4`}>
+              <div className="grid gap-4" style={getGridStyle(gridSize)}>
                 {filteredSubmissions.map(sub => renderCard(sub))}
               </div>
             ) : (
