@@ -1410,6 +1410,7 @@ const App: React.FC = () => {
           <BOCAsPage
             bocas={bocas}
             submissions={submissions.filter(sub => isSubmissionVisible(sub, userProfile?.email || '', collaborations))}
+            assignments={assignments.filter(a => !a.deletedAt)}
             currentUserEmail={userProfile?.email || ''}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
@@ -1422,6 +1423,8 @@ const App: React.FC = () => {
             sortBy={bocasSortBy}
             onSortByChange={setBocasSortBy}
             dateFormat={dateFormat}
+            gridSize={submissionsGridSize}
+            onGridSizeChange={setSubmissionsGridSize}
             collaborations={collaborations}
           />
         );

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Boca, Submission, PlayableTrack, ViewState, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
+import { Assignment, Boca, Submission, PlayableTrack, ViewState, Collaboration } from '../types';
+import { DateFormat, formatDate, getDisplayArtist, getGridStyle, getTerm, trackFromSubmission } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 type BocasSortOption = 'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent';
@@ -9,6 +9,7 @@ type BocasSortOption = 'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' |
 interface BOCAsPageProps {
   bocas: Boca[];
   submissions: Submission[];
+  assignments: Assignment[];
   currentUserEmail: string;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
@@ -21,10 +22,12 @@ interface BOCAsPageProps {
   sortBy: BocasSortOption;
   onSortByChange: (value: BocasSortOption) => void;
   dateFormat: DateFormat;
+  gridSize: 3 | 4 | 5;
+  onGridSizeChange: (value: 3 | 4 | 5) => void;
   collaborations: Collaboration[];
 }
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, collaborations }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -220,25 +223,43 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
         </div>
       )}
 
-      {/* View toggle + results count */}
+      {/* View toggle + grid size + results count */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
-          <button
-            onClick={() => onViewModeChange('cards')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              viewMode === 'cards' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Cards
-          </button>
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              viewMode === 'list' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            List
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-fit">
+            <button
+              onClick={() => onViewModeChange('cards')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                viewMode === 'cards' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => onViewModeChange('list')}
+              className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                viewMode === 'list' ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              List
+            </button>
+          </div>
+          {viewMode === 'cards' && (
+            <div className="hidden xl:flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+              {([3, 4, 5] as const).map(n => (
+                <button
+                  key={n}
+                  onClick={() => onGridSizeChange(n)}
+                  className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${
+                    gridSize === n ? 'bg-amber-500 text-white' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                  title={`${n} per row`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <p className="text-xs text-slate-400 font-medium">
           {filteredSortedSongs.length} song{filteredSortedSongs.length !== 1 ? 's' : ''}
@@ -248,10 +269,12 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
       {/* Content */}
       {filteredSortedSongs.length > 0 ? (
         viewMode === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid gap-4" style={getGridStyle(gridSize)}>
             {filteredSortedSongs.map(({ submissionId, count, submission: sub }) => {
               if (!sub) return null;
               const track = trackFromSubmission(sub, collaborations);
+              const assignment = assignments.find(a => a.id === sub.assignmentId);
+              const semester = assignment?.dueDate ? getTerm(assignment.dueDate) : null;
               const alreadyBocad = bocas.some(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
               const isOwnSong = currentUserEmail === sub.camperId;
               const canGive = currentUserEmail && !alreadyBocad && !isOwnSong && remaining > 0 && isCurrentMonth;
@@ -290,6 +313,13 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                   <div className="p-4">
                     <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
                     <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
+                    {(assignment || semester) && (
+                      <p className="text-[11px] text-slate-400 mt-1.5 truncate">
+                        {assignment && <span>{assignment.title}</span>}
+                        {assignment && semester && <span className="mx-1">·</span>}
+                        {semester && <span>{semester}</span>}
+                      </p>
+                    )}
                     <div className="mt-3 flex items-center justify-between">
                       {alreadyBocad ? (
                         <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1">
@@ -321,19 +351,21 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
         ) : (
           /* List View */
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <table className="w-full text-left">
+            <table className="w-full table-fixed text-left">
               <thead className="bg-slate-50 text-[10px] text-slate-500 uppercase font-bold tracking-widest border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">Song</th>
-                  <th className="px-4 py-3">BOCAs</th>
+                  <th className="px-3 sm:px-4 py-3 w-[60%] sm:w-auto">Song</th>
+                  <th className="px-2 sm:px-4 py-3 w-[25%] sm:w-auto">BOCAs</th>
                   <th className="px-4 py-3 hidden md:table-cell"></th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-2 sm:px-4 py-3 w-[15%] sm:w-auto"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredSortedSongs.map(({ submissionId, count, submission: sub }) => {
                   if (!sub) return null;
                   const track = trackFromSubmission(sub, collaborations);
+                  const assignment = assignments.find(a => a.id === sub.assignmentId);
+                  const semester = assignment?.dueDate ? getTerm(assignment.dueDate) : null;
                   const alreadyBocad = bocas.some(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
                   const isOwnSong = currentUserEmail === sub.camperId;
                   const canGive = currentUserEmail && !alreadyBocad && !isOwnSong && remaining > 0 && isCurrentMonth;
@@ -344,8 +376,8 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                       onClick={() => onNavigate('song-detail', submissionId)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors group"
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                      <td className="px-3 sm:px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center relative">
                             <ArtworkImage
                               fileId={sub.artworkFileId}
@@ -358,11 +390,15 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-slate-800 truncate">{sub.title}</p>
-                            <p className="text-xs text-slate-500 truncate">{getDisplayArtist(sub, collaborations)}</p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {getDisplayArtist(sub, collaborations)}
+                              {assignment && <span className="text-slate-300"> · {assignment.title}</span>}
+                              {semester && <span className="text-slate-300"> · {semester}</span>}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-3">
                         <span className="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
                           <i className="fa-solid fa-star text-[8px]"></i>
                           {count}
@@ -389,7 +425,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, currentUserEm
                           </button>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <td className="px-2 sm:px-4 py-3" onClick={e => e.stopPropagation()}>
                         {track && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}

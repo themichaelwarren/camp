@@ -1299,12 +1299,12 @@ export class DriveAccessError extends Error {
 }
 
 export const fetchDriveFile = async (fileId: string) => {
+  const proxyUrl = isLocalDev ? `https://camp.themichaelwarren.com/api/drive/${fileId}` : `/api/drive/${fileId}`;
+
   if (!accessToken) {
     // Use Worker proxy for publicly shared files (avoids CORS issues)
-    if (!isLocalDev) {
-      const proxyResponse = await fetch(`/api/drive/${fileId}`, { cache: 'no-store' });
-      if (proxyResponse.ok) return proxyResponse.blob();
-    }
+    const proxyResponse = await fetch(proxyUrl, { cache: 'no-store' });
+    if (proxyResponse.ok) return proxyResponse.blob();
     throw new Error('Not authenticated');
   }
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
@@ -1327,12 +1327,10 @@ export const fetchDriveFile = async (fileId: string) => {
 
   // Fallback: try Worker proxy for publicly shared files
   if (response && (response.status === 403 || response.status === 404)) {
-    if (!isLocalDev) {
-      try {
-        const proxyResponse = await fetch(`/api/drive/${fileId}`, { cache: 'no-store' });
-        if (proxyResponse.ok) return proxyResponse.blob();
-      } catch { /* network error */ }
-    }
+    try {
+      const proxyResponse = await fetch(proxyUrl, { cache: 'no-store' });
+      if (proxyResponse.ok) return proxyResponse.blob();
+    } catch { /* network error */ }
     throw new DriveAccessError(fileId, response.status);
   }
   throw response ? new Error(`Failed to fetch Drive file (${response.status})`) : new Error('Failed to fetch Drive file (network error)');

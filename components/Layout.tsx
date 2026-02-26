@@ -87,7 +87,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     ]},
   ];
 
-  const PUBLIC_MENU_IDS = new Set(['submissions', 'assignments', 'semesters', 'campers']);
+  const PUBLIC_MENU_IDS = new Set(['submissions', 'assignments', 'semesters', 'campers', 'bocas']);
   const menuGroups = isPublicMode
     ? allMenuGroups.map(g => ({ ...g, items: g.items.filter(i => PUBLIC_MENU_IDS.has(i.id)) })).filter(g => g.items.length > 0)
     : allMenuGroups;

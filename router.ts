@@ -3,7 +3,7 @@ import { ViewState } from './types';
 // --- Public Mode ---
 
 export const PUBLIC_VIEWS: Set<ViewState> = new Set([
-  'assignments', 'submissions', 'campers', 'semesters',
+  'assignments', 'submissions', 'campers', 'semesters', 'bocas',
   'assignment-detail', 'song-detail', 'camper-detail', 'semester-detail',
 ]);
 export const PUBLIC_DEFAULT_VIEW: ViewState = 'submissions';
