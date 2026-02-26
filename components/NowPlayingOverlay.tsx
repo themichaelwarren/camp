@@ -28,6 +28,7 @@ interface NowPlayingOverlayProps {
   onNavigateToCamper?: (camperId: string) => void;
   onNavigateToAssignment?: (assignmentId: string) => void;
   isJukeboxMode?: boolean;
+  onStartJukebox?: () => void;
   onStopJukebox?: () => void;
   bocaCount?: number;
   isFavorited?: boolean;
@@ -55,6 +56,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   onNavigateToCamper,
   onNavigateToAssignment,
   isJukeboxMode,
+  onStartJukebox,
   onStopJukebox,
   bocaCount,
   isFavorited,
@@ -383,16 +385,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                   >
                     <i className="fa-solid fa-list text-sm"></i>
                   </button>
-                  {isJukeboxMode && (
-                    <button
-                      onClick={onStopJukebox}
-                      className="flex items-center gap-1.5 bg-amber-50 text-amber-600 border border-amber-200 px-2.5 py-1 rounded-full text-[10px] font-bold hover:bg-amber-100 transition-colors"
-                    >
-                      <i className="fa-solid fa-shuffle text-[10px]"></i>
-                      Jukebox
-                      <i className="fa-solid fa-xmark text-[9px]"></i>
-                    </button>
-                  )}
+                  <button
+                    onClick={isJukeboxMode ? onStopJukebox : onStartJukebox}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                      isJukeboxMode
+                        ? 'text-amber-500 hover:bg-amber-50'
+                        : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                    }`}
+                    title={isJukeboxMode ? 'Stop jukebox' : 'Start jukebox'}
+                  >
+                    <i className="fa-solid fa-shuffle text-sm"></i>
+                  </button>
                   {player.submissionId && (
                     <button
                       onClick={handleShare}

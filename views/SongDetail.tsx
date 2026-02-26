@@ -386,7 +386,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
               {submission.status === 'shared' ? 'Shared' : 'Private'}
             </button>
-          ) : (
+          ) : currentUserEmail ? (
             <span className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
               submission.status === 'shared'
                 ? 'bg-green-50 text-green-600 border-green-200'
@@ -395,7 +395,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
               {submission.status === 'shared' ? 'Shared' : 'Private'}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -566,7 +566,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 font-serif">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest">Lyrics</h3>
-              {submission.lyricsDocUrl ? (
+              {currentUserEmail && submission.lyricsDocUrl ? (
                 <div className="flex items-center gap-1.5">
                   <a
                     href={submission.lyricsDocUrl}
@@ -638,7 +638,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               </p>
             </section>
           )}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+          {currentUserEmail && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Version History</h3>
 
             {canManageVersions && !showUploadForm && (
@@ -778,7 +778,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 <p className="text-slate-400 text-sm italic text-center py-4">No audio versions yet.</p>
               )}
             </div>
-          </section>
+          </section>}
         </div>
       </div>
 
