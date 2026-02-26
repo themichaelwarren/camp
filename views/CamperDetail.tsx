@@ -418,9 +418,9 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             <table className="w-full text-left">
               <thead className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">Song</th>
-                  <th className="px-4 py-3">Uploaded</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-3 sm:px-4 py-3">Song</th>
+                  <th className="px-4 py-3 hidden sm:table-cell">Uploaded</th>
+                  <th className="px-4 py-3 hidden sm:table-cell"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -434,7 +434,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                       onClick={() => onNavigate('song-detail', submission.id)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors group"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 sm:px-4 py-3 max-w-0 sm:max-w-none">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center">
                             <ArtworkImage
@@ -446,21 +446,31 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                               fallback={<i className="fa-solid fa-compact-disc text-indigo-400 text-sm"></i>}
                             />
                           </div>
-                          <div className="min-w-0 flex items-center gap-2">
-                            <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
                               <p className="text-sm font-semibold text-slate-800 truncate">{submission.title}</p>
+                              {bocaCount > 0 && (
+                                <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                                  <i className="fa-solid fa-star text-[8px]"></i>
+                                  {bocaCount}
+                                </span>
+                              )}
                             </div>
-                            {bocaCount > 0 && (
-                              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
-                                <i className="fa-solid fa-star text-[8px]"></i>
-                                {bocaCount}
-                              </span>
-                            )}
                           </div>
+                          {track && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              disabled={playingTrackId === track.versionId}
+                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors flex-shrink-0 sm:hidden"
+                              title="Play"
+                            >
+                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                            </button>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap hidden sm:table-cell">{formatDate(submission.versions?.length ? submission.versions[submission.versions.length - 1].timestamp : submission.updatedAt, dateFormat)}</td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
                         <div className="flex gap-1.5">
                           <button
                             onClick={(e) => { e.stopPropagation(); onToggleFavorite(submission.id); }}
