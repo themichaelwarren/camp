@@ -449,8 +449,8 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       )}
 
       {showAdd && createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Create Assignment</h3>
               <button onClick={() => setShowAdd(false)} className="text-slate-400 hover:text-slate-600">

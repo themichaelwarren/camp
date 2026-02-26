@@ -793,8 +793,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       )}
       </div>
       {showEdit && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={() => setShowEdit(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
               <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">

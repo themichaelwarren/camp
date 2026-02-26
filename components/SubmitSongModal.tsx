@@ -145,8 +145,8 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-8">
+    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-8" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-xl text-slate-800">Drive Submission</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
