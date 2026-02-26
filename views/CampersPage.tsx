@@ -52,7 +52,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
               <tr>
                 <th className="px-6 py-4">Camper</th>
                 <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 hidden sm:table-cell">Status</th>
                 <th className="px-6 py-4">Intake</th>
                 <th className="px-6 py-4">Last Seen</th>
               </tr>
@@ -90,7 +90,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{camper.location || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{camper.status || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">{camper.status || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">
                     {camper.intakeSemester ? (
                       <span className="inline-flex items-center gap-1">
@@ -150,9 +150,9 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                   <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Location</span>
                   <span className="text-slate-600">{camper.location || '—'}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Status</span>
-                  <span className="text-slate-600">{camper.status || '—'}</span>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest shrink-0 pt-0.5">Status</span>
+                  <span className="text-slate-600 text-right line-clamp-2">{camper.status || '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Intake</span>
