@@ -302,7 +302,6 @@ const App: React.FC = () => {
   const handleInitialSync = async (profile: { id?: string; name?: string; email?: string; picture?: string } | null) => {
     setIsSyncing(true);
     try {
-      await googleService.ensureSpreadsheetAccess();
       const sId = await googleService.findOrCreateDatabase();
       setSpreadsheetId(sId);
       if (profile?.email) {

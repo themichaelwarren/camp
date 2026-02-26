@@ -79,11 +79,28 @@ async function getServiceAccountToken(env: Env): Promise<string> {
   return data.access_token;
 }
 
+const verifiedTokens = new Map<string, number>();
+
 async function verifyCallerToken(authHeader: string | null): Promise<boolean> {
   if (!authHeader?.startsWith('Bearer ')) return false;
   const token = authHeader.slice(7);
+
+  // Return cached verification if still valid (5 min TTL)
+  const cached = verifiedTokens.get(token);
+  if (cached && Date.now() < cached) return true;
+
   const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`);
-  return resp.ok;
+  if (!resp.ok) return false;
+
+  verifiedTokens.set(token, Date.now() + 5 * 60 * 1000);
+  // Prune old entries
+  if (verifiedTokens.size > 100) {
+    const now = Date.now();
+    for (const [k, v] of verifiedTokens) {
+      if (now >= v) verifiedTokens.delete(k);
+    }
+  }
+  return true;
 }
 
 // --- Sheets Proxy Endpoint ---
