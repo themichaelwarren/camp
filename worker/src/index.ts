@@ -216,7 +216,10 @@ async function fetchSheet(env: Env, range: string, cacheKey: string): Promise<st
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${env.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${env.GOOGLE_API_KEY}`;
   const resp = await fetch(url);
-  if (!resp.ok) return [];
+  if (!resp.ok) {
+    console.error(`fetchSheet ${range} failed: ${resp.status}`, await resp.text().catch(() => ''));
+    return [];
+  }
 
   const data = (await resp.json()) as { values?: string[][] };
   const rows = data.values || [];
