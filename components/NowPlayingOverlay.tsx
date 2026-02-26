@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkImage from './ArtworkImage';
+import { buildPath } from '../router';
 
 interface Track {
   src: string;
@@ -67,6 +68,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMobile] = useState(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  const [showCopied, setShowCopied] = useState(false);
+
+  const handleShare = useCallback(() => {
+    if (!player.submissionId) return;
+    const path = buildPath('song-detail', player.submissionId, player.title);
+    const url = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    });
+  }, [player.submissionId, player.title]);
 
   // Swipe-to-remove state for queue items (iOS-style reveal)
   const swipeStartX = useRef<number | null>(null);
@@ -379,6 +391,19 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                       <i className="fa-solid fa-shuffle text-[10px]"></i>
                       Jukebox
                       <i className="fa-solid fa-xmark text-[9px]"></i>
+                    </button>
+                  )}
+                  {player.submissionId && (
+                    <button
+                      onClick={handleShare}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                        showCopied
+                          ? 'text-green-500'
+                          : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                      }`}
+                      title={showCopied ? 'Link copied!' : 'Copy link to song'}
+                    >
+                      <i className={`fa-solid ${showCopied ? 'fa-check' : 'fa-share-from-square'} text-sm`}></i>
                     </button>
                   )}
                 </div>

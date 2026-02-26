@@ -259,7 +259,7 @@ async function getOgMeta(env: Env, type: string, shortId: string, requestUrl: st
 
     const assignmentRow = assignments.find(r => r[0] === assignmentId);
     const assignmentTitle = assignmentRow?.[2] || '';
-    const description = `By ${camperName}${assignmentTitle ? ` · ${assignmentTitle}` : ''}`;
+    const description = `A song by ${camperName}${assignmentTitle ? ` · ${assignmentTitle}` : ''}`;
     const image = artworkFileId ? `https://drive.google.com/thumbnail?id=${artworkFileId}&sz=w600` : undefined;
 
     return { title, description, image, url: requestUrl };
@@ -306,10 +306,8 @@ function injectOgTags(html: string, meta: OgMeta): string {
   html = html.replace(/<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${esc(meta.description)}">`);
 
   if (meta.image) {
-    html = html.replace(
-      /<meta name="twitter:card" content="[^"]*">/,
-      `<meta name="twitter:card" content="summary_large_image">\n    <meta property="og:image" content="${esc(meta.image)}">\n    <meta name="twitter:image" content="${esc(meta.image)}">`
-    );
+    html = html.replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(meta.image)}">`);
+    html = html.replace(/<meta name="twitter:image" content="[^"]*">/, `<meta name="twitter:image" content="${esc(meta.image)}">`);
   }
 
   return html;
