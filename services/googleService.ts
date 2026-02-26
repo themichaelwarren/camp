@@ -1219,7 +1219,8 @@ export const extractDocIdFromUrl = (url: string): string | null => {
 export const fetchDocContent = async (docId: string): Promise<import('../types').DocTextSegment[]> => {
   // Use worker proxy when not authenticated (public mode)
   if (!accessToken) {
-    const resp = await fetch(`/api/lyrics/${docId}`);
+    const base = isLocalDev ? 'https://camp.themichaelwarren.com' : '';
+    const resp = await fetch(`${base}/api/lyrics/${docId}`);
     if (!resp.ok) throw new Error('Failed to fetch lyrics');
     return resp.json();
   }
