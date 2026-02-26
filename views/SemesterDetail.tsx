@@ -47,25 +47,32 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
   // Campers who participated this semester (submitted at least one song)
   const semesterCampers = useMemo((): CamperProfile[] => {
     const matched: CamperProfile[] = [];
-    const matchedIds = new Set<string>();
-    const allCamperIds = new Set(submissions.map(s => s.camperId || s.camperName));
+    const seen = new Set<string>();
+    // Build a map from every possible camper identifier to their profile
+    const profileByKey = new Map<string, CamperProfile>();
+    campers.forEach(c => {
+      [c.email, c.id, c.name].forEach(k => { if (k) profileByKey.set(String(k).trim(), c); });
+    });
 
+    const allCamperIds = new Set(submissions.map(s => s.camperId || s.camperName));
     allCamperIds.forEach(cid => {
-      const profile = campers.find(c => c.email === cid || c.id === cid || c.name === cid);
+      const key = cid.trim();
+      if (seen.has(key)) return;
+      const profile = profileByKey.get(key);
       if (profile) {
-        if (!matchedIds.has(profile.email)) {
+        if (!seen.has(profile.email)) {
           matched.push(profile);
-          matchedIds.add(profile.email);
+          [profile.email, profile.id, profile.name].forEach(k => { if (k) seen.add(String(k).trim()); });
         }
       } else {
         // Camper submitted but has no profile (hasn't signed in)
         const sub = submissions.find(s => (s.camperId || s.camperName) === cid);
-        matched.push({
-          id: cid,
-          name: sub?.camperName || cid,
-          email: cid,
-          lastSignedInAt: '',
-        });
+        const name = sub?.camperName || cid;
+        // Check if we already matched this person by their display name
+        if (seen.has(name.trim())) return;
+        matched.push({ id: cid, name, email: cid, lastSignedInAt: '' });
+        seen.add(key);
+        seen.add(name.trim());
       }
     });
     return matched;
@@ -294,7 +301,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
           </h2>
           <div className="flex flex-wrap gap-4">
             {semesterCampers.map(c => {
-              const songCount = submissions.filter(s => s.camperId === c.email || s.camperId === c.id).length;
+              const songCount = submissions.filter(s => s.camperId === c.email || s.camperId === c.id || s.camperId === c.name || s.camperName === c.name).length;
               return (
                 <button
                   key={c.id || c.email}
