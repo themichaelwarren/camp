@@ -41,6 +41,7 @@ const App: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [hasPublicData, setHasPublicData] = useState(false);
+  const [isLoadingPublicData, setIsLoadingPublicData] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null>(null);
@@ -207,7 +208,8 @@ const App: React.FC = () => {
         setStatusUpdates(data.statusUpdates);
         setHasPublicData(true);
       })
-      .catch(err => console.error('Public data fetch failed:', err));
+      .catch(err => console.error('Public data fetch failed:', err))
+      .finally(() => setIsLoadingPublicData(false));
   }, []);
 
   useEffect(() => {
@@ -1560,6 +1562,13 @@ const App: React.FC = () => {
   };
 
   if (!isLoggedIn && !hasPublicData) {
+    if (isLoadingPublicData) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <i className="fa-solid fa-campground text-6xl text-indigo-600 animate-pulse"></i>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-1000">
         <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/40 max-w-2xl w-full">
