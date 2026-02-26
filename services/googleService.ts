@@ -12,7 +12,7 @@ const ASSIGNMENTS_PARENT_FOLDER_ID = import.meta.env.VITE_ASSIGNMENTS_PARENT_FOL
 
 const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const SCOPES = isLocalDev
-  ? 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events'
+  ? 'openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar.events'
   : 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events';
 
 let accessToken: string | null = null;
