@@ -485,6 +485,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   <i className="fa-solid fa-circle-info"></i>
                   About Camp
                 </button>
+                <button
+                  onClick={() => handleNavigate('feedback')}
+                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                >
+                  <i className="fa-solid fa-comment-dots"></i>
+                  Feedback
+                </button>
                 {isLoggedIn && (
                   <button
                     onClick={onLogout}
@@ -563,7 +570,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </button>
              <h2 className="text-lg font-semibold text-slate-800 capitalize">
                {(() => {
-                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp' };
+                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp', feedback: 'Feedback' };
                  return labels[activeView] || activeView.split('-').join(' ');
                })()}
              </h2>

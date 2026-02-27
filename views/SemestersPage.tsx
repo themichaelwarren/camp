@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Assignment, Submission, Prompt } from '../types';
-import { getTerm } from '../utils';
+import { getTerm, getSeasonStyle } from '../utils';
 
 interface SemestersPageProps {
   semesters: string[];
@@ -40,6 +40,7 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
   const renderCard = (semester: string) => {
     const stats = getStats(semester);
     const isCurrent = semester === currentSemester;
+    const style = getSeasonStyle(semester);
     return (
       <button
         key={semester}
@@ -47,8 +48,8 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
         className="text-left bg-white rounded-2xl border border-slate-200 p-6 hover:border-indigo-300 hover:shadow-md transition-all group"
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <i className="fa-solid fa-graduation-cap text-sm"></i>
+          <div className={`w-10 h-10 rounded-xl ${style.bg} ${style.text} flex items-center justify-center`}>
+            <i className={`fa-solid ${style.icon} text-sm`}></i>
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{semester}</h3>
@@ -82,6 +83,7 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
   const renderRow = (semester: string) => {
     const stats = getStats(semester);
     const isCurrent = semester === currentSemester;
+    const style = getSeasonStyle(semester);
     return (
       <tr
         key={semester}
@@ -90,8 +92,8 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
       >
         <td className="px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
-              <i className="fa-solid fa-graduation-cap text-xs"></i>
+            <div className={`w-8 h-8 rounded-lg ${style.bg} ${style.text} flex items-center justify-center flex-shrink-0`}>
+              <i className={`fa-solid ${style.icon} text-xs`}></i>
             </div>
             <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{semester}</span>
             {isCurrent && (

@@ -54,6 +54,7 @@ const VIEW_TO_SEGMENT: Record<string, string> = {
   semesters: 'semesters',
   changelog: 'whats-new',
   about: 'about',
+  feedback: 'feedback',
 };
 
 const DETAIL_VIEW_TO_SEGMENT: Record<string, string> = {
@@ -79,6 +80,7 @@ const SEGMENT_TO_VIEW: Record<string, ViewState> = {
   semesters: 'semesters',
   'whats-new': 'changelog',
   about: 'about',
+  feedback: 'feedback',
 };
 
 const SEGMENT_TO_DETAIL_VIEW: Record<string, ViewState> = {
@@ -193,6 +195,7 @@ const VIEW_TITLES: Record<string, string> = {
   semesters: 'Semesters',
   changelog: "What's New",
   about: 'About Camp',
+  feedback: 'Feedback',
 };
 
 export function getDefaultPageMeta(view: ViewState): PageMeta {

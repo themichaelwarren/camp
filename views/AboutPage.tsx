@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ViewState } from '../types';
 
 interface AboutPageProps {
@@ -28,24 +28,6 @@ const Section: React.FC<{ icon: string; title: string; onNavigate?: () => void; 
 );
 
 const AboutPage: React.FC<AboutPageProps> = ({ onNavigate, onStartRadio }) => {
-  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature'>('bug');
-  const [feedbackTitle, setFeedbackTitle] = useState('');
-  const [feedbackBody, setFeedbackBody] = useState('');
-
-  const handleSubmitFeedback = () => {
-    if (!feedbackTitle.trim()) return;
-    const label = feedbackType === 'bug' ? 'bug' : 'enhancement';
-    const prefix = feedbackType === 'bug' ? '[Bug] ' : '[Feature] ';
-    const title = encodeURIComponent(prefix + feedbackTitle.trim());
-    const body = encodeURIComponent(feedbackBody.trim());
-    window.open(
-      `https://github.com/themichaelwarren/camp/issues/new?title=${title}&body=${body}&labels=${label}`,
-      '_blank'
-    );
-    setFeedbackTitle('');
-    setFeedbackBody('');
-  };
-
   const nav = (view: ViewState) => onNavigate ? () => onNavigate(view) : undefined;
 
   return (
@@ -155,86 +137,9 @@ const AboutPage: React.FC<AboutPageProps> = ({ onNavigate, onStartRadio }) => {
         </ul>
       </Section>
 
-      {/* Bug Report / Feature Request */}
-      <section className="bg-white border border-slate-200 rounded-3xl p-8">
-        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2.5">
-          <i className="fa-solid fa-bug text-rose-500"></i>
-          Feedback & Requests
-        </h3>
-        <p className="text-sm text-slate-500 mt-2">Found a bug or have an idea for Camp? Submit it below and it'll be tracked on GitHub.</p>
-
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-1 bg-slate-100 rounded-full p-1 w-fit">
-            <button
-              onClick={() => setFeedbackType('bug')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
-                feedbackType === 'bug' ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <i className="fa-solid fa-bug text-[9px]"></i>
-              Bug Report
-            </button>
-            <button
-              onClick={() => setFeedbackType('feature')}
-              className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5 ${
-                feedbackType === 'feature' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <i className="fa-solid fa-lightbulb text-[9px]"></i>
-              Feature Request
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-              {feedbackType === 'bug' ? 'What went wrong?' : 'What would you like to see?'}
-            </label>
-            <input
-              type="text"
-              value={feedbackTitle}
-              onChange={e => setFeedbackTitle(e.target.value)}
-              placeholder={feedbackType === 'bug' ? 'e.g. Player stops when switching pages' : 'e.g. Dark mode for the audio player'}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-              Details <span className="text-slate-300 font-normal normal-case">(optional)</span>
-            </label>
-            <textarea
-              value={feedbackBody}
-              onChange={e => setFeedbackBody(e.target.value)}
-              placeholder={feedbackType === 'bug' ? 'Steps to reproduce, what you expected, what happened instead...' : 'Describe your idea in more detail...'}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 h-24 resize-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleSubmitFeedback}
-              disabled={!feedbackTitle.trim()}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                feedbackType === 'bug'
-                  ? 'bg-rose-500 text-white hover:bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400'
-                  : 'bg-emerald-500 text-white hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400'
-              }`}
-            >
-              <i className="fa-brands fa-github"></i>
-              {feedbackType === 'bug' ? 'Report Bug' : 'Request Feature'}
-            </button>
-            <a
-              href="https://github.com/themichaelwarren/camp/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1"
-            >
-              <i className="fa-brands fa-github text-sm"></i>
-              View all issues
-            </a>
-          </div>
-        </div>
-      </section>
+      <Section icon="fa-comment-dots" title="Feedback" onNavigate={nav('feedback')}>
+        <p>Found a bug or have an idea for Camp? Head to the <button onClick={nav('feedback')} className="text-indigo-600 hover:text-indigo-800 font-semibold">Feedback</button> page to submit reports, request features, and upvote the issues that matter most to you.</p>
+      </Section>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration, CamperProfile } from '../types';
-import { getPromptStatus, getPromptStatusStyle, getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
+import { getPromptStatus, getPromptStatusStyle, getTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface SemesterDetailProps {
@@ -279,9 +279,11 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
           Semesters
         </button>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-            <i className="fa-solid fa-graduation-cap text-lg"></i>
-          </div>
+          {(() => { const style = getSeasonStyle(semester); return (
+            <div className={`w-12 h-12 rounded-2xl ${style.bg} ${style.text} flex items-center justify-center`}>
+              <i className={`fa-solid ${style.icon} text-lg`}></i>
+            </div>
+          ); })()}
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{semester}</h1>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -396,7 +398,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                     onAddToQueue(allTracks[i]);
                   }
                 }}
-                className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+                className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
               >
                 <i className="fa-solid fa-play"></i>
                 Play All
@@ -410,7 +412,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                     onAddToQueue(shuffled[i]);
                   }
                 }}
-                className="bg-amber-500 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-amber-600 transition-all flex items-center gap-2"
+                className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
               >
                 <i className="fa-solid fa-shuffle"></i>
                 Shuffle

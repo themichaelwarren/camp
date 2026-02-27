@@ -271,7 +271,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callSheetsMetadata();
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators', 'Notifications'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators', 'Notifications', 'FeedbackUpvotes'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -293,7 +293,8 @@ export const findOrCreateDatabase = async () => {
     'StatusUpdates!A1:E1',
     'Favorites!A1:D1',
     'Collaborators!A1:F1',
-    'Notifications!A1:K1'
+    'Notifications!A1:K1',
+    'FeedbackUpvotes!A1:E1'
   ];
   const headersResult = await callSheetsBatchGet(headerRanges);
   const headerValues = headersResult.valueRanges || [];
@@ -487,6 +488,17 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
 
+  const feedbackUpvotesHeader = headerValues[13]?.values?.[0] || [];
+  if (feedbackUpvotesHeader.length < 5) {
+    await updateSheetRows(SPREADSHEET_ID, 'FeedbackUpvotes!A1', [[
+      'id',
+      'issueNumber',
+      'userEmail',
+      'userName',
+      'createdAt'
+    ]]);
+  }
+
   return SPREADSHEET_ID;
 };
 
@@ -637,7 +649,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'Collaborators!A2:F5000',
     'BOCAs!A2:D5000',
     'StatusUpdates!A2:E5000',
-    'Notifications!A2:K5000'
+    'Notifications!A2:K5000',
+    'FeedbackUpvotes!A2:E5000'
   ];
   const result = await callSheetsBatchGet(ranges);
 
@@ -654,6 +667,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
   const bocasRaw = result.valueRanges[10].values || [];
   const statusUpdatesRaw = result.valueRanges[11].values || [];
   const notificationsRaw = result.valueRanges[12]?.values || [];
+  const feedbackUpvotesRaw = result.valueRanges[13]?.values || [];
 
   const prompts: Prompt[] = promptsRaw.map((row: any[]) => ({
     id: row[0] || Math.random().toString(36).substr(2, 9),
@@ -820,7 +834,14 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
         }))
     : [];
 
-  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications };
+  const upvotedIssueNumbers: number[] = userEmail
+    ? feedbackUpvotesRaw
+        .filter((row: any[]) => row[2] === userEmail)
+        .map((row: any[]) => parseInt(row[1], 10))
+        .filter((n: number) => !isNaN(n))
+    : [];
+
+  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications, upvotedIssueNumbers };
 };
 
 // --- Row parsers shared between fetchAllData and fetchPublicData ---
@@ -1075,6 +1096,61 @@ export const appendPromptUpvote = async (
     now
   ]];
   return appendSheetRow(spreadsheetId, 'PromptUpvotes!A1', row);
+};
+
+// --- Feedback Upvotes ---
+
+export const fetchFeedbackUpvoteCounts = async (spreadsheetId: string): Promise<Record<number, number>> => {
+  const result = await callSheetsGet('FeedbackUpvotes!A2:E5000');
+  const rows = result.values || [];
+  const counts: Record<number, number> = {};
+  for (const row of rows) {
+    const issueNum = parseInt(row[1], 10);
+    if (!isNaN(issueNum)) {
+      counts[issueNum] = (counts[issueNum] || 0) + 1;
+    }
+  }
+  return counts;
+};
+
+export const appendFeedbackUpvote = async (
+  spreadsheetId: string,
+  data: { issueNumber: number; userEmail: string; userName: string }
+) => {
+  const now = new Date().toISOString();
+  const row = [[
+    Math.random().toString(36).substr(2, 9),
+    String(data.issueNumber),
+    data.userEmail,
+    data.userName,
+    now
+  ]];
+  return appendSheetRow(spreadsheetId, 'FeedbackUpvotes!A1', row);
+};
+
+export const createGitHubIssue = async (data: {
+  title: string;
+  body: string;
+  labels: string[];
+  submittedBy: string;
+}): Promise<{ number: number; html_url: string }> => {
+  if (!accessToken) {
+    try { await refreshAccessToken(); } catch { throw new Error('Not authenticated'); }
+  }
+  const baseUrl = isLocalDev ? 'https://camp.themichaelwarren.com' : '';
+  const response = await fetch(`${baseUrl}/api/github/issues`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || 'Failed to create issue');
+  }
+  return response.json();
 };
 
 // --- Favorites ---

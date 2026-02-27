@@ -21,6 +21,7 @@ import BOCAsPage from './views/BOCAsPage';
 import FavoritesPage from './views/FavoritesPage';
 import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
+import FeedbackPage from './views/FeedbackPage';
 import * as googleService from './services/googleService';
 import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible } from './utils';
 
@@ -48,6 +49,8 @@ const App: React.FC = () => {
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [favoritedSubmissionIds, setFavoritedSubmissionIds] = useState<string[]>([]);
+  const [upvotedIssueNumbers, setUpvotedIssueNumbers] = useState<number[]>([]);
+  const [feedbackUpvoteCounts, setFeedbackUpvoteCounts] = useState<Record<number, number>>({});
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [bocas, setBocas] = useState<Boca[]>([]);
@@ -341,6 +344,7 @@ const App: React.FC = () => {
       if (profile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
         setFavoritedSubmissionIds(data.favoritedSubmissionIds);
+        setUpvotedIssueNumbers(data.upvotedIssueNumbers);
         const match = data.campers.find((camper) => camper.email === profile.email);
         if (match) {
           let intakeSemester = match.intakeSemester;
@@ -415,6 +419,7 @@ const App: React.FC = () => {
       if (userProfile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
         setFavoritedSubmissionIds(data.favoritedSubmissionIds);
+        setUpvotedIssueNumbers(data.upvotedIssueNumbers);
         const match = data.campers.find((camper) => camper.email === userProfile.email);
         if (match) {
           setUserProfile((prev) => ({
@@ -685,6 +690,48 @@ const App: React.FC = () => {
       setPrompts(prev => prev.map(p => p.id === prompt.id ? prompt : p));
       setUpvotedPromptIds(prev => prev.filter(id => id !== prompt.id));
       alert('Upvote failed to sync. Please try again.');
+    }
+  };
+
+  const handleFeedbackUpvote = async (issueNumber: number) => {
+    if (!userProfile?.email || !spreadsheetId) return;
+    if (upvotedIssueNumbers.includes(issueNumber)) return;
+
+    setUpvotedIssueNumbers(prev => [...prev, issueNumber]);
+    setFeedbackUpvoteCounts(prev => ({ ...prev, [issueNumber]: (prev[issueNumber] || 0) + 1 }));
+
+    try {
+      await googleService.appendFeedbackUpvote(spreadsheetId, {
+        issueNumber,
+        userEmail: userProfile.email,
+        userName: userProfile.name || userProfile.email
+      });
+    } catch (error) {
+      console.error('Failed to upvote issue', error);
+      setUpvotedIssueNumbers(prev => prev.filter(n => n !== issueNumber));
+      setFeedbackUpvoteCounts(prev => ({ ...prev, [issueNumber]: Math.max((prev[issueNumber] || 1) - 1, 0) }));
+    }
+  };
+
+  const handleSubmitFeedback = async (data: { type: 'bug' | 'feature'; title: string; body: string }) => {
+    if (!userProfile?.name) return;
+    const label = data.type === 'bug' ? 'bug' : 'enhancement';
+    const prefix = data.type === 'bug' ? '[Bug] ' : '[Feature] ';
+    await googleService.createGitHubIssue({
+      title: prefix + data.title,
+      body: data.body,
+      labels: [label],
+      submittedBy: userProfile.name,
+    });
+  };
+
+  const handleLoadFeedbackUpvoteCounts = async () => {
+    if (!spreadsheetId) return;
+    try {
+      const counts = await googleService.fetchFeedbackUpvoteCounts(spreadsheetId);
+      setFeedbackUpvoteCounts(counts);
+    } catch (error) {
+      console.error('Failed to load feedback upvote counts', error);
     }
   };
 
@@ -1600,6 +1647,18 @@ const App: React.FC = () => {
                 });
               if (tracks.length > 0) handleStartJukebox(tracks);
             }}
+          />
+        );
+      case 'feedback':
+        return (
+          <FeedbackPage
+            userProfile={userProfile}
+            upvotedIssueNumbers={upvotedIssueNumbers}
+            upvoteCounts={feedbackUpvoteCounts}
+            onUpvote={handleFeedbackUpvote}
+            onSubmit={handleSubmitFeedback}
+            onLoadUpvoteCounts={handleLoadFeedbackUpvoteCounts}
+            onNavigate={navigateTo}
           />
         );
       case 'campers':

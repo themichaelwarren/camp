@@ -4,6 +4,7 @@ interface Env {
   SPREADSHEET_ID: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: string;
+  GITHUB_PAT: string;
 }
 
 interface OgMeta {
@@ -417,6 +418,64 @@ async function handleLyricsProxy(docId: string, env: Env): Promise<Response> {
   }
 }
 
+// --- GitHub Issue Creation Proxy ---
+
+async function handleGitHubIssueCreate(request: Request, env: Env): Promise<Response> {
+  const isValid = await verifyCallerToken(request.headers.get('Authorization'));
+  if (!isValid) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const body = await request.json() as {
+    title: string;
+    body: string;
+    labels: string[];
+    submittedBy: string;
+  };
+
+  if (!body.title?.trim()) {
+    return new Response(JSON.stringify({ error: 'Title is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const issueBody = body.body
+    ? `${body.body}\n\n---\n*Submitted by: ${body.submittedBy}*`
+    : `*Submitted by: ${body.submittedBy}*`;
+
+  const resp = await fetch('https://api.github.com/repos/themichaelwarren/camp/issues', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.GITHUB_PAT}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'camp-worker',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: body.title,
+      body: issueBody,
+      labels: body.labels || [],
+    }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    return new Response(JSON.stringify({ error: 'GitHub API error', details: err }), {
+      status: resp.status,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const issue = await resp.json() as { number: number; html_url: string };
+  return new Response(JSON.stringify({ number: issue.number, html_url: issue.html_url }), {
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  });
+}
+
 // --- Main Handler ---
 
 export default {
@@ -448,6 +507,11 @@ export default {
     const lyricsMatch = url.pathname.match(/^\/api\/lyrics\/(.+)$/);
     if (lyricsMatch) {
       return handleLyricsProxy(lyricsMatch[1], env);
+    }
+
+    // GitHub issue creation proxy
+    if (url.pathname === '/api/github/issues' && request.method === 'POST') {
+      return handleGitHubIssueCreate(request, env);
     }
 
     // Pass through non-HTML requests (assets)

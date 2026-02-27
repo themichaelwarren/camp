@@ -190,4 +190,18 @@ export type ViewState =
   | 'semesters'
   | 'semester-detail'
   | 'changelog'
-  | 'about';
+  | 'about'
+  | 'feedback';
+
+export interface GitHubIssue {
+  number: number;
+  title: string;
+  body: string;
+  state: 'open' | 'closed';
+  labels: { name: string; color: string }[];
+  created_at: string;
+  updated_at: string;
+  html_url: string;
+  user: { login: string; avatar_url: string };
+  comments: number;
+}

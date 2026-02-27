@@ -572,7 +572,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                         href={assignmentEvent.meetLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors"
                       >
                         <i className="fa-solid fa-video"></i>
                         Join Google Meet
@@ -581,14 +581,14 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={handleEditEvent}
-                        className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                        className="inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
                       >
                         <i className="fa-solid fa-pen"></i>
                         Edit
                       </button>
                       <button
                         onClick={handleSyncFromCalendar}
-                        className="flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                        className="inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
                         title="Sync changes from Google Calendar"
                       >
                         <i className="fa-solid fa-rotate"></i>
@@ -597,7 +597,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                     </div>
                     <button
                       onClick={() => onNavigate('events')}
-                      className="w-full flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-xl hover:bg-green-50 transition-colors text-sm"
+                      className="w-full inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
                     >
                       <i className="fa-solid fa-calendar"></i>
                       View All Events
@@ -623,7 +623,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   }
                 }}
                 disabled={isCreatingEvent}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 md:py-3 text-sm md:text-base rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreatingEvent ? (
                   <>
