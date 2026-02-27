@@ -716,9 +716,8 @@ const App: React.FC = () => {
   const handleSubmitFeedback = async (data: { type: 'bug' | 'feature'; title: string; body: string }) => {
     if (!userProfile?.name) return;
     const label = data.type === 'bug' ? 'bug' : 'enhancement';
-    const prefix = data.type === 'bug' ? '[Bug] ' : '[Feature] ';
     await googleService.createGitHubIssue({
-      title: prefix + data.title,
+      title: data.title,
       body: data.body,
       labels: [label],
       submittedBy: userProfile.name,
