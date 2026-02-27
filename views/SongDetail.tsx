@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion } from '../types';
 import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion } from '../utils';
+import { buildPath } from '../router';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
@@ -149,6 +150,16 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
+  const [showCopied, setShowCopied] = useState(false);
+
+  const handleShare = useCallback(() => {
+    const path = buildPath('song-detail', submission.id, submission.title);
+    const url = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    });
+  }, [submission.id, submission.title]);
 
   const bocaCount = bocas.filter(b => b.submissionId === submission.id).length;
   const isOwnSong = currentUserEmail === submission.camperId;
@@ -437,6 +448,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
+              {submission.isExtraCredit && (
+                <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
+                  <i className="fa-solid fa-star text-[9px]"></i>
+                  Extra Credit
+                </span>
+              )}
               {onToggleFavorite && (
                 <button
                   onClick={() => onToggleFavorite(submission.id)}
@@ -450,6 +467,17 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
                 </button>
               )}
+              <button
+                onClick={handleShare}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                  showCopied
+                    ? 'bg-green-50 text-green-500'
+                    : 'bg-slate-100 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50'
+                }`}
+                title={showCopied ? 'Link copied!' : 'Copy link to share'}
+              >
+                <i className={`fa-solid ${showCopied ? 'fa-check' : 'fa-share-from-square'} text-base`}></i>
+              </button>
             </div>
             <p className="text-sm mt-1">
               {(() => {

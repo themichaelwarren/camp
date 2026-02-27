@@ -152,7 +152,15 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                   className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer flex justify-between items-center"
                 >
                   <div>
-                    <h4 className="font-bold text-slate-800">{a.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-slate-800">{a.title}</h4>
+                      {a.extraCreditPromptIds?.includes(prompt.id) && !(a.promptIds?.includes(prompt.id) || a.promptId === prompt.id) && (
+                        <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5">
+                          <i className="fa-solid fa-star text-[7px]"></i>
+                          EC
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500">Due {formatDate(a.dueDate, dateFormat)}</p>
                   </div>
                   <i className="fa-solid fa-chevron-right text-slate-300"></i>

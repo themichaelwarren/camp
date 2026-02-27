@@ -263,37 +263,35 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     >
       {/* Full-bleed container */}
       <div
-        className="flex-1 flex flex-col overflow-hidden"
+        className="flex-1 flex flex-col overflow-hidden relative"
         onClick={e => e.stopPropagation()}
       >
-        {/* Top bar — swipe-down handle on mobile */}
+        {/* Mobile-only pull-down handle */}
         <div
-          className="flex items-center justify-between px-6 pt-4 pb-2 flex-shrink-0 touch-none"
+          className="md:hidden flex items-center justify-center px-6 pt-4 pb-2 flex-shrink-0 touch-none"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Mobile pull-down indicator */}
-          <div className="md:hidden flex-1 flex justify-center">
-            <div className="w-10 h-1 rounded-full bg-slate-300" />
-          </div>
-          <div className="hidden md:block flex-1" />
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-slate-300 hover:bg-slate-400 flex items-center justify-center text-slate-600 hover:text-slate-800 active:scale-95 transition-all flex-shrink-0"
-          >
-            <i className="fa-solid fa-chevron-down text-base"></i>
-          </button>
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
         </div>
 
+        {/* Close button — floats top-right on desktop, below handle on mobile */}
+        <button
+          onClick={onClose}
+          className="md:absolute md:top-4 md:right-6 md:z-10 w-10 h-10 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-500 hover:text-slate-700 active:scale-95 transition-all flex-shrink-0 self-end mr-6 md:mr-0 md:self-auto -mt-2 mb-1 md:mt-0 md:mb-0"
+        >
+          <i className="fa-solid fa-chevron-down text-base"></i>
+        </button>
+
         {/* Content area — stacked on mobile, side-by-side & vertically centered on desktop */}
-        <div className="flex-1 overflow-y-auto md:overflow-hidden md:flex md:items-center md:justify-center">
-          <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:gap-12 xl:gap-16 md:px-10 xl:px-16 md:pb-0">
+        <div className="flex-1 overflow-y-auto md:flex md:items-center md:justify-center">
+          <div className="flex flex-col items-center px-6 pb-6 md:flex-row md:items-start md:gap-12 xl:gap-16 md:px-10 xl:px-16 md:pb-0 md:py-4">
             {/* Left: Player controls */}
             <div className="flex flex-col items-center w-full max-w-sm md:max-w-none md:w-96 lg:w-[26rem] xl:w-[32rem] 2xl:w-[40rem] md:flex-shrink-0">
               {/* Artwork */}
               <div className="w-full mt-2 md:mt-0">
-                <div className="aspect-square w-full rounded-2xl xl:rounded-3xl overflow-hidden bg-slate-200 shadow-xl relative">
+                <div className="aspect-square w-full max-h-[50vh] rounded-2xl xl:rounded-3xl overflow-hidden bg-slate-200 shadow-xl relative">
                   <ArtworkImage
                     fileId={player.artworkFileId}
                     fallbackUrl={player.artworkUrl}

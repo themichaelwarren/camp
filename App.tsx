@@ -772,7 +772,9 @@ const App: React.FC = () => {
           assignmentWithFolderAndEvent.driveFolderId || '',
           assignmentWithFolderAndEvent.eventId || '',
           assignmentWithFolderAndEvent.deletedAt || '',
-          assignmentWithFolderAndEvent.deletedBy || ''
+          assignmentWithFolderAndEvent.deletedBy || '',
+          assignmentWithFolderAndEvent.createdAt || new Date().toISOString(),
+          (assignmentWithFolderAndEvent.extraCreditPromptIds || []).join(',')
         ]]);
       } catch (error) {
         console.error('Failed to save assignment to sheet', error);
@@ -793,7 +795,8 @@ const App: React.FC = () => {
           newSubmission.artworkFileId || '', newSubmission.artworkUrl || '',
           newSubmission.deletedAt || '', newSubmission.deletedBy || '',
           newSubmission.primaryVersionId || '',
-          newSubmission.status || ''
+          newSubmission.status || '',
+          newSubmission.isExtraCredit ? 'true' : ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);
@@ -1323,10 +1326,16 @@ const App: React.FC = () => {
         return p && spreadsheetId ? (
           <PromptDetail
             prompt={p}
-            assignments={assignments.filter(a => (a.promptIds?.includes(p.id) || a.promptId === p.id) && !a.deletedAt)}
+            assignments={assignments.filter(a => (a.promptIds?.includes(p.id) || a.promptId === p.id || a.extraCreditPromptIds?.includes(p.id)) && !a.deletedAt)}
             submissions={submissions.filter(s => {
               const assignment = assignments.find(asn => asn.id === s.assignmentId);
-              return assignment && (assignment.promptIds?.includes(p.id) || assignment.promptId === p.id) && isSubmissionVisible(s, userProfile?.email || '', collaborations);
+              if (!assignment || !isSubmissionVisible(s, userProfile?.email || '', collaborations)) return false;
+              const isRequiredPrompt = assignment.promptIds?.includes(p.id) || assignment.promptId === p.id;
+              const isEcPrompt = assignment.extraCreditPromptIds?.includes(p.id);
+              // Regular prompt: show all submissions; EC-only prompt: show only EC submissions
+              if (isRequiredPrompt) return true;
+              if (isEcPrompt) return !!s.isExtraCredit;
+              return false;
             })}
             onNavigate={navigateTo}
             onUpdate={handleUpdatePrompt}

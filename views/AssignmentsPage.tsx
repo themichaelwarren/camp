@@ -37,7 +37,7 @@ interface AssignmentsPageProps {
 const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts, campersCount, onAdd, onAddPrompt, onViewDetail, userProfile, spreadsheetId, availableTags, viewMode, onViewModeChange, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, dateFormat }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [form, setForm] = useState({ title: '', promptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
+  const [form, setForm] = useState({ title: '', promptIds: [] as string[], extraCreditPromptIds: [] as string[], startDate: '', dueDate: '', instructions: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +46,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
       title: form.title,
       promptId: form.promptIds[0] || '',      // First prompt for backwards compat
       promptIds: form.promptIds,               // All prompts
+      extraCreditPromptIds: form.extraCreditPromptIds,
       startDate: form.startDate,
       dueDate: form.dueDate,
       instructions: form.instructions,
@@ -55,7 +56,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
     };
     onAdd?.(assignment);
     setShowAdd(false);
-    setForm({ title: '', promptIds: [], startDate: '', dueDate: '', instructions: '' });
+    setForm({ title: '', promptIds: [], extraCreditPromptIds: [], startDate: '', dueDate: '', instructions: '' });
   };
 
   const availableSemesters = useMemo(() => {
@@ -492,6 +493,22 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                     spreadsheetId={spreadsheetId || ''}
                     userEmail={userProfile?.email}
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Extra Credit Prompts <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                  </label>
+                  <MultiPromptSelector
+                    prompts={prompts}
+                    assignments={assignments}
+                    selectedPromptIds={form.extraCreditPromptIds}
+                    onChange={(extraCreditPromptIds) => setForm({...form, extraCreditPromptIds})}
+                    onCreatePrompt={onAddPrompt}
+                    availableTags={availableTags}
+                    spreadsheetId={spreadsheetId || ''}
+                    userEmail={userProfile?.email}
+                    placeholder="Search for extra credit prompts..."
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -51,6 +51,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   const [editForm, setEditForm] = useState({
     title: assignment.title,
     promptIds: initialPromptIds,
+    extraCreditPromptIds: assignment.extraCreditPromptIds || [] as string[],
     startDate: assignment.startDate || '',
     dueDate: assignment.dueDate,
     instructions: assignment.instructions,
@@ -94,6 +95,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
       setEditForm({
         title: assignment.title,
         promptIds,
+        extraCreditPromptIds: assignment.extraCreditPromptIds || [],
         startDate: assignment.startDate || '',
         dueDate: assignment.dueDate,
         instructions: assignment.instructions,
@@ -109,6 +111,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
       title: editForm.title.trim(),
       promptId: editForm.promptIds[0] || '',    // First prompt for backwards compat
       promptIds: editForm.promptIds,             // All prompts
+      extraCreditPromptIds: editForm.extraCreditPromptIds,
       startDate: editForm.startDate,
       dueDate: editForm.dueDate,
       instructions: editForm.instructions.trim(),
@@ -290,13 +293,49 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 </div>
               );
             })()}
+            {(() => {
+              const ecPromptIds = assignment.extraCreditPromptIds || [];
+              const ecPrompts = ecPromptIds.map(pid => prompts.find(p => p.id === pid)).filter(Boolean);
+              if (ecPrompts.length === 0) return null;
+              return (
+                <div className="bg-amber-50 p-6 border-t border-amber-100">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase mb-3 flex items-center gap-1.5">
+                    <i className="fa-solid fa-star text-[8px]"></i>
+                    Extra Credit Prompt{ecPrompts.length > 1 ? 's' : ''} ({ecPrompts.length})
+                  </p>
+                  <div className="space-y-2">
+                    {ecPrompts.map(p => (
+                      <div
+                        key={p!.id}
+                        onClick={() => onNavigate('prompt-detail', p!.id)}
+                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-200 cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                            <i className="fa-solid fa-star text-sm"></i>
+                          </div>
+                          <span className="font-semibold text-sm text-slate-800 group-hover:text-amber-700 transition-colors">
+                            {p!.title}
+                          </span>
+                        </div>
+                        <i className="fa-solid fa-arrow-right text-slate-300 group-hover:text-amber-400 transition-colors"></i>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </section>
 
+          {(() => {
+            const regularSubmissions = submissions.filter(s => !s.isExtraCredit);
+            const extraCreditSubmissions = submissions.filter(s => s.isExtraCredit);
+            return (<>
           <section>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length}</span>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{regularSubmissions.length}</span>
               </div>
               {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
                 <button
@@ -319,7 +358,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {submissions.map(s => {
+              {regularSubmissions.map(s => {
                 const track = trackFromSubmission(s, collaborations);
                 const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
                 const isFavorited = favoritedSubmissionIds.includes(s.id);
@@ -391,7 +430,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   </div>
                 );
               })}
-              {submissions.length === 0 && (
+              {regularSubmissions.length === 0 && (
                 <div className="col-span-2 p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
                   <i className="fa-solid fa-music text-3xl mb-4 opacity-20"></i>
                   <p className="font-medium">No submissions for this project yet.</p>
@@ -399,6 +438,79 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
               )}
             </div>
           </section>
+
+          {extraCreditSubmissions.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-6">
+                <h3 className="text-xl font-bold text-slate-800">Extra Credit</h3>
+                <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                  <i className="fa-solid fa-star text-[8px]"></i>
+                  {extraCreditSubmissions.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extraCreditSubmissions.map(s => {
+                  const track = trackFromSubmission(s, collaborations);
+                  const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
+                  const isFavorited = favoritedSubmissionIds.includes(s.id);
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => onNavigate('song-detail', s.id)}
+                      className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                          <i className="fa-solid fa-star"></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-800 group-hover:text-amber-700 transition-colors truncate">{s.title}</h4>
+                            {bocaCount > 0 && (
+                              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                                <i className="fa-solid fa-star text-[8px]"></i>
+                                {bocaCount}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                              isFavorited
+                                ? 'bg-red-50 text-red-500'
+                                : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
+                            }`}
+                            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                          </button>
+                          {track && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
+                              disabled={playingTrackId === track.versionId}
+                              className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors"
+                              title="Play"
+                            >
+                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                        <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
+                        <span>UPDATED {formatDate(s.updatedAt, dateFormat)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+          </>);
+          })()}
         </div>
 
         <div className="space-y-6">
@@ -589,6 +701,22 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                     spreadsheetId={spreadsheetId}
                     userEmail={currentUser?.email}
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                    Extra Credit Prompts <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                  </label>
+                  <MultiPromptSelector
+                    prompts={prompts}
+                    assignments={assignments}
+                    selectedPromptIds={editForm.extraCreditPromptIds}
+                    onChange={(extraCreditPromptIds) => setEditForm({...editForm, extraCreditPromptIds})}
+                    onCreatePrompt={onAddPrompt}
+                    availableTags={availableTags}
+                    spreadsheetId={spreadsheetId}
+                    userEmail={currentUser?.email}
+                    placeholder="Search for extra credit prompts..."
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

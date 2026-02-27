@@ -32,6 +32,10 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   const [collabCamperId, setCollabCamperId] = useState('');
   const [collabRole, setCollabRole] = useState<CollaboratorRole>('collaborator');
   const [isPrivate, setIsPrivate] = useState(true);
+  const [isExtraCredit, setIsExtraCredit] = useState(false);
+
+  const selectedAssignment = assignments.find(a => a.id === form.assignmentId);
+  const hasExtraCreditPrompts = (selectedAssignment?.extraCreditPromptIds || []).length > 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -128,7 +132,8 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         lyricsRevisionCount: 1,
         artworkFileId: artworkResult?.id || '',
         artworkUrl: artworkResult?.webViewLink || '',
-        status: isPrivate ? 'private' as const : 'shared' as const
+        status: isPrivate ? 'private' as const : 'shared' as const,
+        isExtraCredit: isExtraCredit || undefined
       };
 
       onAdd(submission);
@@ -174,7 +179,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                     required
                     className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
                     value={form.assignmentId}
-                    onChange={e => setForm({...form, assignmentId: e.target.value})}
+                    onChange={e => { setForm({...form, assignmentId: e.target.value}); setIsExtraCredit(false); }}
                   >
                     <option value="">Select project...</option>
                     {assignments.filter(a => isCurrentOrFutureTerm(getTerm(a.dueDate))).map(a => (
@@ -278,6 +283,30 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 {isPrivate ? 'Private' : 'Shared'}
               </button>
             </div>
+
+            {hasExtraCreditPrompts && (
+              <div className="flex items-center justify-between py-3 px-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div>
+                  <label className="block text-xs font-bold text-amber-600 uppercase flex items-center gap-1">
+                    <i className="fa-solid fa-star text-[8px]"></i>
+                    Extra Credit
+                  </label>
+                  <p className="text-[10px] text-amber-500 mt-0.5">This song is for the extra credit challenge</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsExtraCredit(!isExtraCredit)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors flex items-center gap-1.5 ${
+                    isExtraCredit
+                      ? 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200'
+                      : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <i className={`fa-solid fa-star text-[10px]`}></i>
+                  {isExtraCredit ? 'Yes' : 'No'}
+                </button>
+              </div>
+            )}
 
             {campers.length > 0 && onAddCollaborators && (
               <div>

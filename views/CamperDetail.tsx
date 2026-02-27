@@ -183,17 +183,14 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Semesters</p>
             <div className="flex flex-wrap gap-2">
               {earnedSemesters.map(term => {
-                const isIntake = term === camper.intakeSemester;
                 const style = getSeasonStyle(term);
                 return (
                   <button
                     key={term}
                     onClick={() => onNavigate('semester-detail', term)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text} ${
-                      isIntake ? 'ring-2 ring-offset-1 ring-current' : ''
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text}`}
                   >
-                    <i className={`fa-solid ${isIntake ? 'fa-seedling' : style.icon} text-xs`}></i>
+                    <i className={`fa-solid ${style.icon} text-xs`}></i>
                     {term}
                   </button>
                 );

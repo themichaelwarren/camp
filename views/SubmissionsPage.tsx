@@ -213,7 +213,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
         )}
       </div>
       <div className="p-4">
-        <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
+        <div className="flex items-center gap-2">
+          <h4 className="font-bold text-slate-800 text-lg leading-tight truncate">{sub.title}</h4>
+          {sub.isExtraCredit && (
+            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 flex-shrink-0">
+              <i className="fa-solid fa-star text-[7px]"></i>
+              EC
+            </span>
+          )}
+        </div>
         <p className="text-xs text-slate-500 mt-1">By {getDisplayArtist(sub, collaborations)}</p>
         <div className="mt-4 text-xs text-slate-500 space-y-1">
           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Assignment</p>
@@ -256,6 +264,12 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
                   <i className="fa-solid fa-star text-[8px]"></i>
                   {bocaCount}
+                </span>
+              )}
+              {sub.isExtraCredit && (
+                <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 flex-shrink-0">
+                  <i className="fa-solid fa-star text-[7px]"></i>
+                  EC
                 </span>
               )}
             </div>

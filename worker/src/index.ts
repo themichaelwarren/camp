@@ -241,8 +241,8 @@ function findByShortId(rows: string[][], shortId: string): string[] | null {
 async function getOgMeta(env: Env, type: string, shortId: string, requestUrl: string): Promise<OgMeta | null> {
   if (type === 'song') {
     const [submissions, assignments] = await Promise.all([
-      fetchSheet(env, 'Submissions!A2:O1000', 'submissions'),
-      fetchSheet(env, 'Assignments!A2:M1000', 'assignments'),
+      fetchSheet(env, 'Submissions!A2:R1000', 'submissions'),
+      fetchSheet(env, 'Assignments!A2:N1000', 'assignments'),
     ]);
 
     const row = findByShortId(submissions, shortId);
@@ -277,7 +277,7 @@ async function getOgMeta(env: Env, type: string, shortId: string, requestUrl: st
   }
 
   if (type === 'assignment') {
-    const assignments = await fetchSheet(env, 'Assignments!A2:M1000', 'assignments');
+    const assignments = await fetchSheet(env, 'Assignments!A2:N1000', 'assignments');
     const row = findByShortId(assignments, shortId);
     if (!row || row[10]) return null; // not found or deleted
     return {
@@ -323,8 +323,8 @@ const CORS_HEADERS = {
 
 async function handlePublicData(env: Env): Promise<Response> {
   const [assignments, submissions, campers, collaborators, bocas, statusUpdates] = await Promise.all([
-    fetchSheet(env, 'Assignments!A2:M1000', 'pub-assignments'),
-    fetchSheet(env, 'Submissions!A2:Q1000', 'pub-submissions'),
+    fetchSheet(env, 'Assignments!A2:N1000', 'pub-assignments'),
+    fetchSheet(env, 'Submissions!A2:R1000', 'pub-submissions'),
     fetchSheet(env, 'Users!A2:J1000', 'pub-campers'),
     fetchSheet(env, 'Collaborators!A2:F5000', 'pub-collaborators'),
     fetchSheet(env, 'BOCAs!A2:D5000', 'pub-bocas'),

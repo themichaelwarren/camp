@@ -123,8 +123,49 @@ export const logout = () => {
   }
 };
 
-const callGoogleApi = async (url: string, options: RequestInit = {}) => {
-  if (!accessToken) throw new Error('Not authenticated');
+// Silent token refresh — resolves when the auth callback fires with a new token
+let refreshPromise: Promise<void> | null = null;
+
+const refreshAccessToken = (): Promise<void> => {
+  // Check cache first (might have been refreshed in another tab)
+  const cached = getCachedToken();
+  if (cached) {
+    accessToken = cached;
+    return Promise.resolve();
+  }
+  if (!tokenClient) return Promise.reject(new Error('Session expired — please sign in again.'));
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      refreshPromise = null;
+      reject(new Error('Session expired — please sign in again.'));
+    }, 8000);
+
+    // Poll for the token to be set by the auth callback
+    const check = setInterval(() => {
+      if (accessToken) {
+        clearTimeout(timeout);
+        clearInterval(check);
+        refreshPromise = null;
+        resolve();
+      }
+    }, 100);
+
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+  return refreshPromise;
+};
+
+const callGoogleApi = async (url: string, options: RequestInit = {}, retries = 3): Promise<any> => {
+  // Auto-refresh expired token before throwing
+  if (!accessToken) {
+    try {
+      await refreshAccessToken();
+    } catch {
+      throw new Error('Not authenticated');
+    }
+  }
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -133,9 +174,29 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
       'Content-Type': 'application/json',
     },
   });
+  // Token expired at Google's end — try silent refresh once
+  if (response.status === 401 && retries > 0) {
+    console.warn('Google API returned 401, attempting token refresh...');
+    accessToken = null;
+    clearCachedToken();
+    try {
+      await refreshAccessToken();
+      return callGoogleApi(url, options, retries - 1);
+    } catch {
+      throw new Error('Session expired — please sign in again.');
+    }
+  }
+  if (response.status === 429 && retries > 0) {
+    const delay = (4 - retries) * 1500; // 1.5s, 3s, 4.5s
+    console.warn(`Google API rate limited (429), retrying in ${delay}ms...`, url);
+    await new Promise(r => setTimeout(r, delay));
+    return callGoogleApi(url, options, retries - 1);
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-    throw new Error(error.error?.message || 'API Call failed');
+    const msg = error.error?.message || 'API Call failed';
+    console.error(`Google API error ${response.status} on ${options.method || 'GET'} ${url}:`, msg);
+    throw new Error(msg);
   }
   return response.json();
 };
@@ -143,7 +204,9 @@ const callGoogleApi = async (url: string, options: RequestInit = {}) => {
 // --- Sheets Proxy (production routes through Worker; local dev uses direct API) ---
 
 const callSheetsProxy = async (action: string, params: Record<string, any> = {}) => {
-  if (!accessToken) throw new Error('Not authenticated');
+  if (!accessToken) {
+    try { await refreshAccessToken(); } catch { throw new Error('Not authenticated'); }
+  }
   const response = await fetch('/api/sheets', {
     method: 'POST',
     headers: {
@@ -411,7 +474,7 @@ export const findOrCreateDatabase = async () => {
 
 export const updateSheetRows = async (_spreadsheetId: string, range: string, values: any[][]) => {
   if (isLocalDev) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
     return callGoogleApi(url, { method: 'PUT', body: JSON.stringify({ values }) });
   }
   return callSheetsProxy('update', { range, values });
@@ -419,7 +482,7 @@ export const updateSheetRows = async (_spreadsheetId: string, range: string, val
 
 export const appendSheetRow = async (_spreadsheetId: string, range: string, values: any[][]) => {
   if (isLocalDev) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
     return callGoogleApi(url, { method: 'POST', body: JSON.stringify({ values }) });
   }
   return callSheetsProxy('append', { range, values });
@@ -452,7 +515,7 @@ export const updatePromptRow = async (spreadsheetId: string, prompt: Prompt) => 
 };
 
 export const updateAssignmentRow = async (spreadsheetId: string, assignment: Assignment) => {
-  const rowsResult = await callSheetsGet('Assignments!A2:M1000');
+  const rowsResult = await callSheetsGet('Assignments!A2:N1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === assignment.id);
   // Serialize promptIds as comma-separated, falling back to single promptId
@@ -470,7 +533,8 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
     assignment.eventId || '',
     assignment.deletedAt || '',
     assignment.deletedBy || '',
-    assignment.createdAt || ''
+    assignment.createdAt || '',
+    (assignment.extraCreditPromptIds || []).join(',')
   ]];
 
   if (rowIndex === -1) {
@@ -478,12 +542,12 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Assignments!A${sheetRow}:M${sheetRow}`;
+  const range = `Assignments!A${sheetRow}:N${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsResult = await callSheetsGet('Submissions!A2:Q1000');
+  const rowsResult = await callSheetsGet('Submissions!A2:R1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
   const rowValues = [[
@@ -503,7 +567,8 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
     submission.deletedAt || '',
     submission.deletedBy || '',
     submission.primaryVersionId || '',
-    submission.status || ''
+    submission.status || '',
+    submission.isExtraCredit ? 'true' : ''
   ]];
 
   if (rowIndex === -1) {
@@ -511,12 +576,12 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Submissions!A${sheetRow}:Q${sheetRow}`;
+  const range = `Submissions!A${sheetRow}:R${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
-  const rowsResult = await callSheetsGet('Submissions!A2:Q1000');
+  const rowsResult = await callSheetsGet('Submissions!A2:R1000');
   const rows = rowsResult.values || [];
   // Column F (index 5) = lyrics, Column J (index 9) = lyricsDocUrl
   const updates: { range: string; values: string[][] }[] = [];
@@ -543,8 +608,8 @@ export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
 export const fetchAllData = async (spreadsheetId: string, userEmail?: string) => {
   const ranges = [
     'Prompts!A2:J1000',
-    'Assignments!A2:M1000',
-    'Submissions!A2:Q1000',
+    'Assignments!A2:N1000',
+    'Submissions!A2:R1000',
     'Comments!A2:J5000',
     'Users!A2:J1000',
     'Events!A2:O5000',
@@ -600,7 +665,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       eventId: row[9] || '',
       deletedAt: row[10] || '',
       deletedBy: row[11] || '',
-      createdAt: row[12] || ''
+      createdAt: row[12] || '',
+      extraCreditPromptIds: (row[13] || '').split(',').map((id: string) => id.trim()).filter(Boolean)
     };
   });
 
@@ -642,7 +708,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       deletedAt: rawDeletedAt || '',
       deletedBy: rawDeletedBy || '',
       primaryVersionId: row[15] || '',
-      status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined
+      status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
+      isExtraCredit: row[17] === 'true'
     };
   });
 
@@ -737,7 +804,8 @@ const parseAssignmentRow = (row: any[]): Assignment => {
     eventId: row[9] || '',
     deletedAt: row[10] || '',
     deletedBy: row[11] || '',
-    createdAt: row[12] || ''
+    createdAt: row[12] || '',
+    extraCreditPromptIds: (row[13] || '').split(',').map((id: string) => id.trim()).filter(Boolean)
   };
 };
 
@@ -777,7 +845,8 @@ const parseSubmissionRow = (row: any[]): Submission => {
     deletedAt: rawDeletedAt || '',
     deletedBy: rawDeletedBy || '',
     primaryVersionId: row[15] || '',
-    status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined
+    status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
+    isExtraCredit: row[17] === 'true'
   };
 };
 
@@ -832,7 +901,7 @@ export const fetchPublicData = async () => {
   } catch {
     // Fallback: direct Sheets API for local dev
     const ranges = [
-      'Assignments!A2:M1000', 'Submissions!A2:Q1000', 'Users!A2:J1000',
+      'Assignments!A2:N1000', 'Submissions!A2:R1000', 'Users!A2:J1000',
       'Collaborators!A2:F5000', 'BOCAs!A2:D5000', 'StatusUpdates!A2:E5000'
     ];
     const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
@@ -1217,35 +1286,43 @@ export const extractDocIdFromUrl = (url: string): string | null => {
 };
 
 export const fetchDocContent = async (docId: string): Promise<import('../types').DocTextSegment[]> => {
-  // Use worker proxy when not authenticated (public mode)
-  if (!accessToken) {
+  const fetchViaProxy = async () => {
     const base = isLocalDev ? 'https://camp.themichaelwarren.com' : '';
     const resp = await fetch(`${base}/api/lyrics/${docId}`);
     if (!resp.ok) throw new Error('Failed to fetch lyrics');
     return resp.json();
-  }
-  const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
-  const segments: import('../types').DocTextSegment[] = [];
-  const content = doc.body?.content || [];
-  for (let i = 0; i < content.length; i++) {
-    const block = content[i];
-    if (block.paragraph) {
-      if (i > 1) segments.push({ text: '\n' });
-      for (const el of block.paragraph.elements || []) {
-        if (el.textRun) {
-          const text = el.textRun.content?.replace(/\n$/, '') || '';
-          if (text) {
-            segments.push({
-              text,
-              bold: el.textRun.textStyle?.bold || false,
-              italic: el.textRun.textStyle?.italic || false
-            });
+  };
+
+  // Use worker proxy when not authenticated (public mode)
+  if (!accessToken) return fetchViaProxy();
+
+  // Try Docs API first; fall back to proxy for docs the user can't access directly
+  try {
+    const doc = await callGoogleApi(`https://docs.googleapis.com/v1/documents/${docId}`);
+    const segments: import('../types').DocTextSegment[] = [];
+    const content = doc.body?.content || [];
+    for (let i = 0; i < content.length; i++) {
+      const block = content[i];
+      if (block.paragraph) {
+        if (i > 1) segments.push({ text: '\n' });
+        for (const el of block.paragraph.elements || []) {
+          if (el.textRun) {
+            const text = el.textRun.content?.replace(/\n$/, '') || '';
+            if (text) {
+              segments.push({
+                text,
+                bold: el.textRun.textStyle?.bold || false,
+                italic: el.textRun.textStyle?.italic || false
+              });
+            }
           }
         }
       }
     }
+    return segments;
+  } catch {
+    return fetchViaProxy();
   }
-  return segments;
 };
 
 export const replaceDocContent = async (docId: string, newText: string): Promise<void> => {

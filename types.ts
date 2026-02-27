@@ -33,6 +33,7 @@ export interface Assignment {
   createdAt?: string;
   deletedAt?: string;
   deletedBy?: string;
+  extraCreditPromptIds?: string[];
 }
 
 export interface SongVersion {
@@ -61,6 +62,7 @@ export interface Submission {
   deletedAt?: string;
   deletedBy?: string;
   status?: 'private' | 'shared';
+  isExtraCredit?: boolean;
 }
 
 export interface CamperProfile {
