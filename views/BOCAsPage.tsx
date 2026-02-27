@@ -13,6 +13,7 @@ interface BOCAsPageProps {
   currentUserEmail: string;
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   onGiveBoca: (submissionId: string) => Promise<void>;
   viewMode: 'cards' | 'list';
@@ -27,7 +28,7 @@ interface BOCAsPageProps {
   collaborations: Collaboration[];
 }
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -131,15 +132,38 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
 
   const isCurrentMonth = selectedMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+  const allTracks = useMemo(() => {
+    return filteredSortedSongs
+      .map(({ submission: sub }) => sub ? trackFromSubmission(sub, collaborations) : null)
+      .filter((t): t is PlayableTrack => t !== null);
+  }, [filteredSortedSongs, collaborations]);
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-slate-800">BOCAs</h2>
-        <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
-          <i className="fa-solid fa-star mr-1"></i>
-          Best of Camp Awards
-        </span>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-slate-800">BOCAs</h2>
+          <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
+            <i className="fa-solid fa-star mr-1"></i>
+            Best of Camp Awards
+          </span>
+        </div>
+        {allTracks.length > 0 && (
+          <button
+            onClick={async () => {
+              const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
+              await onPlayTrack(shuffled[0]);
+              for (let i = 1; i < shuffled.length; i++) {
+                onAddToQueue(shuffled[i]);
+              }
+            }}
+            className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors self-start md:self-auto"
+          >
+            <i className="fa-solid fa-shuffle"></i>
+            Shuffle All
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}

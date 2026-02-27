@@ -817,6 +817,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
           campers={campers}
+          entityOwnerEmail={submission.camperId}
+          entityTitle={submission.title}
         />
       )}
       </div>

@@ -141,6 +141,22 @@ export interface Collaboration {
   createdAt: string;
 }
 
+export type NotificationType = 'comment_on_song' | 'reply_to_comment' | 'boca_received' | 'reaction_on_comment' | 'new_assignment' | 'deadline_reminder';
+
+export interface Notification {
+  id: string;
+  recipientEmail: string;
+  type: NotificationType;
+  triggerUserEmail: string;
+  triggerUserName: string;
+  entityType: 'song' | 'prompt' | 'assignment';
+  entityId: string;
+  referenceId: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export type DocTextSegment = { text: string; bold?: boolean; italic?: boolean };
 
 export interface PlayableTrack {

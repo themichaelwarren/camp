@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, Boca, StatusUpdate } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, Boca, StatusUpdate, Notification, NotificationType } from '../types';
 import { getTerm } from '../utils';
 
 // Global declaration for the Google Identity Services script
@@ -271,7 +271,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callSheetsMetadata();
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators', 'Notifications'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -292,7 +292,8 @@ export const findOrCreateDatabase = async () => {
     'BOCAs!A1:D1',
     'StatusUpdates!A1:E1',
     'Favorites!A1:D1',
-    'Collaborators!A1:F1'
+    'Collaborators!A1:F1',
+    'Notifications!A1:K1'
   ];
   const headersResult = await callSheetsBatchGet(headerRanges);
   const headerValues = headersResult.valueRanges || [];
@@ -469,6 +470,23 @@ export const findOrCreateDatabase = async () => {
     ]]);
   }
 
+  const notificationsHeader = headerValues[12]?.values?.[0] || [];
+  if (notificationsHeader.length < 11) {
+    await updateSheetRows(SPREADSHEET_ID, 'Notifications!A1', [[
+      'id',
+      'recipientEmail',
+      'type',
+      'triggerUserEmail',
+      'triggerUserName',
+      'entityType',
+      'entityId',
+      'referenceId',
+      'message',
+      'read',
+      'createdAt'
+    ]]);
+  }
+
   return SPREADSHEET_ID;
 };
 
@@ -618,7 +636,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'Favorites!A2:D5000',
     'Collaborators!A2:F5000',
     'BOCAs!A2:D5000',
-    'StatusUpdates!A2:E5000'
+    'StatusUpdates!A2:E5000',
+    'Notifications!A2:K5000'
   ];
   const result = await callSheetsBatchGet(ranges);
 
@@ -634,6 +653,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
   const collaboratorsRaw = result.valueRanges[9].values || [];
   const bocasRaw = result.valueRanges[10].values || [];
   const statusUpdatesRaw = result.valueRanges[11].values || [];
+  const notificationsRaw = result.valueRanges[12]?.values || [];
 
   const prompts: Prompt[] = promptsRaw.map((row: any[]) => ({
     id: row[0] || Math.random().toString(36).substr(2, 9),
@@ -782,7 +802,25 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     timestamp: row[4] || ''
   }));
 
-  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates };
+  const notifications: Notification[] = userEmail
+    ? notificationsRaw
+        .filter((row: any[]) => row[1] === userEmail)
+        .map((row: any[]) => ({
+          id: row[0] || '',
+          recipientEmail: row[1] || '',
+          type: (row[2] || '') as NotificationType,
+          triggerUserEmail: row[3] || '',
+          triggerUserName: row[4] || '',
+          entityType: (row[5] || 'song') as 'song' | 'prompt' | 'assignment',
+          entityId: row[6] || '',
+          referenceId: row[7] || '',
+          message: row[8] || '',
+          read: row[9] === 'true',
+          createdAt: row[10] || ''
+        }))
+    : [];
+
+  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications };
 };
 
 // --- Row parsers shared between fetchAllData and fetchPublicData ---
@@ -1912,6 +1950,278 @@ export const createStatusUpdate = async (
     entry.id, entry.camperEmail, entry.camperName, entry.status, entry.timestamp
   ]]);
   return entry;
+};
+
+// --- Notifications ---
+
+export const createNotification = async (
+  spreadsheetId: string,
+  data: {
+    recipientEmail: string;
+    type: NotificationType;
+    triggerUserEmail: string;
+    triggerUserName: string;
+    entityType: 'song' | 'prompt' | 'assignment';
+    entityId: string;
+    referenceId: string;
+    message: string;
+  }
+): Promise<Notification | null> => {
+  if (data.recipientEmail === data.triggerUserEmail) return null;
+
+  const notification: Notification = {
+    id: Math.random().toString(36).substr(2, 9),
+    ...data,
+    read: false,
+    createdAt: new Date().toISOString()
+  };
+
+  await appendSheetRow(spreadsheetId, 'Notifications!A1', [[
+    notification.id,
+    notification.recipientEmail,
+    notification.type,
+    notification.triggerUserEmail,
+    notification.triggerUserName,
+    notification.entityType,
+    notification.entityId,
+    notification.referenceId,
+    notification.message,
+    'false',
+    notification.createdAt
+  ]]);
+
+  return notification;
+};
+
+export const createNotifications = async (
+  spreadsheetId: string,
+  items: Array<{
+    recipientEmail: string;
+    type: NotificationType;
+    triggerUserEmail: string;
+    triggerUserName: string;
+    entityType: 'song' | 'prompt' | 'assignment';
+    entityId: string;
+    referenceId: string;
+    message: string;
+  }>
+): Promise<Notification[]> => {
+  const filtered = items.filter(item => item.recipientEmail !== item.triggerUserEmail);
+  if (filtered.length === 0) return [];
+
+  const notifications: Notification[] = filtered.map(item => ({
+    id: Math.random().toString(36).substr(2, 9),
+    ...item,
+    read: false,
+    createdAt: new Date().toISOString()
+  }));
+
+  const rows = notifications.map(n => [
+    n.id, n.recipientEmail, n.type, n.triggerUserEmail, n.triggerUserName,
+    n.entityType, n.entityId, n.referenceId, n.message, 'false', n.createdAt
+  ]);
+
+  await appendSheetRow(spreadsheetId, 'Notifications!A1', rows);
+  return notifications;
+};
+
+export const markNotificationRead = async (
+  spreadsheetId: string,
+  notificationId: string
+): Promise<void> => {
+  const result = await callSheetsGet('Notifications!A2:K5000');
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === notificationId);
+  if (rowIndex === -1) return;
+
+  const sheetRow = rowIndex + 2;
+  await updateSheetRows(spreadsheetId, `Notifications!J${sheetRow}`, [['true']]);
+};
+
+export const markAllNotificationsRead = async (
+  spreadsheetId: string,
+  userEmail: string
+): Promise<void> => {
+  const result = await callSheetsGet('Notifications!A2:K5000');
+  const rows = result.values || [];
+
+  const updates: Promise<any>[] = [];
+  rows.forEach((row: any[], index: number) => {
+    if (row[1] === userEmail && row[9] !== 'true') {
+      const sheetRow = index + 2;
+      updates.push(updateSheetRows(spreadsheetId, `Notifications!J${sheetRow}`, [['true']]));
+    }
+  });
+
+  if (updates.length > 0) await Promise.all(updates);
+};
+
+export const backfillNotifications = async (
+  spreadsheetId: string,
+  data: {
+    comments: Comment[];
+    bocas: Boca[];
+    submissions: Submission[];
+    campers: CamperProfile[];
+  }
+): Promise<number> => {
+  const { comments, bocas, submissions, campers } = data;
+  const submissionMap = new Map(submissions.map(s => [s.id, s]));
+  const commentMap = new Map(comments.map(c => [c.id, c]));
+  const camperMap = new Map(campers.map(c => [c.email, c]));
+  const getName = (email: string) => camperMap.get(email)?.name || email;
+
+  const rows: string[][] = [];
+
+  // Comments on songs
+  for (const comment of comments) {
+    if (comment.parentId) continue; // skip replies, handled below
+    if (comment.entityType !== 'song') continue;
+    const submission = submissionMap.get(comment.entityId);
+    if (!submission || submission.camperId === comment.authorEmail) continue;
+    rows.push([
+      Math.random().toString(36).substr(2, 9),
+      submission.camperId,
+      'comment_on_song',
+      comment.authorEmail,
+      comment.author || getName(comment.authorEmail),
+      'song',
+      comment.entityId,
+      comment.id,
+      `commented on "${submission.title}"`,
+      'true',
+      comment.timestamp
+    ]);
+  }
+
+  // Replies
+  for (const comment of comments) {
+    if (!comment.parentId) continue;
+    const parent = commentMap.get(comment.parentId);
+    if (!parent || parent.authorEmail === comment.authorEmail) continue;
+    const submission = comment.entityType === 'song' ? submissionMap.get(comment.entityId) : null;
+    const label = submission ? `"${submission.title}"` : (comment.entityType === 'song' ? 'a song' : comment.entityType === 'assignment' ? 'an assignment' : 'a prompt');
+    rows.push([
+      Math.random().toString(36).substr(2, 9),
+      parent.authorEmail,
+      'reply_to_comment',
+      comment.authorEmail,
+      comment.author || getName(comment.authorEmail),
+      comment.entityType,
+      comment.entityId,
+      comment.id,
+      `replied to your comment on ${label}`,
+      'true',
+      comment.timestamp
+    ]);
+  }
+
+  // Reactions
+  for (const comment of comments) {
+    for (const [emoji, emails] of Object.entries(comment.reactions || {})) {
+      for (const email of emails) {
+        if (email === comment.authorEmail) continue;
+        const submission = comment.entityType === 'song' ? submissionMap.get(comment.entityId) : null;
+        const label = submission ? `"${submission.title}"` : (comment.entityType === 'song' ? 'a song' : comment.entityType === 'assignment' ? 'an assignment' : 'a prompt');
+        rows.push([
+          Math.random().toString(36).substr(2, 9),
+          comment.authorEmail,
+          'reaction_on_comment',
+          email,
+          getName(email),
+          comment.entityType,
+          comment.entityId,
+          comment.id,
+          `reacted ${emoji} to your comment on ${label}`,
+          'true',
+          comment.timestamp
+        ]);
+      }
+    }
+  }
+
+  // BOCAs
+  for (const boca of bocas) {
+    const submission = submissionMap.get(boca.submissionId);
+    if (!submission || submission.camperId === boca.fromEmail) continue;
+    rows.push([
+      Math.random().toString(36).substr(2, 9),
+      submission.camperId,
+      'boca_received',
+      boca.fromEmail,
+      getName(boca.fromEmail),
+      'song',
+      boca.submissionId,
+      boca.id,
+      `gave a BOCA to "${submission.title}"`,
+      'true',
+      boca.awardedAt
+    ]);
+  }
+
+  if (rows.length === 0) return 0;
+  await appendSheetRow(spreadsheetId, 'Notifications!A1', rows);
+  return rows.length;
+};
+
+export const checkDeadlineReminders = async (
+  spreadsheetId: string,
+  assignments: Assignment[],
+  existingNotifications: Notification[],
+  userEmail: string
+): Promise<Notification[]> => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const thresholds = [
+    { days: 7, label: 'due in 7 days' },
+    { days: 2, label: 'due in 2 days' },
+    { days: 1, label: 'due tomorrow' }
+  ];
+
+  const existingRefIds = new Set(existingNotifications.map(n => n.referenceId));
+  const rows: string[][] = [];
+  const created: Notification[] = [];
+
+  for (const assignment of assignments) {
+    if (assignment.status !== 'Open' || assignment.deletedAt) continue;
+    if (!assignment.assignedTo.some(e => e.trim() === userEmail)) continue;
+
+    const due = new Date(assignment.dueDate + 'T00:00:00');
+    const daysUntil = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+    for (const { days, label } of thresholds) {
+      if (daysUntil !== days) continue;
+      const refId = `${assignment.id}-${days}d`;
+      if (existingRefIds.has(refId)) continue;
+
+      const notification: Notification = {
+        id: Math.random().toString(36).substr(2, 9),
+        recipientEmail: userEmail,
+        type: 'deadline_reminder',
+        triggerUserEmail: 'system',
+        triggerUserName: 'Camp',
+        entityType: 'assignment',
+        entityId: assignment.id,
+        referenceId: refId,
+        message: `"${assignment.title}" is ${label}`,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+
+      rows.push([
+        notification.id, notification.recipientEmail, notification.type,
+        notification.triggerUserEmail, notification.triggerUserName,
+        notification.entityType, notification.entityId, notification.referenceId,
+        notification.message, 'false', notification.createdAt
+      ]);
+      created.push(notification);
+    }
+  }
+
+  if (rows.length > 0) {
+    await appendSheetRow(spreadsheetId, 'Notifications!A1', rows);
+  }
+  return created;
 };
 
 // --- Google Drive Picker ---

@@ -275,7 +275,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         {onAdd && (
           <button
             onClick={() => setShowAdd(true)}
-            className="self-start md:self-auto bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+            className="self-start md:self-auto inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
           >
             <i className="fa-solid fa-calendar-plus"></i>
             Create Assignment

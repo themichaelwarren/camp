@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ViewState } from '../types';
+import { ViewState, Notification } from '../types';
+import NotificationPanel from './NotificationPanel';
 import { getTerm } from '../utils';
 import ArtworkImage from './ArtworkImage';
 import NowPlayingOverlay from './NowPlayingOverlay';
@@ -35,9 +36,14 @@ interface LayoutProps {
   onSignIn?: () => void;
   themePreference?: 'light' | 'dark' | 'system';
   onThemeChange?: (value: 'light' | 'dark' | 'system') => void;
+  notifications?: Notification[];
+  unreadNotificationCount?: number;
+  onMarkNotificationRead?: (id: string) => void;
+  onMarkAllNotificationsRead?: () => void;
+  onNotificationNavigate?: (view: ViewState, id: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -47,6 +53,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
   const hadPlayerRef = useRef(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar-collapsed') === 'true'; } catch { return false; }
   });
@@ -65,6 +74,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isUserMenuOpen]);
+
+  useEffect(() => {
+    if (!isNotificationPanelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (notificationPanelRef.current && !notificationPanelRef.current.contains(e.target as Node)) {
+        setIsNotificationPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isNotificationPanelOpen]);
 
   const allMenuGroups = [
     { label: 'Activity', items: [
@@ -359,21 +379,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           collapsed ? (
             <button
               onClick={onStartJukebox}
-              className="w-10 h-10 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white flex items-center justify-center transition-all shadow-lg shadow-amber-500/20"
               title="Start Jukebox"
             >
-              <i className="fa-solid fa-shuffle text-sm"></i>
+              <i className="fa-solid fa-radio text-sm"></i>
             </button>
           ) : (
             <button
               onClick={onStartJukebox}
-              className="w-full flex items-center gap-3 bg-amber-500/20 border border-amber-500/30 rounded-xl p-3 hover:bg-amber-500/30 transition-colors group"
+              className="w-full flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-3 hover:from-amber-500/30 hover:to-orange-500/30 transition-all group"
             >
-              <div className="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
-                <i className="fa-solid fa-shuffle text-sm"></i>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                <i className="fa-solid fa-radio text-sm"></i>
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-white">Start Jukebox</p>
+                <p className="text-sm font-semibold text-white">Camp Radio</p>
                 <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Shuffle all songs</p>
               </div>
             </button>
@@ -422,7 +442,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-0 right-0'}`}>
                 {onThemeChange && (
                   <div className="px-3 pt-3 pb-2">
-                    <div className="flex items-center gap-1 bg-white/20 rounded-xl p-1">
+                    <div className="flex items-center gap-1 bg-white/20 rounded-full p-1">
                       {([
                         { mode: 'light' as const, icon: 'fa-sun', label: 'Light' },
                         { mode: 'dark' as const, icon: 'fa-moon', label: 'Dark' },
@@ -431,7 +451,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                         <button
                           key={mode}
                           onClick={(e) => { e.stopPropagation(); onThemeChange(mode); }}
-                          className={`theme-picker-btn flex-1 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                          className={`theme-picker-btn flex-1 h-8 rounded-full flex items-center justify-center transition-colors ${
                             themePreference === mode
                               ? 'bg-indigo-500 theme-picker-active'
                               : 'opacity-50 hover:opacity-100'
@@ -549,13 +569,42 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              </h2>
           </div>
           <div className="flex items-center gap-2">
+            {isLoggedIn && !isPublicMode && (
+              <div className="relative" ref={notificationPanelRef}>
+                <button
+                  onClick={() => setIsNotificationPanelOpen(prev => !prev)}
+                  className="relative text-slate-500 hover:text-slate-700 text-sm w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  aria-label="Notifications"
+                >
+                  <i className="fa-solid fa-bell"></i>
+                  {(unreadNotificationCount ?? 0) > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {unreadNotificationCount! > 9 ? '9+' : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+
+                {isNotificationPanelOpen && (
+                  <NotificationPanel
+                    notifications={notifications || []}
+                    onMarkRead={(id) => { onMarkNotificationRead?.(id); }}
+                    onMarkAllRead={() => { onMarkAllNotificationsRead?.(); }}
+                    onNavigate={(view, id) => {
+                      onNotificationNavigate?.(view, id);
+                      setIsNotificationPanelOpen(false);
+                    }}
+                    onClose={() => setIsNotificationPanelOpen(false)}
+                  />
+                )}
+              </div>
+            )}
             {!player && (isLoggedIn || isPublicMode) && onStartJukebox && (
               <button
                 className="md:hidden text-amber-600 text-sm w-9 h-9 rounded-full border border-amber-200 bg-amber-50 flex items-center justify-center hover:bg-amber-100 transition-colors"
                 onClick={onStartJukebox}
-                aria-label="Start Jukebox"
+                aria-label="Camp Radio"
               >
-                <i className="fa-solid fa-shuffle"></i>
+                <i className="fa-solid fa-radio"></i>
               </button>
             )}
             {player && (

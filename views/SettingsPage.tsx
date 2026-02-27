@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as googleService from '../services/googleService';
-import { Submission } from '../types';
+import { Submission, Comment as CommentType, Boca, CamperProfile } from '../types';
 import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -18,9 +18,13 @@ interface SettingsPageProps {
   onRememberMeChange: (value: boolean) => void;
   submissions?: Submission[];
   allSemesters?: string[];
+  spreadsheetId?: string;
+  comments?: CommentType[];
+  bocas?: Boca[];
+  campers?: CamperProfile[];
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [], allSemesters = [] }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [], allSemesters = [], spreadsheetId, comments = [], bocas = [], campers = [] }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [intakeSemester, setIntakeSemester] = useState(userProfile?.intakeSemester || '');
@@ -346,6 +350,41 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
             </button>
             <p className="text-[10px] text-slate-400 mt-2">Sets "anyone with the link can view" on every audio file and artwork. Run this once to fix songs uploaded before public sharing was enabled.</p>
           </div>
+          {spreadsheetId && (
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={!!shareProgress}
+                onClick={async () => {
+                  setShareProgress('Backfilling notifications...');
+                  try {
+                    const count = await googleService.backfillNotifications(spreadsheetId, {
+                      comments, bocas, submissions, campers
+                    });
+                    setShareProgress(`Done! Created ${count} notifications (marked as read).`);
+                  } catch (err) {
+                    console.error('Backfill failed', err);
+                    setShareProgress('Failed to backfill notifications.');
+                  }
+                  setTimeout(() => setShareProgress(null), 5000);
+                }}
+                className="w-full bg-indigo-500 text-white py-3 rounded-xl font-bold hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {shareProgress ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    {shareProgress}
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-bell"></i>
+                    Backfill Notifications from History
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-slate-400 mt-2">Creates notification entries from existing comments, replies, reactions, and BOCAs. All are marked as read. Safe to run multiple times (will create duplicates if run again).</p>
+            </div>
+          )}
         </section>
       )}
     </div>

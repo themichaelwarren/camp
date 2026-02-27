@@ -11,6 +11,8 @@ interface CommentsSectionProps {
   spreadsheetId: string;
   currentUser: { name: string; email: string };
   campers?: CamperProfile[];
+  entityOwnerEmail?: string;
+  entityTitle?: string;
 }
 
 const CommentsSection: React.FC<CommentsSectionProps> = ({
@@ -19,6 +21,8 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   spreadsheetId,
   currentUser,
   campers = [],
+  entityOwnerEmail,
+  entityTitle,
 }) => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +93,19 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       text
     });
     setComments(prev => [...prev, newComment]);
+
+    if (entityType === 'song' && entityOwnerEmail && entityOwnerEmail !== currentUser.email) {
+      googleService.createNotification(spreadsheetId, {
+        recipientEmail: entityOwnerEmail,
+        type: 'comment_on_song',
+        triggerUserEmail: currentUser.email,
+        triggerUserName: currentUser.name,
+        entityType: 'song',
+        entityId,
+        referenceId: newComment.id,
+        message: `commented on "${entityTitle || 'your song'}"`
+      }).catch(err => console.error('Failed to create comment notification', err));
+    }
   };
 
   const handleReply = async (parentId: string, text: string) => {
@@ -101,9 +118,27 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       text
     });
     setComments(prev => [...prev, newComment]);
+
+    const parentComment = comments.find(c => c.id === parentId);
+    if (parentComment && parentComment.authorEmail !== currentUser.email) {
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      googleService.createNotification(spreadsheetId, {
+        recipientEmail: parentComment.authorEmail,
+        type: 'reply_to_comment',
+        triggerUserEmail: currentUser.email,
+        triggerUserName: currentUser.name,
+        entityType,
+        entityId,
+        referenceId: newComment.id,
+        message: `replied to your comment on ${label}`
+      }).catch(err => console.error('Failed to create reply notification', err));
+    }
   };
 
   const handleToggleReaction = async (commentId: string, emoji: string) => {
+    const comment = comments.find(c => c.id === commentId);
+    const wasAlreadyReacted = comment?.reactions[emoji]?.includes(currentUser.email);
+
     try {
       const updatedComment = await googleService.toggleReaction(
         spreadsheetId,
@@ -112,6 +147,20 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
         currentUser.email
       );
       setComments(prev => prev.map((c) => (c.id === commentId ? updatedComment : c)));
+
+      if (!wasAlreadyReacted && comment && comment.authorEmail !== currentUser.email) {
+        const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+        googleService.createNotification(spreadsheetId, {
+          recipientEmail: comment.authorEmail,
+          type: 'reaction_on_comment',
+          triggerUserEmail: currentUser.email,
+          triggerUserName: currentUser.name,
+          entityType,
+          entityId,
+          referenceId: comment.id,
+          message: `reacted ${emoji} to your comment on ${label}`
+        }).catch(err => console.error('Failed to create reaction notification', err));
+      }
     } catch (error) {
       console.error('Failed to toggle reaction', error);
       alert('Failed to update reaction. Please try again.');

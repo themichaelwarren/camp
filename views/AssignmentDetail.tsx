@@ -45,6 +45,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('cards');
 
   // Initialize promptIds from assignment, falling back to single promptId
   const initialPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
@@ -204,8 +205,8 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   return (
     <>
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 min-w-0">
           <button
             onClick={() => onNavigate('assignments')}
             className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors shrink-0"
@@ -228,28 +229,22 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </div>
         </div>
         {currentUser && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {!isPastSemester && (
               <button
                 onClick={() => setShowSubmitModal(true)}
-                className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors"
               >
                 <i className="fa-solid fa-cloud-arrow-up"></i>
-                Submit Song
+                <span className="hidden sm:inline">Submit Song</span>
               </button>
-            )}
-            {isPastSemester && (
-              <span className="flex items-center gap-2 text-slate-400 text-sm font-medium px-4 py-2.5">
-                <i className="fa-solid fa-lock text-xs"></i>
-                Past semester
-              </span>
             )}
             <button
               onClick={() => setShowEditModal(true)}
-              className="flex-1 md:flex-none bg-indigo-600 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
             >
               <i className="fa-solid fa-pen"></i>
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
         )}
@@ -330,19 +325,117 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           {(() => {
             const regularSubmissions = submissions.filter(s => !s.isExtraCredit);
             const extraCreditSubmissions = submissions.filter(s => s.isExtraCredit);
+
+            const renderSubmissionCard = (s: Submission, isEC = false) => {
+              const track = trackFromSubmission(s, collaborations);
+              const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
+              const isFav = favoritedSubmissionIds.includes(s.id);
+              const accent = isEC ? { bg: 'bg-amber-50', text: 'text-amber-600', hover: 'hover:bg-amber-100', border: 'border-amber-200', hoverBorder: 'hover:border-amber-300', hoverText: 'group-hover:text-amber-700', icon: 'fa-star' } : { bg: 'bg-indigo-50', text: 'text-indigo-600', hover: 'hover:bg-indigo-100', border: 'border-slate-200', hoverBorder: 'hover:border-indigo-300', hoverText: 'group-hover:text-indigo-600', icon: 'fa-music' };
+              return (
+                <div key={s.id} onClick={() => onNavigate('song-detail', s.id)} className={`bg-white p-6 rounded-2xl border ${accent.border} shadow-sm hover:shadow-md ${accent.hoverBorder} transition-all cursor-pointer group`}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-10 h-10 ${accent.bg} ${accent.text} rounded-lg flex items-center justify-center ${accent.hover} transition-colors`}>
+                      <i className={`fa-solid ${accent.icon}`}></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className={`font-bold text-slate-800 ${accent.hoverText} transition-colors truncate`}>{s.title}</h4>
+                        {bocaCount > 0 && (
+                          <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
+                            <i className="fa-solid fa-star text-[8px]"></i>
+                            {bocaCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isFav ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'}`} title={isFav ? 'Remove from favorites' : 'Add to favorites'}>
+                        <i className={`${isFav ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                      </button>
+                      {track && (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }} disabled={playingTrackId === track.versionId} className={`w-8 h-8 rounded-lg ${accent.bg} ${accent.text} flex items-center justify-center ${accent.hover} transition-colors`} title="Play">
+                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }} disabled={queueingTrackId === track.versionId} className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Add to queue">
+                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                    <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
+                    <span>UPDATED {formatDate(s.updatedAt, dateFormat)}</span>
+                  </div>
+                </div>
+              );
+            };
+
+            const renderSubmissionRow = (s: Submission, isEC = false) => {
+              const track = trackFromSubmission(s, collaborations);
+              const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
+              return (
+                <tr key={s.id} onClick={() => onNavigate('song-detail', s.id)} className="hover:bg-slate-50 cursor-pointer transition-colors">
+                  <td className="px-3 sm:px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 ${isEC ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                        <i className={`fa-solid ${isEC ? 'fa-star' : 'fa-music'} text-xs`}></i>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-slate-800 truncate">{s.title}</span>
+                          {bocaCount > 0 && (
+                            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-0.5 flex-shrink-0">
+                              <i className="fa-solid fa-star text-[7px]"></i>{bocaCount}
+                            </span>
+                          )}
+                          {isEC && (
+                            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold flex-shrink-0">EC</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium">{getDisplayArtist(s, collaborations)}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell text-xs text-slate-500">{formatDate(s.updatedAt, dateFormat)}</td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <div className="flex gap-1.5 justify-end">
+                      {track && (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }} disabled={playingTrackId === track.versionId} className={`w-7 h-7 rounded-lg ${isEC ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'} flex items-center justify-center hover:opacity-80 transition-colors`} title="Play">
+                            <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-[10px]`}></i>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }} disabled={queueingTrackId === track.versionId} className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Add to queue">
+                            <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-[10px]`}></i>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            };
+
+            const allDisplaySubmissions = [...regularSubmissions, ...extraCreditSubmissions];
+
             return (<>
           <section>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-slate-800">Submitted Songs</h3>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{regularSubmissions.length}</span>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{allDisplaySubmissions.length}</span>
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1">
+                  <button onClick={() => setSubmissionsViewMode('cards')} className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${submissionsViewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}>Cards</button>
+                  <button onClick={() => setSubmissionsViewMode('list')} className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${submissionsViewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-700'}`}>List</button>
+                </div>
               </div>
               {submissions.some(s => s.versions?.length > 0 && s.versions[0].id) && (
                 <button
                   onClick={async () => {
                     const playable = submissions.map(s => trackFromSubmission(s, collaborations)).filter((t): t is PlayableTrack => t !== null);
                     if (playable.length === 0) return;
-                    // Shuffle for variety
                     const shuffled = [...playable].sort(() => Math.random() - 0.5);
                     await onPlayTrack(shuffled[0]);
                     for (let i = 1; i < shuffled.length; i++) {
@@ -350,165 +443,57 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                     }
                   }}
                   disabled={!!playingTrackId}
-                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-70"
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-70"
                 >
                   <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-shuffle'} text-xs`}></i>
-                  Shuffle All ({submissions.filter(s => s.versions?.length > 0).length})
+                  <span className="hidden sm:inline">Shuffle All ({submissions.filter(s => s.versions?.length > 0).length})</span>
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {regularSubmissions.map(s => {
-                const track = trackFromSubmission(s, collaborations);
-                const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
-                const isFavorited = favoritedSubmissionIds.includes(s.id);
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => onNavigate('song-detail', s.id)}
-                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                        <i className="fa-solid fa-music"></i>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{s.title}</h4>
-                          {bocaCount > 0 && (
-                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
-                              <i className="fa-solid fa-star text-[8px]"></i>
-                              {bocaCount}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
-                      </div>
-                      <div className="flex gap-1.5 flex-shrink-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                            isFavorited
-                              ? 'bg-red-50 text-red-500'
-                              : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
-                          }`}
-                          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                        >
-                          <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
-                        </button>
-                        {track && (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                              disabled={playingTrackId === track.versionId}
-                              className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
-                              title="Play"
-                            >
-                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }}
-                              disabled={queueingTrackId === track.versionId}
-                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
-                              title="Add to queue"
-                            >
-                              <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
-                            </button>
-                          </>
-                        )}
-                      </div>
+
+            {allDisplaySubmissions.length === 0 ? (
+              <div className="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
+                <i className="fa-solid fa-music text-3xl mb-4 opacity-20"></i>
+                <p className="font-medium">No submissions for this project yet.</p>
+              </div>
+            ) : submissionsViewMode === 'cards' ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {regularSubmissions.map(s => renderSubmissionCard(s, false))}
+                </div>
+                {extraCreditSubmissions.length > 0 && (
+                  <div className="mt-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h4 className="text-sm font-bold text-amber-700 uppercase tracking-widest">Extra Credit</h4>
+                      <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                        <i className="fa-solid fa-star text-[8px]"></i>
+                        {extraCreditSubmissions.length}
+                      </span>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 h-16 overflow-hidden">
-                      <p className="text-[10px] font-serif italic text-slate-500 line-clamp-2">
-                        {s.lyrics}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                      <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
-                      <span>UPDATED {formatDate(s.updatedAt, dateFormat)}</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {extraCreditSubmissions.map(s => renderSubmissionCard(s, true))}
                     </div>
                   </div>
-                );
-              })}
-              {regularSubmissions.length === 0 && (
-                <div className="col-span-2 p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400">
-                  <i className="fa-solid fa-music text-3xl mb-4 opacity-20"></i>
-                  <p className="font-medium">No submissions for this project yet.</p>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] text-slate-400 uppercase font-bold tracking-widest border-b border-slate-200">
+                    <tr>
+                      <th className="px-3 sm:px-4 py-3">Song</th>
+                      <th className="px-4 py-3 hidden sm:table-cell">Updated</th>
+                      <th className="px-4 py-3 hidden sm:table-cell"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {regularSubmissions.map(s => renderSubmissionRow(s, false))}
+                    {extraCreditSubmissions.map(s => renderSubmissionRow(s, true))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
-
-          {extraCreditSubmissions.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <h3 className="text-xl font-bold text-slate-800">Extra Credit</h3>
-                <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                  <i className="fa-solid fa-star text-[8px]"></i>
-                  {extraCreditSubmissions.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {extraCreditSubmissions.map(s => {
-                  const track = trackFromSubmission(s, collaborations);
-                  const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
-                  const isFavorited = favoritedSubmissionIds.includes(s.id);
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => onNavigate('song-detail', s.id)}
-                      className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                          <i className="fa-solid fa-star"></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-slate-800 group-hover:text-amber-700 transition-colors truncate">{s.title}</h4>
-                            {bocaCount > 0 && (
-                              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0">
-                                <i className="fa-solid fa-star text-[8px]"></i>
-                                {bocaCount}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
-                        </div>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(s.id); }}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                              isFavorited
-                                ? 'bg-red-50 text-red-500'
-                                : 'bg-slate-50 text-slate-300 border border-slate-200 hover:text-red-400 hover:bg-red-50'
-                            }`}
-                            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                          >
-                            <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
-                          </button>
-                          {track && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onPlayTrack(track); }}
-                              disabled={playingTrackId === track.versionId}
-                              className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors"
-                              title="Play"
-                            >
-                              <i className={`fa-solid ${playingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-play'} text-xs`}></i>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                        <span>{s.versions.length} VERSION{s.versions.length !== 1 ? 'S' : ''}</span>
-                        <span>UPDATED {formatDate(s.updatedAt, dateFormat)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
           </>);
           })()}
         </div>
@@ -665,6 +650,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
           campers={campers}
+          entityTitle={assignment.title}
         />
       )}
 

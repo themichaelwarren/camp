@@ -116,7 +116,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         </div>
         <button
           onClick={() => setShowEditModal(true)}
-          className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+          className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
         >
           <i className="fa-solid fa-pen"></i>
           Edit
@@ -193,7 +193,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                     }
                   }}
                   disabled={!!playingTrackId}
-                  className="bg-indigo-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-70"
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-70"
                 >
                   <i className={`fa-solid ${playingTrackId ? 'fa-spinner fa-spin' : 'fa-shuffle'} text-xs`}></i>
                   Shuffle All ({submissions.filter(s => s.versions?.length > 0).length})
@@ -321,6 +321,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
           spreadsheetId={spreadsheetId}
           currentUser={currentUser}
           campers={campers}
+          entityTitle={prompt.title}
         />
       )}
 

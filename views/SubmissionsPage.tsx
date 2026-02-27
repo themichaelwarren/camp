@@ -348,15 +348,15 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 .filter((t): t is PlayableTrack => t !== null);
               if (tracks.length > 0) onStartJukebox(tracks);
             }}
-            className="bg-amber-500 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-amber-600 transition-all flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
           >
-            <i className="fa-solid fa-shuffle"></i>
-            Jukebox
+            <i className="fa-solid fa-radio"></i>
+            Camp Radio
           </button>
           {onAdd && (
             <button
               onClick={() => setShowUpload(true)}
-              className="bg-indigo-600 text-white px-4 py-1.5 md:px-6 md:py-2.5 rounded-xl text-sm md:text-base font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
             >
               <i className="fa-solid fa-cloud-arrow-up"></i>
               Submit New Song

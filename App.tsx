@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole, Notification } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta, isPublicView, PUBLIC_DEFAULT_VIEW } from './router';
 import { DateFormat } from './utils';
 import Layout from './components/Layout';
@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [bocas, setBocas] = useState<Boca[]>([]);
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
@@ -327,6 +328,16 @@ const App: React.FC = () => {
       setCollaborations(data.collaborations);
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
+      setNotifications(data.notifications);
+      if (profile?.email && sId) {
+        googleService.checkDeadlineReminders(sId, data.assignments, data.notifications, profile.email)
+          .then(newReminders => {
+            if (newReminders.length > 0) {
+              setNotifications(prev => [...newReminders, ...prev]);
+            }
+          })
+          .catch(err => console.error('Failed to check deadline reminders', err));
+      }
       if (profile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
         setFavoritedSubmissionIds(data.favoritedSubmissionIds);
@@ -399,6 +410,7 @@ const App: React.FC = () => {
       setCollaborations(data.collaborations);
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
+      setNotifications(data.notifications);
 
       if (userProfile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
@@ -426,6 +438,20 @@ const App: React.FC = () => {
       submissionId
     });
     setBocas(prev => [...prev, boca]);
+
+    const submission = submissions.find(s => s.id === submissionId);
+    if (submission && submission.camperId !== userProfile.email) {
+      googleService.createNotification(spreadsheetId, {
+        recipientEmail: submission.camperId,
+        type: 'boca_received',
+        triggerUserEmail: userProfile.email,
+        triggerUserName: userProfile.name || userProfile.email,
+        entityType: 'song',
+        entityId: submissionId,
+        referenceId: boca.id,
+        message: `gave a BOCA to "${submission.title}"`
+      }).catch(err => console.error('Failed to create BOCA notification', err));
+    }
   };
 
   const getTitleForEntity = (view: ViewState, id: string | null): string | null => {
@@ -779,6 +805,23 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Failed to save assignment to sheet', error);
         alert('Assignment saved locally, but failed to sync to the sheet. Please try again.');
+      }
+
+      // Notify assigned campers
+      if (userProfile?.email) {
+        const recipients = assignmentWithFolderAndEvent.assignedTo
+          .map(email => email.trim())
+          .filter(email => email && email.includes('@'));
+        googleService.createNotifications(spreadsheetId, recipients.map(email => ({
+          recipientEmail: email,
+          type: 'new_assignment' as const,
+          triggerUserEmail: userProfile.email,
+          triggerUserName: userProfile.name || userProfile.email,
+          entityType: 'assignment' as const,
+          entityId: assignmentWithFolderAndEvent.id,
+          referenceId: assignmentWithFolderAndEvent.id,
+          message: `posted a new assignment: "${assignmentWithFolderAndEvent.title}"`
+        }))).catch(err => console.error('Failed to create assignment notifications', err));
       }
     }
   };
@@ -1170,6 +1213,28 @@ const App: React.FC = () => {
 
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter(n => !n.read).length,
+    [notifications]
+  );
+
+  const handleMarkNotificationRead = async (notificationId: string) => {
+    setNotifications(prev => prev.map(n =>
+      n.id === notificationId ? { ...n, read: true } : n
+    ));
+    if (spreadsheetId) {
+      googleService.markNotificationRead(spreadsheetId, notificationId)
+        .catch(err => console.error('Failed to mark notification read', err));
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    if (!userProfile?.email || !spreadsheetId) return;
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    googleService.markAllNotificationsRead(spreadsheetId, userProfile.email)
+      .catch(err => console.error('Failed to mark all notifications read', err));
+  };
+
   const allSemesters = useMemo(() => {
     const terms = new Set<string>();
     assignments.filter(a => !a.deletedAt).forEach(a => terms.add(getTerm(a.dueDate)));
@@ -1423,6 +1488,7 @@ const App: React.FC = () => {
             currentUserEmail={userProfile?.email || ''}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             onGiveBoca={handleGiveBoca}
             viewMode={bocasViewMode}
@@ -1513,12 +1579,29 @@ const App: React.FC = () => {
             onDateFormatChange={setDateFormat}
             submissions={submissions}
             allSemesters={allSemesters}
+            spreadsheetId={spreadsheetId || undefined}
+            comments={comments}
+            bocas={bocas}
+            campers={campers}
           />
         );
       case 'changelog':
         return <ChangelogPage />;
       case 'about':
-        return <AboutPage />;
+        return (
+          <AboutPage
+            onNavigate={navigateTo}
+            onStartRadio={() => {
+              const tracks = submissions
+                .filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations) && getPrimaryVersion(s)?.id)
+                .map(s => {
+                  const primary = getPrimaryVersion(s)!;
+                  return { versionId: primary.id, title: s.title, artist: getDisplayArtist(s, collaborations), camperId: s.camperId, submissionId: s.id, artworkFileId: s.artworkFileId, artworkUrl: s.artworkUrl } as PlayableTrack;
+                });
+              if (tracks.length > 0) handleStartJukebox(tracks);
+            }}
+          />
+        );
       case 'campers':
         return <CampersPage campers={campers} onNavigate={navigateTo} viewMode={campersViewMode} onViewModeChange={setCampersViewMode} dateFormat={dateFormat} />;
       case 'camper-detail':
@@ -1663,6 +1746,11 @@ const App: React.FC = () => {
       }}
       themePreference={themePreference}
       onThemeChange={setThemePreference}
+      notifications={notifications}
+      unreadNotificationCount={unreadNotificationCount}
+      onMarkNotificationRead={handleMarkNotificationRead}
+      onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+      onNotificationNavigate={(view: ViewState, id: string) => navigateTo(view, id)}
     >
       {renderView()}
     </Layout>
