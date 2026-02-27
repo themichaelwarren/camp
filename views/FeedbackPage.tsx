@@ -50,13 +50,10 @@ const FeedbackPage: React.FC<FeedbackPageProps> = ({ userProfile, upvotedIssueNu
   const fetchIssues = async () => {
     setIsLoadingIssues(true);
     try {
-      const [openRes, closedRes] = await Promise.all([
-        fetch('https://api.github.com/repos/themichaelwarren/camp/issues?state=open&per_page=100'),
-        fetch('https://api.github.com/repos/themichaelwarren/camp/issues?state=closed&per_page=100'),
-      ]);
-      const [openData, closedData] = await Promise.all([openRes.json(), closedRes.json()]);
-      const all = [...(Array.isArray(openData) ? openData : []), ...(Array.isArray(closedData) ? closedData : [])]
-        .filter((i: any) => !i.pull_request)
+      const baseUrl = window.location.hostname === 'localhost' ? 'https://camp.themichaelwarren.com' : '';
+      const resp = await fetch(`${baseUrl}/api/github/issues`);
+      const data = await resp.json();
+      const all = (Array.isArray(data) ? data : [])
         .map((i: any): GitHubIssue => ({
           number: i.number,
           title: i.title,

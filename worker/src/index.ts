@@ -418,7 +418,41 @@ async function handleLyricsProxy(docId: string, env: Env): Promise<Response> {
   }
 }
 
-// --- GitHub Issue Creation Proxy ---
+// --- GitHub Issues Proxy ---
+
+async function handleGitHubIssuesList(env: Env): Promise<Response> {
+  const [openRes, closedRes] = await Promise.all([
+    fetch('https://api.github.com/repos/themichaelwarren/camp/issues?state=open&per_page=100', {
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'camp-worker',
+      },
+    }),
+    fetch('https://api.github.com/repos/themichaelwarren/camp/issues?state=closed&per_page=100', {
+      headers: {
+        'Authorization': `Bearer ${env.GITHUB_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'camp-worker',
+      },
+    }),
+  ]);
+
+  if (!openRes.ok || !closedRes.ok) {
+    return new Response(JSON.stringify({ error: 'Failed to fetch issues' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const [openData, closedData] = await Promise.all([openRes.json(), closedRes.json()]);
+  const all = [...(openData as any[]), ...(closedData as any[])]
+    .filter((i: any) => !i.pull_request);
+
+  return new Response(JSON.stringify(all), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...CORS_HEADERS },
+  });
+}
 
 async function handleGitHubIssueCreate(request: Request, env: Env): Promise<Response> {
   const isValid = await verifyCallerToken(request.headers.get('Authorization'));
@@ -509,9 +543,10 @@ export default {
       return handleLyricsProxy(lyricsMatch[1], env);
     }
 
-    // GitHub issue creation proxy
-    if (url.pathname === '/api/github/issues' && request.method === 'POST') {
-      return handleGitHubIssueCreate(request, env);
+    // GitHub issues proxy
+    if (url.pathname === '/api/github/issues') {
+      if (request.method === 'GET') return handleGitHubIssuesList(env);
+      if (request.method === 'POST') return handleGitHubIssueCreate(request, env);
     }
 
     // Pass through non-HTML requests (assets)
