@@ -1792,6 +1792,7 @@ const App: React.FC = () => {
           });
         if (tracks.length > 0) handleStartJukebox(tracks);
       }}
+      currentTrackLyricsDocUrl={player?.submissionId ? submissions.find(s => s.id === player.submissionId)?.lyricsDocUrl : undefined}
       currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}
       isCurrentTrackFavorited={player?.submissionId ? favoritedSubmissionIds.includes(player.submissionId) : false}
       onToggleFavorite={handleToggleFavorite}

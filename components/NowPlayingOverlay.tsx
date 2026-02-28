@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkImage from './ArtworkImage';
 import { buildPath } from '../router';
+import { DocTextSegment } from '../types';
+import { fetchDocContent, extractDocIdFromUrl } from '../services/googleService';
 
 interface Track {
   src: string;
@@ -30,6 +32,7 @@ interface NowPlayingOverlayProps {
   isJukeboxMode?: boolean;
   onStartJukebox?: () => void;
   onStopJukebox?: () => void;
+  lyricsDocUrl?: string;
   bocaCount?: number;
   isFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
@@ -58,12 +61,16 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   isJukeboxMode,
   onStartJukebox,
   onStopJukebox,
+  lyricsDocUrl,
   bocaCount,
   isFavorited,
   onToggleFavorite
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
+  const [sidePanel, setSidePanel] = useState<'queue' | 'lyrics'>('queue');
+  const [lyrics, setLyrics] = useState<DocTextSegment[] | null>(null);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -111,6 +118,18 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  // Fetch lyrics when track changes
+  useEffect(() => {
+    if (!lyricsDocUrl) { setLyrics(null); return; }
+    const docId = extractDocIdFromUrl(lyricsDocUrl);
+    if (!docId) { setLyrics(null); return; }
+    setLyricsLoading(true);
+    fetchDocContent(docId)
+      .then(setLyrics)
+      .catch(() => setLyrics(null))
+      .finally(() => setLyricsLoading(false));
+  }, [lyricsDocUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -457,14 +476,27 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart ${isShort ? 'text-xs' : 'text-base'}`}></i>
                       </button>
                     )}
+                    {lyricsDocUrl && (
+                      <button
+                        onClick={() => { if (sidePanel === 'lyrics' && showQueue) { setShowQueue(false); } else { setSidePanel('lyrics'); setShowQueue(true); } }}
+                        className={`rounded-full flex items-center justify-center transition-all ${isShort ? 'w-7 h-7' : 'w-9 h-9'} ${
+                          showQueue && sidePanel === 'lyrics'
+                            ? 'text-indigo-600 hover:bg-indigo-50'
+                            : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                        }`}
+                        title={showQueue && sidePanel === 'lyrics' ? 'Hide lyrics' : 'Show lyrics'}
+                      >
+                        <i className={`fa-solid fa-align-left ${isShort ? 'text-xs' : 'text-sm'}`}></i>
+                      </button>
+                    )}
                     <button
-                      onClick={() => setShowQueue(prev => !prev)}
+                      onClick={() => { if (sidePanel === 'queue' && showQueue) { setShowQueue(false); } else { setSidePanel('queue'); setShowQueue(true); } }}
                       className={`rounded-full flex items-center justify-center transition-all ${isShort ? 'w-7 h-7' : 'w-9 h-9'} ${
-                        showQueue
+                        showQueue && sidePanel === 'queue'
                           ? 'text-indigo-600 hover:bg-indigo-50'
                           : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
                       }`}
-                      title={showQueue ? 'Hide queue' : 'Show queue'}
+                      title={showQueue && sidePanel === 'queue' ? 'Hide queue' : 'Show queue'}
                     >
                       <i className={`fa-solid fa-list ${isShort ? 'text-xs' : 'text-sm'}`}></i>
                     </button>
@@ -568,9 +600,36 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
               </div>
             </div>
 
-            {/* Right: Queue — toggleable, shrunk on short viewports */}
-            {showQueue && (queue.length > 0 || isJukeboxMode) && (
+            {/* Right: Side panel (Queue or Lyrics) */}
+            {showQueue && (sidePanel === 'lyrics' ? !!lyricsDocUrl : (queue.length > 0 || isJukeboxMode)) && (
               <div className={`w-full border-t border-slate-200 pt-3 mt-2 ${isShort ? 'flex-1 min-h-0 overflow-y-auto lg:overflow-y-visible lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:max-w-none lg:flex-shrink-0 lg:flex lg:flex-col lg:py-2 lg:pl-5 lg:w-56 lg:max-h-[90vh]' : 'md:border-t-0 md:border-l md:pt-0 md:mt-0 md:max-w-none md:flex-shrink-0 md:flex md:flex-col md:py-2 max-w-sm md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-h-[70vh]'}`}>
+              {sidePanel === 'lyrics' ? (
+                <>
+                  <div className="flex items-center justify-between mb-3 flex-shrink-0 pr-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lyrics</p>
+                  </div>
+                  <div className="md:overflow-y-auto md:min-h-0 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}>
+                    {lyricsLoading ? (
+                      <div className="flex items-center justify-center py-8 text-slate-400">
+                        <i className="fa-solid fa-spinner fa-spin text-lg"></i>
+                      </div>
+                    ) : lyrics && lyrics.length > 0 ? (
+                      <div className="text-sm text-slate-700 leading-relaxed font-serif">
+                        {lyrics.map((seg, i) =>
+                          seg.text === '\n' ? <br key={i} /> :
+                          seg.bold && seg.italic ? <strong key={i}><em>{seg.text}</em></strong> :
+                          seg.bold ? <strong key={i}>{seg.text}</strong> :
+                          seg.italic ? <em key={i}>{seg.text}</em> :
+                          <span key={i}>{seg.text}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 text-sm italic py-4">No lyrics available.</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
                 <div className="flex items-center justify-between mb-3 flex-shrink-0 pr-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Up Next</p>
                   {queue.length > 0 && onClearQueue && (
@@ -661,6 +720,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 ) : (
                   <p className="text-slate-400 text-sm py-4">Loading next song...</p>
                 )}
+                </>
+              )}
               </div>
             )}
           </div>

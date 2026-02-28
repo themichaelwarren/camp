@@ -29,6 +29,7 @@ interface LayoutProps {
   onStopJukebox?: () => void;
   onLogout?: () => void;
   onStartJukebox?: () => void;
+  currentTrackLyricsDocUrl?: string;
   currentTrackBocaCount?: number;
   isCurrentTrackFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
@@ -43,7 +44,7 @@ interface LayoutProps {
   onNotificationNavigate?: (view: ViewState, id: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackLyricsDocUrl, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -316,9 +317,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
               />
             </button>
           ) : (
-            <div className="bg-indigo-950/70 border border-indigo-800 rounded-sm p-3 cursor-pointer hover:bg-indigo-950/90 transition-colors" onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
+            <div className={`rounded-xl p-3 cursor-pointer transition-colors group/mini ${isJukeboxMode ? 'bg-indigo-950/70 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]' : 'bg-indigo-950/70 border border-indigo-800 hover:border-indigo-600'}`} onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
                   <ArtworkImage
                     fileId={player.artworkFileId}
                     fallbackUrl={player.artworkUrl}
@@ -327,9 +328,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                     containerClassName="w-full h-full flex items-center justify-center"
                     fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
                   />
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
+                    <i className="fa-solid fa-chevron-up text-white text-sm"></i>
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{player.title}</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (player.submissionId) { onNavigateToSong?.(player.submissionId); setIsMobileNavOpen(false); } }}
+                    className="text-sm font-semibold text-white truncate block max-w-full text-left hover:text-indigo-300 hover:underline transition-colors"
+                  >
+                    {player.title}
+                  </button>
                   <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -353,7 +362,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                           setIsPlaying(false);
                         }
                       }}
-                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
                       aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
                       <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
@@ -362,7 +371,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   {queue.length > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
-                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
                       aria-label="Next track"
                     >
                       <i className="fa-solid fa-forward-step text-xs"></i>
@@ -370,8 +379,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   )}
                 </div>
               </div>
-              {queue.length > 0 && (
-                <p className="text-[10px] text-indigo-400 mt-2 pl-1">{queue.length} song{queue.length !== 1 ? 's' : ''} in queue</p>
+              {(queue.length > 0 || isJukeboxMode) && (
+                <p className="text-[10px] text-indigo-400 mt-2 pl-1 flex items-center gap-1.5">
+                  {isJukeboxMode && <i className="fa-solid fa-radio text-amber-400 text-[9px]"></i>}
+                  {queue.length > 0 ? `${queue.length} song${queue.length !== 1 ? 's' : ''} in queue` : 'Camp Radio'}
+                </p>
               )}
             </div>
           )
@@ -641,7 +653,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onNavigateToCamper={(id) => { onNavigateToCamper?.(id); setShowNowPlaying(false); setIsMobileNavOpen(false); }}
             onNavigateToAssignment={(id) => { onNavigateToAssignment?.(id); setShowNowPlaying(false); setIsMobileNavOpen(false); }}
             isJukeboxMode={isJukeboxMode}
+            onStartJukebox={onStartJukebox}
             onStopJukebox={onStopJukebox}
+            lyricsDocUrl={currentTrackLyricsDocUrl}
             bocaCount={currentTrackBocaCount}
             isFavorited={isCurrentTrackFavorited}
             onToggleFavorite={onToggleFavorite}

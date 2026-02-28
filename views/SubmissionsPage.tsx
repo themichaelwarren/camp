@@ -48,7 +48,7 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
   const [showFilters, setShowFilters] = useState(false);
 
   const getSubmissionDate = (sub: Submission): string => {
-    return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;
+    return sub.versions?.length ? sub.versions[sub.versions.length - 1].timestamp : sub.updatedAt;
   };
 
   // Resolve prompt for a submission via its assignment
@@ -94,10 +94,14 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
       })
       .sort((a, b) => {
         switch (sortBy) {
-          case 'date-desc':
-            return new Date(getSubmissionDate(b)).getTime() - new Date(getSubmissionDate(a)).getTime();
-          case 'date-asc':
-            return new Date(getSubmissionDate(a)).getTime() - new Date(getSubmissionDate(b)).getTime();
+          case 'date-desc': {
+            const cmp = new Date(getSubmissionDate(b)).getTime() - new Date(getSubmissionDate(a)).getTime();
+            return cmp !== 0 ? cmp : a.title.localeCompare(b.title);
+          }
+          case 'date-asc': {
+            const cmp = new Date(getSubmissionDate(a)).getTime() - new Date(getSubmissionDate(b)).getTime();
+            return cmp !== 0 ? cmp : a.title.localeCompare(b.title);
+          }
           case 'title-asc':
             return a.title.localeCompare(b.title);
           case 'title-desc':
@@ -420,8 +424,8 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
                 className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">All Assignments</option>
-                {assignments.map(a => (
-                  <option key={a.id} value={a.id}>{a.title}</option>
+                {[...assignments].sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()).map(a => (
+                  <option key={a.id} value={a.id}>{a.title} — {formatDate(a.dueDate, dateFormat)}</option>
                 ))}
               </select>
             </div>
