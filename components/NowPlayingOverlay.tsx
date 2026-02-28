@@ -84,6 +84,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [showCopied, setShowCopied] = useState(false);
   const [isCompact, setIsCompact] = useState(() => window.innerHeight < 480);
   const [isShort, setIsShort] = useState(() => window.innerHeight >= 480 && window.innerHeight < 700);
+  const [showStickyMini, setShowStickyMini] = useState(false);
 
   useEffect(() => {
     const mqCompact = window.matchMedia('(max-height: 479px)');
@@ -96,6 +97,38 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
       mqCompact.removeEventListener('change', handleCompact);
       mqShort.removeEventListener('change', handleShort);
     };
+  }, []);
+
+  // Sticky mini player: show compact controls when user scrolls past player on mobile
+  // One-way activation — only scroll triggers show; tap-to-expand dismisses
+  const stickyActiveRef = useRef(false);
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || isCompact) return;
+    if (!showQueue) {
+      stickyActiveRef.current = false;
+      setShowStickyMini(false);
+      return;
+    }
+    const handleScroll = () => {
+      if (window.innerWidth >= 768 || stickyActiveRef.current) return;
+      if (container.scrollTop > 100) {
+        stickyActiveRef.current = true;
+        setShowStickyMini(true);
+        // After controls hide, reset scroll so side panel starts from top
+        requestAnimationFrame(() => { container.scrollTop = 0; });
+      }
+    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isCompact, showQueue]);
+
+  const handleExpandPlayer = useCallback(() => {
+    stickyActiveRef.current = false;
+    setShowStickyMini(false);
+    requestAnimationFrame(() => {
+      scrollContainerRef.current?.scrollTo({ top: 0 });
+    });
   }, []);
 
   const handleShare = useCallback(() => {
@@ -426,13 +459,90 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         {!isCompact && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all"
+            className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all ${showStickyMini ? 'hidden md:flex' : ''}`}
           >
             <i className="fa-solid fa-chevron-down text-sm"></i>
           </button>
         )}
 
-        {/* Content area — compact horizontal when viewport is very short, normal otherwise */}
+        {/* Compact mini player bar — sits above scroll container, doesn't affect scroll content */}
+        {showStickyMini && !isCompact && (
+          <div className="bg-white border-b border-slate-200 md:hidden flex-shrink-0">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <button onClick={onClose} className="w-7 h-7 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all flex-shrink-0">
+                  <i className="fa-solid fa-chevron-down text-xs"></i>
+                </button>
+                <button onClick={handleExpandPlayer} className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 shadow-sm">
+                    <ArtworkImage
+                      fileId={player.artworkFileId}
+                      fallbackUrl={player.artworkUrl}
+                      alt={player.title}
+                      className="w-full h-full object-cover"
+                      containerClassName="w-full h-full"
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center bg-slate-200">
+                          <i className="fa-solid fa-compact-disc text-lg text-slate-400 animate-spin" style={{ animationDuration: '3s' }}></i>
+                        </div>
+                      }
+                      lazy={false}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-slate-800 font-bold text-sm truncate">{player.title}</p>
+                    <p className="text-slate-500 text-xs truncate">{player.artist}</p>
+                  </div>
+                </button>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button onClick={() => onPlayPrevious?.()} disabled={!hasHistory} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${hasHistory ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300'}`}>
+                    <i className="fa-solid fa-backward-step text-xs"></i>
+                  </button>
+                  <button onClick={togglePlayPause} disabled={isLoading} className={`w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-sm ${isLoading ? 'opacity-50' : 'hover:bg-indigo-700 active:scale-95'} transition-all`}>
+                    <i className={`fa-solid ${isLoading ? 'fa-spinner fa-spin' : isPlaying ? 'fa-pause' : 'fa-play ml-0.5'} text-sm`}></i>
+                  </button>
+                  <button onClick={onPlayNext} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${queue.length > 0 ? 'text-slate-600 hover:bg-slate-200' : 'text-slate-300'}`} disabled={queue.length === 0}>
+                    <i className="fa-solid fa-forward-step text-xs"></i>
+                  </button>
+                </div>
+              </div>
+              {/* Action row + seek */}
+              <div className="flex items-center gap-1 px-3 pb-1">
+                {!!bocaCount && bocaCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-amber-500 px-1">
+                    {Array.from({ length: bocaCount }, (_, i) => (
+                      <i key={i} className="fa-solid fa-star text-[10px]"></i>
+                    ))}
+                  </span>
+                )}
+                {onToggleFavorite && player.submissionId && (
+                  <button onClick={() => onToggleFavorite(player.submissionId!)} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isFavorited ? 'text-red-500' : 'text-slate-300 hover:text-red-400'}`}>
+                    <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                  </button>
+                )}
+                {lyricsDocUrl && (
+                  <button onClick={() => { if (sidePanel === 'lyrics' && showQueue) { setShowQueue(false); } else { setSidePanel('lyrics'); setShowQueue(true); } }} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${showQueue && sidePanel === 'lyrics' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-500'}`}>
+                    <i className="fa-solid fa-align-left text-xs"></i>
+                  </button>
+                )}
+                <button onClick={() => { if (sidePanel === 'queue' && showQueue) { setShowQueue(false); } else { setSidePanel('queue'); setShowQueue(true); } }} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${showQueue && sidePanel === 'queue' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-500'}`}>
+                  <i className="fa-solid fa-list text-xs"></i>
+                </button>
+                <button onClick={isJukeboxMode ? onStopJukebox : onStartJukebox} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isJukeboxMode ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500'}`}>
+                  <i className="fa-solid fa-radio text-xs"></i>
+                </button>
+                {player.submissionId && (
+                  <button onClick={handleShare} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${showCopied ? 'text-green-500' : 'text-slate-300 hover:text-slate-500'}`}>
+                    <i className={`fa-solid ${showCopied ? 'fa-check' : 'fa-share-from-square'} text-xs`}></i>
+                  </button>
+                )}
+                <div className="flex-1 ml-1">
+                  <input type="range" min={0} max={duration || 0} step={0.1} value={currentTime} onChange={handleSeek} className="w-full h-1 appearance-none bg-slate-200 rounded-full cursor-pointer accent-indigo-600" style={{ background: `linear-gradient(to right, var(--np-accent) ${seekPercent}%, var(--np-track) ${seekPercent}%)` }} />
+                </div>
+              </div>
+          </div>
+        )}
+
+        {/* Scrollable content area */}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto md:flex md:items-center md:justify-center"
@@ -504,8 +614,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           ) : (
           /* ===== FULL PLAYER (normal viewports) ===== */
           <div className={`flex flex-col items-center px-6 pb-6 ${isShort ? 'h-full lg:flex-row lg:items-start lg:pb-0 lg:py-4 lg:gap-6 lg:px-6' : 'md:flex-row md:items-start md:pb-0 md:py-4 md:gap-12 xl:gap-16 md:px-10 xl:px-16'}`}>
-            {/* Left: Player controls */}
-            <div className={`flex items-center w-full ${isShort ? 'flex-row gap-5 max-w-none flex-shrink-0 lg:w-auto lg:flex-1' : 'flex-col max-w-sm md:flex-shrink-0 md:max-w-none md:w-96 lg:w-[26rem] xl:w-[32rem] 2xl:w-[40rem] min-[1800px]:w-[48rem] min-[2200px]:w-[56rem]'}`}>
+            {/* Left: Player controls — hidden on mobile when compact bar is active */}
+            <div className={`flex items-center w-full ${showStickyMini ? 'hidden md:flex' : ''} ${isShort ? 'flex-row gap-5 max-w-none flex-shrink-0 lg:w-auto lg:flex-1' : 'flex-col max-w-sm md:flex-shrink-0 md:max-w-none md:w-96 lg:w-[26rem] xl:w-[32rem] 2xl:w-[40rem] min-[1800px]:w-[48rem] min-[2200px]:w-[56rem]'}`}>
               {/* Artwork — aspect-square with viewport-capped height */}
               <div className={isShort ? 'flex-shrink-0' : 'w-full mt-2 md:mt-0 flex justify-center'} style={isShort ? { width: 'min(35vh, 240px)' } : undefined}>
                 <div className={`relative overflow-hidden bg-slate-200 shadow-xl aspect-square ${isShort ? 'rounded-xl w-full' : 'rounded-2xl xl:rounded-3xl max-h-[55vh] max-w-[55vh] w-full'}`}>
