@@ -122,6 +122,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
   const handleDragHandleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
     e.stopPropagation(); // prevent swipe-to-delete
+    e.preventDefault(); // prevent text selection
+    window.getSelection()?.removeAllRanges();
     touchDragIndex.current = index;
     setTouchDragging(index);
     setTouchDragOver(index);
@@ -779,7 +781,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         onTouchStart={(e) => { if (touchDragging === null) handleSwipeStart(e, i); }}
                         onTouchMove={(e) => { if (touchDragging === null) handleSwipeMove(e, i); }}
                         onTouchEnd={() => { if (touchDragging === null) handleSwipeEnd(i); }}
-                        className={`relative flex items-center group rounded-lg bg-slate-100 hover:bg-slate-200/50 ${isShort ? 'gap-2 px-1.5 py-1' : 'gap-3 px-2 py-1.5'} ${
+                        className={`relative flex items-center group rounded-lg bg-slate-100 hover:bg-slate-200/50 select-none ${isShort ? 'gap-2 px-1.5 py-1' : 'gap-3 px-2 py-1.5'} ${
                           dragIndex === i || touchDragging === i ? 'opacity-40' : ''
                         } ${(dragOverIndex === i && dragIndex !== i) || (touchDragOver === i && touchDragging !== null && touchDragging !== i) ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
                         style={{
