@@ -23,7 +23,7 @@ interface SongDetailProps {
   spreadsheetId?: string;
   bocas?: Boca[];
   currentUserEmail?: string;
-  onGiveBoca?: (submissionId: string) => Promise<void>;
+  onGiveBoca?: (submissionId: string, reason?: string) => Promise<void>;
   campers?: CamperProfile[];
   dateFormat: DateFormat;
   isFavorited?: boolean;
@@ -142,6 +142,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [isUploadingArtwork, setIsUploadingArtwork] = useState(false);
   const artworkInputRef = React.useRef<HTMLInputElement>(null);
   const [isGivingBoca, setIsGivingBoca] = useState(false);
+  const [showBocaModal, setShowBocaModal] = useState(false);
+  const [bocaReason, setBocaReason] = useState('');
   const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
   const [docLoading, setDocLoading] = useState(false);
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
@@ -598,19 +600,37 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 </button>
               ) : (
                 <button
-                  onClick={async () => {
-                    setIsGivingBoca(true);
-                    try { await onGiveBoca(submission.id); } finally { setIsGivingBoca(false); }
-                  }}
-                  disabled={isGivingBoca}
+                  onClick={() => { setBocaReason(''); setShowBocaModal(true); }}
                   className="bg-amber-400 hover:bg-amber-500 text-amber-900 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors shadow-sm"
                 >
-                  <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : 'fa-star'}`}></i>
+                  <i className="fa-solid fa-star"></i>
                   Give a BOCA
                 </button>
               )}
             </div>
           )}
+
+          {/* BOCA reasons */}
+          {(() => {
+            const songBocas = bocas.filter(b => b.submissionId === submission.id && b.reason);
+            if (songBocas.length === 0) return null;
+            return (
+              <div className="space-y-2 max-w-lg">
+                {songBocas.map(b => {
+                  const giver = campers.find(c => c.email === b.fromEmail);
+                  return (
+                    <div key={b.id} className="bg-amber-50/60 border border-amber-100 rounded-xl px-4 py-2.5 flex gap-3 items-start">
+                      <i className="fa-solid fa-star text-amber-400 text-xs mt-1 flex-shrink-0"></i>
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-700">{b.reason}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">— {giver?.name || b.fromEmail}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
         </div>
       </div>
@@ -980,6 +1000,57 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         />
       )}
       </div>
+
+      {/* BOCA Reason Modal */}
+      {showBocaModal && onGiveBoca && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowBocaModal(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <i className="fa-solid fa-star"></i>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-slate-800">Give a BOCA</h3>
+                <p className="text-xs text-slate-500 truncate">{submission.title} by {getDisplayArtist(submission, collaborations)}</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 block mb-1.5">Why is this song BOCA-worthy?</label>
+              <textarea
+                value={bocaReason}
+                onChange={e => setBocaReason(e.target.value)}
+                placeholder="What makes this song stand out..."
+                maxLength={280}
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                autoFocus
+              />
+              <p className="text-[10px] text-slate-400 mt-1 text-right">{bocaReason.length}/280</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBocaModal(false)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShowBocaModal(false);
+                  setIsGivingBoca(true);
+                  try { await onGiveBoca(submission.id, bocaReason.trim() || undefined); } finally { setIsGivingBoca(false); }
+                }}
+                disabled={isGivingBoca}
+                className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-900 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : 'fa-star'} text-xs`}></i>
+                Give BOCA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

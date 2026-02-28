@@ -785,7 +785,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       )}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
+        <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
           <div className="flex items-center gap-4">
              <button
                className="md:hidden text-indigo-900 text-xl"

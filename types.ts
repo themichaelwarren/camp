@@ -121,6 +121,7 @@ export interface Boca {
   fromEmail: string;
   submissionId: string;
   awardedAt: string;
+  reason?: string;
 }
 
 export interface StatusUpdate {

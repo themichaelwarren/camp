@@ -419,13 +419,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   }, []);
 
   const handleContentTouchEnd = useCallback(() => {
-    if (pullDismissActive.current && dragOffsetY > 120) {
-      onClose();
+    if (pullDismissActive.current && dragOffsetY > (showStickyMini ? 60 : 120)) {
+      if (showStickyMini) {
+        handleExpandPlayer();
+      } else {
+        onClose();
+      }
     }
     dragStartY.current = null;
     pullDismissActive.current = false;
     setDragOffsetY(0);
-  }, [dragOffsetY, onClose]);
+  }, [dragOffsetY, onClose, showStickyMini, handleExpandPlayer]);
 
   return createPortal(
     <div
@@ -469,7 +473,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         {showStickyMini && !isCompact && (
           <div className="bg-slate-100 border-b border-slate-200 md:hidden flex-shrink-0">
               <div className="flex items-center gap-3 px-3 py-2">
-                <button onClick={onClose} className="w-7 h-7 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all flex-shrink-0">
+                <button onClick={handleExpandPlayer} className="w-7 h-7 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 active:scale-95 transition-all flex-shrink-0">
                   <i className="fa-solid fa-chevron-down text-xs"></i>
                 </button>
                 <button onClick={handleExpandPlayer} className="flex items-center gap-3 flex-1 min-w-0">

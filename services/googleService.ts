@@ -648,7 +648,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'PromptUpvotes!A2:E5000',
     'Favorites!A2:D5000',
     'Collaborators!A2:F5000',
-    'BOCAs!A2:D5000',
+    'BOCAs!A2:E5000',
     'StatusUpdates!A2:E5000',
     'Notifications!A2:K5000',
     'FeedbackUpvotes!A2:E5000'
@@ -938,7 +938,8 @@ const parseBocaRow = (row: any[]): Boca => ({
   id: row[0] || '',
   fromEmail: row[1] || '',
   submissionId: row[2] || '',
-  awardedAt: row[3] || ''
+  awardedAt: row[3] || '',
+  reason: row[4] || ''
 });
 
 const parseStatusUpdateRow = (row: any[]): StatusUpdate => ({
@@ -964,7 +965,7 @@ export const fetchPublicData = async () => {
     // Fallback: direct Sheets API for local dev
     const ranges = [
       'Assignments!A2:N1000', 'Submissions!A2:S1000', 'Users!A2:J1000',
-      'Collaborators!A2:F5000', 'BOCAs!A2:D5000', 'StatusUpdates!A2:E5000'
+      'Collaborators!A2:F5000', 'BOCAs!A2:E5000', 'StatusUpdates!A2:E5000'
     ];
     const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${rangeParams}&key=${API_KEY}`;
@@ -2027,29 +2028,25 @@ export const syncEventFromCalendar = async (spreadsheetId: string, event: Event)
 };
 
 // BOCAs
-export const fetchBocas = async (spreadsheetId: string): Promise<{ id: string; fromEmail: string; submissionId: string; awardedAt: string }[]> => {
-  const result = await callSheetsGet('BOCAs!A2:D5000');
+export const fetchBocas = async (spreadsheetId: string): Promise<Boca[]> => {
+  const result = await callSheetsGet('BOCAs!A2:E5000');
   const rows = result.values || [];
-  return rows.map((row: any[]) => ({
-    id: row[0] || '',
-    fromEmail: row[1] || '',
-    submissionId: row[2] || '',
-    awardedAt: row[3] || ''
-  }));
+  return rows.map(parseBocaRow);
 };
 
 export const createBoca = async (
   spreadsheetId: string,
-  data: { fromEmail: string; submissionId: string }
-): Promise<{ id: string; fromEmail: string; submissionId: string; awardedAt: string }> => {
-  const boca = {
+  data: { fromEmail: string; submissionId: string; reason?: string }
+): Promise<Boca> => {
+  const boca: Boca = {
     id: Math.random().toString(36).substr(2, 9),
     fromEmail: data.fromEmail,
     submissionId: data.submissionId,
-    awardedAt: new Date().toISOString()
+    awardedAt: new Date().toISOString(),
+    reason: data.reason || ''
   };
   await appendSheetRow(spreadsheetId, 'BOCAs!A1', [[
-    boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt
+    boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt, boca.reason
   ]]);
   return boca;
 };

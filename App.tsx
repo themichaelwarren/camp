@@ -447,11 +447,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGiveBoca = async (submissionId: string) => {
+  const handleGiveBoca = async (submissionId: string, reason?: string) => {
     if (!userProfile?.email || !spreadsheetId) return;
     const boca = await googleService.createBoca(spreadsheetId, {
       fromEmail: userProfile.email,
-      submissionId
+      submissionId,
+      reason
     });
     setBocas(prev => [...prev, boca]);
 

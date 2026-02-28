@@ -15,7 +15,7 @@ interface BOCAsPageProps {
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
-  onGiveBoca: (submissionId: string) => Promise<void>;
+  onGiveBoca: (submissionId: string, reason?: string) => Promise<void>;
   viewMode: 'cards' | 'list';
   onViewModeChange: (value: 'cards' | 'list') => void;
   searchTerm: string;
@@ -30,8 +30,10 @@ interface BOCAsPageProps {
 
 const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const [selectedMonth, setSelectedMonth] = useState('all');
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
+  const [bocaModalId, setBocaModalId] = useState<string | null>(null);
+  const [bocaReason, setBocaReason] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   // Build list of months that have at least one BOCA, plus current month
@@ -47,19 +49,17 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
     return Array.from(monthSet).sort().reverse();
   }, [bocas]);
 
-  // Parse selected month into range
-  const [monthStart, monthEnd] = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    return [new Date(year, month - 1, 1), new Date(year, month, 1)];
-  }, [selectedMonth]);
-
-  // Filter BOCAs for selected month
+  // Filter BOCAs for selected month (or all)
   const monthBocas = useMemo(() => {
+    if (selectedMonth === 'all') return bocas;
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
     return bocas.filter(b => {
       const d = new Date(b.awardedAt);
-      return d >= monthStart && d < monthEnd;
+      return d >= start && d < end;
     });
-  }, [bocas, monthStart, monthEnd]);
+  }, [bocas, selectedMonth]);
 
   // Current user's remaining BOCAs (always based on current calendar month)
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -130,7 +130,8 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
     return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  const isCurrentMonth = selectedMonth === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const isCurrentMonth = selectedMonth === 'all' || selectedMonth === currentMonthKey;
 
   const allTracks = useMemo(() => {
     return filteredSortedSongs
@@ -207,6 +208,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="mt-2 w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
+                <option value="all">All Months</option>
                 {availableMonths.map(m => (
                   <option key={m} value={m}>{formatMonth(m)}</option>
                 ))}
@@ -352,15 +354,14 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                         </span>
                       ) : canGive ? (
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            setGivingBocaId(submissionId);
-                            try { await onGiveBoca(submissionId); } finally { setGivingBocaId(null); }
+                            setBocaReason('');
+                            setBocaModalId(submissionId);
                           }}
-                          disabled={givingBocaId === submissionId}
                           className="text-[10px] bg-amber-400 hover:bg-amber-500 text-amber-900 px-3 py-1 rounded-full font-bold uppercase tracking-tighter flex items-center gap-1 transition-colors"
                         >
-                          <i className={`fa-solid ${givingBocaId === submissionId ? 'fa-spinner fa-spin' : 'fa-star'} text-[8px]`}></i>
+                          <i className="fa-solid fa-star text-[8px]"></i>
                           Give BOCA
                         </button>
                       ) : (
@@ -436,15 +437,14 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                           </span>
                         ) : canGive ? (
                           <button
-                            onClick={async (e) => {
+                            onClick={(e) => {
                               e.stopPropagation();
-                              setGivingBocaId(submissionId);
-                              try { await onGiveBoca(submissionId); } finally { setGivingBocaId(null); }
+                              setBocaReason('');
+                              setBocaModalId(submissionId);
                             }}
-                            disabled={givingBocaId === submissionId}
                             className="text-[10px] bg-amber-400 hover:bg-amber-500 text-amber-900 px-3 py-1 rounded-full font-bold uppercase tracking-tighter flex items-center gap-1 transition-colors"
                           >
-                            <i className={`fa-solid ${givingBocaId === submissionId ? 'fa-spinner fa-spin' : 'fa-star'} text-[8px]`}></i>
+                            <i className="fa-solid fa-star text-[8px]"></i>
                             Give BOCA
                           </button>
                         ) : null}
@@ -489,12 +489,67 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-400 text-3xl">
             <i className="fa-solid fa-star"></i>
           </div>
-          <h3 className="font-bold text-slate-800 text-xl">No BOCAs yet for {formatMonth(selectedMonth)}</h3>
+          <h3 className="font-bold text-slate-800 text-xl">No BOCAs yet{selectedMonth !== 'all' ? ` for ${formatMonth(selectedMonth)}` : ''}</h3>
           <p className="text-slate-500 mt-2 mb-2 max-w-md mx-auto">
             Listen to some songs and award your favorites! You get 2 BOCAs each month to give to the songs that move you.
           </p>
         </div>
       )}
+
+      {/* BOCA Reason Modal */}
+      {bocaModalId && (() => {
+        const modalSub = submissions.find(s => s.id === bocaModalId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setBocaModalId(null)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-star"></i>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-slate-800">Give a BOCA</h3>
+                  {modalSub && <p className="text-xs text-slate-500 truncate">{modalSub.title} by {getDisplayArtist(modalSub, collaborations)}</p>}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 block mb-1.5">Why is this song BOCA-worthy?</label>
+                <textarea
+                  value={bocaReason}
+                  onChange={e => setBocaReason(e.target.value)}
+                  placeholder="What makes this song stand out..."
+                  maxLength={280}
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                  autoFocus
+                />
+                <p className="text-[10px] text-slate-400 mt-1 text-right">{bocaReason.length}/280</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBocaModalId(null)}
+                  className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const id = bocaModalId;
+                    setBocaModalId(null);
+                    setGivingBocaId(id);
+                    try { await onGiveBoca(id, bocaReason.trim() || undefined); } finally { setGivingBocaId(null); }
+                  }}
+                  disabled={givingBocaId === bocaModalId}
+                  className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-900 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <i className={`fa-solid ${givingBocaId === bocaModalId ? 'fa-spinner fa-spin' : 'fa-star'} text-xs`}></i>
+                  Give BOCA
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

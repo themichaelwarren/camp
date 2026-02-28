@@ -328,7 +328,7 @@ async function handlePublicData(env: Env): Promise<Response> {
     fetchSheet(env, 'Submissions!A2:R1000', 'pub-submissions'),
     fetchSheet(env, 'Users!A2:J1000', 'pub-campers'),
     fetchSheet(env, 'Collaborators!A2:F5000', 'pub-collaborators'),
-    fetchSheet(env, 'BOCAs!A2:D5000', 'pub-bocas'),
+    fetchSheet(env, 'BOCAs!A2:E5000', 'pub-bocas'),
     fetchSheet(env, 'StatusUpdates!A2:E5000', 'pub-statusupdates'),
   ]);
   return new Response(JSON.stringify({ assignments, submissions, campers, collaborators, bocas, statusUpdates }), {
