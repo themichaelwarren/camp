@@ -221,7 +221,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     };
   }, []);
 
-  const renderSidebarContent = (collapsed: boolean) => (
+  // Lock body scroll when mobile nav is open
+  useEffect(() => {
+    if (isMobileNavOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isMobileNavOpen]);
+
+  const renderSidebarContent = (collapsed: boolean, isMobile = false) => (
     <>
       {/* Header */}
       <div className={`flex items-center ${collapsed ? 'flex-col gap-1 px-2 py-4' : 'justify-between p-6'}`}>
@@ -273,90 +281,89 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-4'} py-4`}>
-        {menuGroups.map((group, gi) => (
-          <div key={group.label}>
-            {collapsed ? (
-              gi > 0 && <div className="my-2 mx-2 border-t border-indigo-700/50"></div>
-            ) : (
-              <p className={`text-[10px] font-bold text-indigo-400/60 uppercase tracking-widest px-4 ${gi === 0 ? 'mb-1' : 'mt-4 mb-1'}`}>
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavigate(item.id as ViewState)}
-                  disabled={!isLoggedIn && !isPublicMode && item.id !== 'dashboard'}
-                  title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all ${
-                    activeView === item.id
-                      ? 'bg-indigo-700 text-white shadow-lg'
-                      : 'text-indigo-100 hover:bg-indigo-800'
-                  } ${!isLoggedIn && !isPublicMode && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
-                >
-                  <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
-                  {!collapsed && <span className="font-medium">{item.label}</span>}
-                </button>
-              ))}
-            </div>
+      <nav className={`${isMobile ? '' : 'flex-1'} overflow-y-auto ${collapsed ? 'px-2' : 'px-4'} py-4`}>
+        {isMobile ? (
+          /* Mobile: flat 2-column grid, no group headers */
+          <div className="grid grid-cols-2 gap-1">
+            {menuGroups.flatMap(g => g.items).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleNavigate(item.id as ViewState)}
+                disabled={!isLoggedIn && !isPublicMode && item.id !== 'dashboard'}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-sm ${
+                  activeView === item.id
+                    ? 'bg-indigo-700 text-white shadow-lg'
+                    : 'text-indigo-100 hover:bg-indigo-800'
+                } ${!isLoggedIn && !isPublicMode && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
+              >
+                <i className={`fa-solid ${item.icon} w-4 text-center`}></i>
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
           </div>
-        ))}
+        ) : (
+          /* Desktop: grouped single-column list */
+          menuGroups.map((group, gi) => (
+            <div key={group.label}>
+              {collapsed ? (
+                gi > 0 && <div className="my-2 mx-2 border-t border-indigo-700/50"></div>
+              ) : (
+                <p className={`text-[10px] font-bold text-indigo-400/60 uppercase tracking-widest px-4 ${gi === 0 ? 'mb-1' : 'mt-4 mb-1'}`}>
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigate(item.id as ViewState)}
+                    disabled={!isLoggedIn && !isPublicMode && item.id !== 'dashboard'}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-2.5 rounded-xl transition-all ${
+                      activeView === item.id
+                        ? 'bg-indigo-700 text-white shadow-lg'
+                        : 'text-indigo-100 hover:bg-indigo-800'
+                    } ${!isLoggedIn && !isPublicMode && item.id !== 'dashboard' ? 'opacity-30 cursor-not-allowed' : ''}`}
+                  >
+                    <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                    {!collapsed && <span className="font-medium">{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </nav>
 
-      {/* Bottom panel */}
-      <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto ${collapsed ? 'space-y-3 flex flex-col items-center' : 'space-y-4'}`}>
-        {player ? (
-          collapsed ? (
-            <button
+      {/* Mobile: now-playing / radio right after nav, not at bottom */}
+      {isMobile && (
+        <div className="px-4 pb-2">
+          {player ? (
+            <div
               onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}
-              className="w-10 h-10 rounded-lg flex-shrink-0 transition-opacity relative group/mini-collapsed overflow-hidden ring-1 ring-indigo-700/50"
-              title={`${player.title} — ${player.artist}`}
+              className={`rounded-xl p-3 cursor-pointer transition-colors ${isJukeboxMode ? 'bg-indigo-950/70 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]' : 'bg-indigo-950/70 border border-indigo-800'}`}
             >
-              <ArtworkImage
-                fileId={player.artworkFileId}
-                fallbackUrl={player.artworkUrl}
-                alt={`${player.title} artwork`}
-                className="w-full h-full object-cover"
-                containerClassName="w-full h-full flex items-center justify-center bg-indigo-100"
-                fallback={<i className="fa-solid fa-compact-disc text-sm text-indigo-400"></i>}
-              />
-              <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini-collapsed:opacity-100 transition-opacity rounded-lg">
-                <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
-              </div>
-            </button>
-          ) : (
-            <div className={`rounded-xl p-3 cursor-pointer transition-colors group/mini ${isJukeboxMode ? 'bg-indigo-950/70 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]' : 'bg-indigo-950/70 border border-indigo-800 hover:border-indigo-600'}`} onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                   <ArtworkImage
                     fileId={player.artworkFileId}
                     fallbackUrl={player.artworkUrl}
                     alt={`${player.title} artwork`}
                     className="w-full h-full object-cover"
-                    containerClassName="w-full h-full flex items-center justify-center"
-                    fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                    containerClassName="w-full h-full flex items-center justify-center bg-indigo-100"
+                    fallback={<i className="fa-solid fa-compact-disc text-sm text-indigo-400"></i>}
                   />
-                  <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
-                    <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
-                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (player.submissionId) { onNavigateToSong?.(player.submissionId); setIsMobileNavOpen(false); } }}
-                    className="text-sm font-semibold text-white truncate block max-w-full text-left hover:text-indigo-300 hover:underline transition-colors"
-                  >
-                    {player.title}
-                  </button>
+                  <p className="text-sm font-semibold text-white truncate">{player.title}</p>
                   <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                {!!currentTrackBocaCount && currentTrackBocaCount > 0 && (
-                  <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>
-                )}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {!!currentTrackBocaCount && currentTrackBocaCount > 0 && (
+                    <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>
+                  )}
                   {isPlayerLoading ? (
-                    <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center">
                       <i className="fa-solid fa-spinner fa-spin text-xs"></i>
                     </div>
                   ) : (
@@ -372,7 +379,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                           setIsPlaying(false);
                         }
                       }}
-                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
+                      className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
                       aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
                       <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
@@ -381,7 +388,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   {queue.length > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
-                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
+                      className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
                       aria-label="Next track"
                     >
                       <i className="fa-solid fa-forward-step text-xs"></i>
@@ -396,22 +403,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 </p>
               )}
             </div>
-          )
-        ) : (isLoggedIn || isPublicMode) && onStartJukebox && (
-          collapsed ? (
+          ) : (isLoggedIn || isPublicMode) && onStartJukebox ? (
             <button
-              onClick={onStartJukebox}
-              className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white flex items-center justify-center transition-all shadow-lg shadow-amber-500/20"
-              title="Start Jukebox"
+              onClick={() => { onStartJukebox(); setIsMobileNavOpen(false); }}
+              className="w-full flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-3 transition-all"
             >
-              <i className="fa-solid fa-radio text-sm"></i>
-            </button>
-          ) : (
-            <button
-              onClick={onStartJukebox}
-              className="w-full flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-3 hover:from-amber-500/30 hover:to-orange-500/30 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
                 <i className="fa-solid fa-radio text-sm"></i>
               </div>
               <div className="text-left">
@@ -419,113 +416,320 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Shuffle all songs</p>
               </div>
             </button>
+          ) : null}
+        </div>
+      )}
+
+      {/* Bottom panel */}
+      <div className={`${collapsed ? 'p-2' : 'p-4'} bg-indigo-950/50 mt-auto ${collapsed ? 'space-y-3 flex flex-col items-center' : isMobile ? 'space-y-3' : 'space-y-4'}`}>
+        {!isMobile && (
+          /* Desktop: now-playing / radio in bottom panel */
+          player ? (
+            collapsed ? (
+              <button
+                onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}
+                className="w-10 h-10 rounded-lg flex-shrink-0 transition-opacity relative group/mini-collapsed overflow-hidden ring-1 ring-indigo-700/50"
+                title={`${player.title} — ${player.artist}`}
+              >
+                <ArtworkImage
+                  fileId={player.artworkFileId}
+                  fallbackUrl={player.artworkUrl}
+                  alt={`${player.title} artwork`}
+                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full flex items-center justify-center bg-indigo-100"
+                  fallback={<i className="fa-solid fa-compact-disc text-sm text-indigo-400"></i>}
+                />
+                <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini-collapsed:opacity-100 transition-opacity rounded-lg">
+                  <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
+                </div>
+              </button>
+            ) : (
+              <div className={`rounded-xl p-3 cursor-pointer transition-colors group/mini ${isJukeboxMode ? 'bg-indigo-950/70 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]' : 'bg-indigo-950/70 border border-indigo-800 hover:border-indigo-600'}`} onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                    <ArtworkImage
+                      fileId={player.artworkFileId}
+                      fallbackUrl={player.artworkUrl}
+                      alt={`${player.title} artwork`}
+                      className="w-full h-full object-cover"
+                      containerClassName="w-full h-full flex items-center justify-center"
+                      fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
+                    />
+                    <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
+                      <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (player.submissionId) { onNavigateToSong?.(player.submissionId); setIsMobileNavOpen(false); } }}
+                      className="text-sm font-semibold text-white truncate block max-w-full text-left hover:text-indigo-300 hover:underline transition-colors"
+                    >
+                      {player.title}
+                    </button>
+                    <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold truncate">{player.artist}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                  {!!currentTrackBocaCount && currentTrackBocaCount > 0 && (
+                    <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>
+                  )}
+                    {isPlayerLoading ? (
+                      <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                        <i className="fa-solid fa-spinner fa-spin text-xs"></i>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!audioRef.current) return;
+                          if (audioRef.current.paused) {
+                            audioRef.current.play().catch(() => undefined);
+                            setIsPlaying(true);
+                          } else {
+                            audioRef.current.pause();
+                            setIsPlaying(false);
+                          }
+                        }}
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
+                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                      >
+                        <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'} text-xs`}></i>
+                      </button>
+                    )}
+                    {queue.length > 0 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onPlayNext?.(); }}
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/30 hover:scale-110 text-white flex items-center justify-center transition-all"
+                        aria-label="Next track"
+                      >
+                        <i className="fa-solid fa-forward-step text-xs"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {(queue.length > 0 || isJukeboxMode) && (
+                  <p className="text-[10px] text-indigo-400 mt-2 pl-1 flex items-center gap-1.5">
+                    {isJukeboxMode && <i className="fa-solid fa-radio text-amber-400 text-[9px]"></i>}
+                    {queue.length > 0 ? `${queue.length} song${queue.length !== 1 ? 's' : ''} in queue` : 'Camp Radio'}
+                  </p>
+                )}
+              </div>
+            )
+          ) : (isLoggedIn || isPublicMode) && onStartJukebox && (
+            collapsed ? (
+              <button
+                onClick={onStartJukebox}
+                className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white flex items-center justify-center transition-all shadow-lg shadow-amber-500/20"
+                title="Start Jukebox"
+              >
+                <i className="fa-solid fa-radio text-sm"></i>
+              </button>
+            ) : (
+              <button
+                onClick={onStartJukebox}
+                className="w-full flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-3 hover:from-amber-500/30 hover:to-orange-500/30 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <i className="fa-solid fa-radio text-sm"></i>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Camp Radio</p>
+                  <p className="text-[10px] text-indigo-300 uppercase tracking-widest font-bold">Shuffle all songs</p>
+                </div>
+              </button>
+            )
           )
         )}
         {isLoggedIn ? (
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setIsUserMenuOpen((open) => !open)}
-              className={`${collapsed ? '' : 'w-full'} flex items-center ${collapsed ? 'justify-center' : 'gap-3 text-left'}`}
-              aria-expanded={isUserMenuOpen}
-              aria-haspopup="menu"
-              title={collapsed ? (userProfile?.name || 'User menu') : undefined}
-            >
-            {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
-              <ArtworkImage
-                fileId={undefined}
-                fallbackUrl={userProfile.pictureOverrideUrl || userProfile.picture}
-                alt={userProfile.name || 'User profile'}
-                className={`${collapsed ? 'w-8 h-8' : 'w-10 h-10'} rounded-full object-cover border border-white/30`}
-                fallback={
-                  <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
+          isMobile ? (
+            /* Mobile: inline user section — no dropdown */
+            <div className="space-y-3">
+              {/* Theme toggle */}
+              {onThemeChange && (
+                <div className="flex items-center gap-1 bg-white/10 rounded-full p-1">
+                  {([
+                    { mode: 'light' as const, icon: 'fa-sun', label: 'Light' },
+                    { mode: 'dark' as const, icon: 'fa-moon', label: 'Dark' },
+                    { mode: 'system' as const, icon: 'fa-desktop', label: 'System' },
+                  ]).map(({ mode, icon, label }) => (
+                    <button
+                      key={mode}
+                      onClick={() => onThemeChange(mode)}
+                      className={`theme-picker-btn flex-1 h-8 rounded-full flex items-center justify-center gap-1.5 text-xs font-medium transition-colors ${
+                        themePreference === mode
+                          ? 'bg-indigo-500 text-white theme-picker-active'
+                          : 'text-white opacity-50 hover:opacity-100'
+                      }`}
+                    >
+                      <i className={`fa-solid ${icon} text-[10px]`}></i>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Quick links grid */}
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  { id: 'settings', label: 'Settings', icon: 'fa-gear' },
+                  { id: 'changelog', label: "What's New", icon: 'fa-bolt' },
+                  { id: 'about', label: 'About', icon: 'fa-circle-info' },
+                  { id: 'feedback', label: 'Feedback', icon: 'fa-comment-dots' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigate(item.id as ViewState)}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-sm ${
+                      activeView === item.id
+                        ? 'bg-indigo-700 text-white shadow-lg'
+                        : 'text-indigo-100 hover:bg-indigo-800'
+                    }`}
+                  >
+                    <i className={`fa-solid ${item.icon} w-4 text-center`}></i>
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+              {/* User row + logout */}
+              <div className="flex items-center gap-3">
+                {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
+                  <ArtworkImage
+                    fileId={undefined}
+                    fallbackUrl={userProfile.pictureOverrideUrl || userProfile.picture}
+                    alt={userProfile.name || 'User profile'}
+                    className="w-8 h-8 rounded-full object-cover border border-white/30"
+                    fallback={
+                      <div className="w-8 h-8 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold text-xs">
+                        KC
+                      </div>
+                    }
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold text-xs">
                     KC
                   </div>
-                }
-              />
-            ) : (
-              <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
-                KC
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
+                  <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                    {isSyncing ? 'Syncing...' : 'Connected'}
+                  </p>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500/20 text-indigo-200 hover:text-rose-200 flex items-center justify-center transition-colors"
+                  aria-label="Log out"
+                >
+                  <i className="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                </button>
               </div>
-            )}
-              {!collapsed && (
-                <>
-                  <div className="overflow-hidden flex-1">
-                    <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
-                      {isSyncing ? 'Syncing...' : 'Connected'}
-                    </p>
-                  </div>
-                  <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
-                </>
-              )}
-            </button>
-            {isUserMenuOpen && (
-              <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-0 right-0'}`}>
-                {onThemeChange && (
-                  <div className="px-3 pt-3 pb-2">
-                    <div className="flex items-center gap-1 bg-white/20 rounded-full p-1">
-                      {([
-                        { mode: 'light' as const, icon: 'fa-sun', label: 'Light' },
-                        { mode: 'dark' as const, icon: 'fa-moon', label: 'Dark' },
-                        { mode: 'system' as const, icon: 'fa-desktop', label: 'System' },
-                      ]).map(({ mode, icon, label }) => (
-                        <button
-                          key={mode}
-                          onClick={(e) => { e.stopPropagation(); onThemeChange(mode); }}
-                          className={`theme-picker-btn flex-1 h-8 rounded-full flex items-center justify-center transition-colors ${
-                            themePreference === mode
-                              ? 'bg-indigo-500 theme-picker-active'
-                              : 'opacity-50 hover:opacity-100'
-                          }`}
-                          title={label}
-                        >
-                          <i className={`fa-solid ${icon} text-xs`}></i>
-                        </button>
-                      ))}
+            </div>
+          ) : (
+            /* Desktop: dropdown user menu */
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setIsUserMenuOpen((open) => !open)}
+                className={`${collapsed ? '' : 'w-full'} flex items-center ${collapsed ? 'justify-center' : 'gap-3 text-left'}`}
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="menu"
+                title={collapsed ? (userProfile?.name || 'User menu') : undefined}
+              >
+              {userProfile?.pictureOverrideUrl || userProfile?.picture ? (
+                <ArtworkImage
+                  fileId={undefined}
+                  fallbackUrl={userProfile.pictureOverrideUrl || userProfile.picture}
+                  alt={userProfile.name || 'User profile'}
+                  className={`${collapsed ? 'w-8 h-8' : 'w-10 h-10'} rounded-full object-cover border border-white/30`}
+                  fallback={
+                    <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
+                      KC
                     </div>
-                  </div>
+                  }
+                />
+              ) : (
+                <div className={`${collapsed ? 'w-8 h-8 text-xs' : 'w-10 h-10'} rounded-full bg-amber-400 text-indigo-900 flex items-center justify-center font-bold`}>
+                  KC
+                </div>
+              )}
+                {!collapsed && (
+                  <>
+                    <div className="overflow-hidden flex-1">
+                      <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
+                      <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                        {isSyncing ? 'Syncing...' : 'Connected'}
+                      </p>
+                    </div>
+                    <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
+                  </>
                 )}
-                <button
-                  onClick={() => handleNavigate('settings')}
-                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
-                >
-                  <i className="fa-solid fa-gear"></i>
-                  Settings
-                </button>
-                <button
-                  onClick={() => handleNavigate('changelog')}
-                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
-                >
-                  <i className="fa-solid fa-bolt"></i>
-                  What's New
-                </button>
-                <button
-                  onClick={() => handleNavigate('about')}
-                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
-                >
-                  <i className="fa-solid fa-circle-info"></i>
-                  About Camp
-                </button>
-                <button
-                  onClick={() => handleNavigate('feedback')}
-                  className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
-                >
-                  <i className="fa-solid fa-comment-dots"></i>
-                  Feedback
-                </button>
-                {isLoggedIn && (
+              </button>
+              {isUserMenuOpen && (
+                <div className={`absolute z-50 bg-indigo-950 border border-indigo-800 rounded-2xl shadow-xl overflow-hidden ${collapsed ? 'bottom-0 left-full ml-2 min-w-[160px]' : 'bottom-full mb-3 left-0 right-0'}`}>
+                  {onThemeChange && (
+                    <div className="px-3 pt-3 pb-2">
+                      <div className="flex items-center gap-1 bg-white/20 rounded-full p-1">
+                        {([
+                          { mode: 'light' as const, icon: 'fa-sun', label: 'Light' },
+                          { mode: 'dark' as const, icon: 'fa-moon', label: 'Dark' },
+                          { mode: 'system' as const, icon: 'fa-desktop', label: 'System' },
+                        ]).map(({ mode, icon, label }) => (
+                          <button
+                            key={mode}
+                            onClick={(e) => { e.stopPropagation(); onThemeChange(mode); }}
+                            className={`theme-picker-btn flex-1 h-8 rounded-full flex items-center justify-center transition-colors ${
+                              themePreference === mode
+                                ? 'bg-indigo-500 theme-picker-active'
+                                : 'opacity-50 hover:opacity-100'
+                            }`}
+                            title={label}
+                          >
+                            <i className={`fa-solid ${icon} text-xs`}></i>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <button
-                    onClick={onLogout}
-                    className="w-full px-4 py-3 text-left text-sm font-semibold text-rose-200 hover:bg-rose-500/10 flex items-center gap-3"
+                    onClick={() => handleNavigate('settings')}
+                    className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
                   >
-                    <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                    Log out
+                    <i className="fa-solid fa-gear"></i>
+                    Settings
                   </button>
-                )}
-              </div>
-            )}
-          </div>
+                  <button
+                    onClick={() => handleNavigate('changelog')}
+                    className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                  >
+                    <i className="fa-solid fa-bolt"></i>
+                    What's New
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('about')}
+                    className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                  >
+                    <i className="fa-solid fa-circle-info"></i>
+                    About Camp
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('feedback')}
+                    className="w-full px-4 py-3 text-left text-sm font-semibold text-indigo-100 hover:bg-indigo-900/60 flex items-center gap-3"
+                  >
+                    <i className="fa-solid fa-comment-dots"></i>
+                    Feedback
+                  </button>
+                  {isLoggedIn && (
+                    <button
+                      onClick={onLogout}
+                      className="w-full px-4 py-3 text-left text-sm font-semibold text-rose-200 hover:bg-rose-500/10 flex items-center gap-3"
+                    >
+                      <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                      Log out
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
         ) : isPublicMode && onSignIn ? (
           collapsed ? (
             <button
@@ -539,7 +743,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             <div className="text-center p-2 space-y-2">
               <p className="text-[10px] text-indigo-400 font-bold uppercase">Read-only mode</p>
               <button
-                onClick={onSignIn}
+                onClick={() => { onSignIn(); setIsMobileNavOpen(false); }}
                 className="text-xs bg-white/10 hover:bg-white/20 w-full py-2.5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
               >
                 <i className="fa-brands fa-google"></i>
@@ -574,8 +778,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onClick={() => setIsMobileNavOpen(false)}
             aria-label="Close navigation overlay"
           />
-          <aside className="camp-sidebar relative z-10 w-full bg-indigo-900 text-white flex flex-col h-full shadow-2xl">
-            {renderSidebarContent(false)}
+          <aside className="camp-sidebar relative z-10 w-full bg-indigo-900 text-white flex flex-col h-full shadow-2xl overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+            {renderSidebarContent(false, true)}
           </aside>
         </div>
       )}
