@@ -328,8 +328,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                     containerClassName="w-full h-full flex items-center justify-center"
                     fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
                   />
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
-                    <i className="fa-solid fa-chevron-up text-white text-sm"></i>
+                  <div className="absolute inset-0 bg-indigo-100 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
+                    <i className="fa-solid fa-chevron-up text-indigo-600 text-sm"></i>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
