@@ -33,6 +33,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [shareProgress, setShareProgress] = useState<string | null>(null);
+  const [convertProgress, setConvertProgress] = useState<string | null>(null);
   const isAdmin = userProfile?.id === ADMIN_USER_ID;
 
   useEffect(() => {
@@ -383,6 +384,61 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
                 )}
               </button>
               <p className="text-[10px] text-slate-400 mt-2">Creates notification entries from existing comments, replies, reactions, and BOCAs. All are marked as read. Safe to run multiple times (will create duplicates if run again).</p>
+            </div>
+          )}
+          {spreadsheetId && (
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={!!convertProgress || !!shareProgress}
+                onClick={async () => {
+                  const withLyrics = submissions.filter(s => s.lyricsDocUrl);
+                  if (withLyrics.length === 0) {
+                    setConvertProgress('No submissions with lyrics docs found.');
+                    setTimeout(() => setConvertProgress(null), 4000);
+                    return;
+                  }
+                  setConvertProgress(`Scanning ${withLyrics.length} lyrics docs...`);
+                  let converted = 0;
+                  let scanned = 0;
+                  let failed = 0;
+                  for (const sub of withLyrics) {
+                    const fileId = googleService.extractFileIdFromUrl(sub.lyricsDocUrl!);
+                    if (!fileId) { scanned++; continue; }
+                    try {
+                      const newUrl = await googleService.convertWordFileToGoogleDoc(fileId);
+                      if (newUrl) {
+                        const updated = { ...sub, lyricsDocUrl: newUrl };
+                        await googleService.updateSubmissionRow(spreadsheetId, updated);
+                        converted++;
+                      }
+                    } catch {
+                      failed++;
+                    }
+                    scanned++;
+                    setConvertProgress(`Scanning ${scanned}/${withLyrics.length}...${converted ? ` Converted ${converted}.` : ''}`);
+                  }
+                  setConvertProgress(converted > 0
+                    ? `Done! Converted ${converted} Word file${converted !== 1 ? 's' : ''} to Google Docs.${failed ? ` ${failed} failed.` : ''}`
+                    : `Done — no Word files found.${failed ? ` ${failed} failed.` : ''}`
+                  );
+                  setTimeout(() => setConvertProgress(null), 6000);
+                }}
+                className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {convertProgress ? (
+                  <>
+                    <i className={`fa-solid ${convertProgress.startsWith('Done') || convertProgress.startsWith('No ') ? 'fa-check' : 'fa-spinner fa-spin'}`}></i>
+                    {convertProgress}
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-file-word"></i>
+                    Convert Word Lyrics to Google Docs
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-slate-400 mt-2">Scans all lyrics docs and converts any .docx Word files to native Google Docs so lyrics display in the player. Safe to run multiple times.</p>
             </div>
           )}
         </section>

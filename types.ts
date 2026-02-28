@@ -63,6 +63,7 @@ export interface Submission {
   deletedBy?: string;
   status?: 'private' | 'shared';
   isExtraCredit?: boolean;
+  aboutDocUrl?: string;
 }
 
 export interface CamperProfile {

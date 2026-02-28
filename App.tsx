@@ -885,7 +885,8 @@ const App: React.FC = () => {
           newSubmission.deletedAt || '', newSubmission.deletedBy || '',
           newSubmission.primaryVersionId || '',
           newSubmission.status || '',
-          newSubmission.isExtraCredit ? 'true' : ''
+          newSubmission.isExtraCredit ? 'true' : '',
+          newSubmission.aboutDocUrl || ''
         ]]);
       } catch (error) {
         console.error('Failed to save submission to sheet', error);

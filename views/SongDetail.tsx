@@ -6,6 +6,8 @@ import { buildPath } from '../router';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
+import MarkdownEditor from '../components/MarkdownEditor';
+import MarkdownPreview from '../components/MarkdownPreview';
 
 interface SongDetailProps {
   submission: Submission;
@@ -131,14 +133,14 @@ const CollaboratorEditor: React.FC<{
 
 const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat, isFavorited = false, onToggleFavorite, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
-  const [showEdit, setShowEdit] = useState(false);
-  const [editForm, setEditForm] = useState({
-    title: submission.title,
-    lyrics: submission.lyrics,
-    details: submission.details
-  });
-  const [newArtwork, setNewArtwork] = useState<File | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [editingField, setEditingField] = useState<'title' | 'details' | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [aboutDocContent, setAboutDocContent] = useState<DocTextSegment[] | null>(null);
+  const [aboutDocLoading, setAboutDocLoading] = useState(false);
+  const [isCreatingAboutDoc, setIsCreatingAboutDoc] = useState(false);
+  const [isRefreshingAbout, setIsRefreshingAbout] = useState(false);
+  const [isUploadingArtwork, setIsUploadingArtwork] = useState(false);
+  const artworkInputRef = React.useRef<HTMLInputElement>(null);
   const [isGivingBoca, setIsGivingBoca] = useState(false);
   const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
   const [docLoading, setDocLoading] = useState(false);
@@ -174,17 +176,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const poolExhausted = monthlyUsed >= 3;
 
   React.useEffect(() => {
-    // Only sync form state when modal is closed to avoid overwriting user's edits
-    if (!showEdit) {
-      setEditForm({
-        title: submission.title,
-        lyrics: submission.lyrics,
-        details: submission.details
-      });
-    }
-  }, [submission, showEdit]);
-
-  React.useEffect(() => {
     if (!submission.lyricsDocUrl) return;
     const docId = googleService.extractDocIdFromUrl(submission.lyricsDocUrl);
     if (!docId) {
@@ -197,6 +188,17 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       .catch((err) => { console.error('Failed to fetch lyrics doc:', err, 'URL:', submission.lyricsDocUrl, 'docId:', docId); setDocLyrics(null); })
       .finally(() => setDocLoading(false));
   }, [submission.lyricsDocUrl]);
+
+  React.useEffect(() => {
+    if (!submission.aboutDocUrl) { setAboutDocContent(null); return; }
+    const docId = googleService.extractDocIdFromUrl(submission.aboutDocUrl);
+    if (!docId) return;
+    setAboutDocLoading(true);
+    googleService.fetchDocContent(docId)
+      .then(setAboutDocContent)
+      .catch(() => setAboutDocContent(null))
+      .finally(() => setAboutDocLoading(false));
+  }, [submission.aboutDocUrl]);
 
   const loadAudio = async (versionId: string) => {
     if (activeVersionId === versionId) return;
@@ -213,17 +215,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       setActiveVersionId(versionId);
     } catch (error) {
       console.error('Failed to load audio', error);
-    }
-  };
-
-  const handleArtworkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Artwork image must be 5MB or smaller.');
-        return;
-      }
-      setNewArtwork(file);
     }
   };
 
@@ -289,6 +280,60 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     setEditingNotesText('');
   };
 
+  const handleInlineSave = (field: 'title' | 'details', value: string) => {
+    const trimmed = value.trim();
+    if (field === 'title' && !trimmed) return;
+    onUpdate?.({
+      ...submission,
+      [field]: trimmed,
+      updatedAt: new Date().toISOString()
+    });
+    setEditingField(null);
+  };
+
+  const handleInlineArtworkUpload = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Artwork image must be 5MB or smaller.');
+      return;
+    }
+    setIsUploadingArtwork(true);
+    try {
+      const uploaded = await googleService.uploadArtworkToDriveInFolder(file, assignment?.driveFolderId);
+      onUpdate?.({
+        ...submission,
+        artworkFileId: uploaded.id,
+        artworkUrl: uploaded.webViewLink,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to upload artwork', error);
+      alert('Failed to upload artwork. Please try again.');
+    } finally {
+      setIsUploadingArtwork(false);
+    }
+  };
+
+  const handleCreateAboutDoc = async () => {
+    setIsCreatingAboutDoc(true);
+    try {
+      const userLabel = submission.camperName || 'Anonymous';
+      const created = await googleService.createAboutDoc(submission.title, userLabel, assignment?.driveFolderId);
+      const updated: Submission = { ...submission, aboutDocUrl: created.webViewLink, updatedAt: new Date().toISOString() };
+      onUpdate?.(updated);
+      // Fetch content immediately (mirrors lyrics pattern)
+      const docId = googleService.extractDocIdFromUrl(created.webViewLink);
+      if (docId) {
+        googleService.fetchDocContent(docId).then(setAboutDocContent).catch(() => {});
+      }
+      window.open(created.webViewLink, '_blank');
+    } catch (error) {
+      console.error('Failed to create about doc', error);
+      alert('Failed to create About doc. Please try again.');
+    } finally {
+      setIsCreatingAboutDoc(false);
+    }
+  };
+
   const handleDeleteVersion = (versionId: string) => {
     if (submission.versions.length <= 1) return;
     if (!window.confirm('Delete this version? The audio file will remain in Google Drive.')) return;
@@ -297,59 +342,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     onUpdate?.({ ...submission, versions: updatedVersions, primaryVersionId: newPrimaryId, updatedAt: new Date().toISOString() });
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      let artworkFileId = submission.artworkFileId || '';
-      let artworkUrl = submission.artworkUrl || '';
-      let lyricsDocUrl = submission.lyricsDocUrl || '';
-      if (newArtwork) {
-        const uploaded = await googleService.uploadArtworkToDriveInFolder(newArtwork, assignment?.driveFolderId);
-        artworkFileId = uploaded.id;
-        artworkUrl = uploaded.webViewLink;
-      }
-
-      const lyricsChanged = editForm.lyrics.trim() !== submission.lyrics;
-      if (lyricsChanged) {
-        if (!lyricsDocUrl) {
-          const userLabel = submission.camperName || 'Anonymous';
-          const created = await googleService.createLyricsDoc(editForm.title, userLabel, editForm.lyrics, assignment?.driveFolderId);
-          lyricsDocUrl = created.webViewLink;
-        } else {
-          const docId = googleService.extractDocIdFromUrl(lyricsDocUrl);
-          if (docId) {
-            await googleService.replaceDocContent(docId, editForm.lyrics);
-          }
-        }
-      }
-
-      const updated: Submission = {
-        ...submission,
-        title: editForm.title.trim(),
-        lyrics: lyricsDocUrl ? '' : editForm.lyrics.trim(),
-        details: editForm.details.trim(),
-        artworkFileId,
-        artworkUrl,
-        lyricsDocUrl,
-        updatedAt: new Date().toISOString()
-      };
-      onUpdate?.(updated);
-      setShowEdit(false);
-      setNewArtwork(null);
-      if (lyricsChanged && lyricsDocUrl) {
-        const docId = googleService.extractDocIdFromUrl(lyricsDocUrl);
-        if (docId) {
-          googleService.fetchDocContent(docId).then(setDocLyrics).catch(() => {});
-        }
-      }
-    } catch (error) {
-      console.error('Failed to update submission', error);
-      alert('Failed to update song. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -362,22 +354,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           <i className="fa-solid fa-arrow-left"></i>
         </button>
         <div className="flex items-center gap-2">
-          {canManageVersions && (
-            <button
-              onClick={() => {
-                setEditForm({
-                  title: submission.title,
-                  lyrics: submission.lyrics,
-                  details: submission.details
-                });
-                setShowEdit(true);
-              }}
-              className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
-            >
-              <i className="fa-solid fa-pen"></i>
-              Edit
-            </button>
-          )}
           {canManageVersions ? (
             <button
               onClick={() => {
@@ -440,6 +416,30 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 </div>
               </button>
             )}
+            {canManageVersions && (
+              <>
+                <input
+                  ref={artworkInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleInlineArtworkUpload(e.target.files[0]);
+                  }}
+                />
+                <button
+                  onClick={(e) => { e.stopPropagation(); artworkInputRef.current?.click(); }}
+                  className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-600 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  title="Change artwork"
+                >
+                  {isUploadingArtwork ? (
+                    <i className="fa-solid fa-spinner fa-spin text-sm"></i>
+                  ) : (
+                    <i className="fa-solid fa-camera text-sm"></i>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -447,7 +447,34 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         <div className="flex-1 min-w-0 w-full space-y-4 overflow-hidden">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-bold text-slate-800">{submission.title}</h2>
+              {editingField === 'title' ? (
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleInlineSave('title', editValue);
+                    if (e.key === 'Escape') setEditingField(null);
+                  }}
+                  onBlur={() => handleInlineSave('title', editValue)}
+                  className="text-3xl font-bold text-slate-800 bg-transparent border-b-2 border-indigo-400 outline-none w-full"
+                  autoFocus
+                />
+              ) : (
+                <h2
+                  className={`text-3xl font-bold text-slate-800 ${canManageVersions ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors group/title' : ''}`}
+                  onClick={() => {
+                    if (!canManageVersions) return;
+                    setEditingField('title');
+                    setEditValue(submission.title);
+                  }}
+                >
+                  {submission.title}
+                  {canManageVersions && (
+                    <i className="fa-solid fa-pencil text-slate-300 text-sm ml-2 opacity-0 group-hover/title:opacity-100 transition-opacity"></i>
+                  )}
+                </h2>
+              )}
               {submission.isExtraCredit && (
                 <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
                   <i className="fa-solid fa-star text-[9px]"></i>
@@ -584,6 +611,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               )}
             </div>
           )}
+
         </div>
       </div>
 
@@ -654,18 +682,127 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             )}
           </section>
 
-        </div>
-
-        {/* Right column: Production Details + Version History */}
-        <div className="space-y-6">
-          {submission.details && (
-            <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Production Notes</h3>
-              <p className="text-sm text-slate-700 leading-relaxed italic whitespace-pre-wrap">
-                {submission.details}
-              </p>
+          {/* About This Song */}
+          {(submission.aboutDocUrl || canManageVersions) && (
+            <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest">About This Song</h3>
+                {currentUserEmail && submission.aboutDocUrl ? (
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={submission.aboutDocUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                      Edit in Google Docs
+                    </a>
+                    <button
+                      onClick={() => {
+                        const docId = googleService.extractDocIdFromUrl(submission.aboutDocUrl!);
+                        if (!docId) return;
+                        setIsRefreshingAbout(true);
+                        googleService.fetchDocContent(docId)
+                          .then(setAboutDocContent)
+                          .catch(() => {})
+                          .finally(() => setIsRefreshingAbout(false));
+                      }}
+                      disabled={isRefreshingAbout}
+                      className="inline-flex items-center justify-center w-8 h-8 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                      title="Refresh content from Google Docs"
+                    >
+                      <i className={`fa-solid fa-arrows-rotate text-[10px] ${isRefreshingAbout ? 'fa-spin' : ''}`}></i>
+                    </button>
+                  </div>
+                ) : canManageVersions ? (
+                  <button
+                    onClick={handleCreateAboutDoc}
+                    disabled={isCreatingAboutDoc}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-sans font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 disabled:opacity-50"
+                  >
+                    <i className="fa-solid fa-file-circle-plus text-[10px]"></i>
+                    {isCreatingAboutDoc ? 'Creating...' : 'Add About This Song'}
+                  </button>
+                ) : null}
+              </div>
+              {aboutDocLoading ? (
+                <p className="text-slate-400 italic font-sans text-sm">Loading...</p>
+              ) : aboutDocContent && aboutDocContent.length > 0 ? (
+                <div className="text-base text-slate-700 leading-relaxed">
+                  {aboutDocContent.map((seg, i) =>
+                    seg.text === '\n' ? <br key={i} /> :
+                    seg.bold && seg.italic ? <strong key={i}><em>{seg.text}</em></strong> :
+                    seg.bold ? <strong key={i}>{seg.text}</strong> :
+                    seg.italic ? <em key={i}>{seg.text}</em> :
+                    <span key={i}>{seg.text}</span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-slate-400 font-sans text-sm italic">
+                  {canManageVersions ? 'No about section yet. Click the button above to create one.' : ''}
+                </p>
+              )}
+              {canManageVersions && onAddCollaborator && onRemoveCollaborator && (
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <CollaboratorEditor
+                    submissionId={submission.id}
+                    collaborations={collaborations.filter(c => c.submissionId === submission.id)}
+                    campers={campers}
+                    primaryCamperId={submission.camperId}
+                    onAdd={onAddCollaborator}
+                    onRemove={onRemoveCollaborator}
+                  />
+                </div>
+              )}
             </section>
           )}
+
+          {/* Production Notes */}
+          {(submission.details || canManageVersions) && (
+            <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold font-sans text-slate-400 uppercase tracking-widest">Production Notes</h3>
+                {canManageVersions && !editingField && (
+                  <button
+                    onClick={() => { setEditingField('details'); setEditValue(submission.details); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                  >
+                    <i className="fa-solid fa-pencil text-[10px]"></i>
+                    Edit
+                  </button>
+                )}
+              </div>
+              {editingField === 'details' ? (
+                <div>
+                  <MarkdownEditor
+                    value={editValue}
+                    onChange={setEditValue}
+                    placeholder="Add production notes (supports markdown)..."
+                    minHeight="h-32"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleInlineSave('details', editValue)} className="text-xs font-bold text-white px-4 py-1.5 bg-indigo-600 rounded-lg hover:bg-indigo-700">Save</button>
+                    <button onClick={() => setEditingField(null)} className="text-xs font-bold text-slate-400 px-3 py-1.5 hover:text-slate-600">Cancel</button>
+                  </div>
+                </div>
+              ) : submission.details ? (
+                <MarkdownPreview content={submission.details} className="text-sm" />
+              ) : (
+                <p
+                  className={`text-sm text-slate-400 italic ${canManageVersions ? 'cursor-pointer hover:text-slate-500' : ''}`}
+                  onClick={() => { if (canManageVersions) { setEditingField('details'); setEditValue(''); } }}
+                >
+                  {canManageVersions ? 'Click to add production notes...' : ''}
+                </p>
+              )}
+            </section>
+          )}
+
+        </div>
+
+        {/* Right column: Version History */}
+        <div className="space-y-6">
           {currentUserEmail && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Version History</h3>
 
@@ -719,10 +856,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   return (
                     <div key={v.id} className={`p-4 rounded-2xl border ${isPrimary ? 'border-green-200 bg-green-50/30' : 'border-slate-100 bg-slate-50'}`}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${isPrimary ? 'text-green-700 bg-white border-green-200' : 'text-slate-500 bg-white border-slate-200'}`}>
-                          {isPrimary ? 'Primary' : `v${submission.versions.length - idx}`}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-bold">{formatDate(v.timestamp, dateFormat)}</span>
+                        {isPrimary && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase text-green-700 bg-white border-green-200">
+                            Primary
+                          </span>
+                        )}
+                        <span className={`text-[10px] text-slate-400 font-bold ${isPrimary ? '' : 'ml-auto'}`}>{formatDate(v.timestamp, dateFormat)}</span>
                       </div>
                       <p className="text-xs font-bold text-slate-800 truncate mb-1">{v.fileName}</p>
                       {editingNotesId === v.id ? (
@@ -807,6 +946,25 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               )}
             </div>
           </section>}
+          {canManageVersions && (
+            <section className="bg-white rounded-3xl border border-rose-100 shadow-sm p-6">
+              <button
+                onClick={() => {
+                  if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
+                  onUpdate?.({
+                    ...submission,
+                    deletedAt: new Date().toISOString(),
+                    deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+                  });
+                  onNavigate('submissions');
+                }}
+                className="w-full text-rose-500 hover:text-rose-700 text-xs font-bold uppercase tracking-widest transition-colors"
+              >
+                <i className="fa-solid fa-trash mr-2"></i>
+                Delete Song
+              </button>
+            </section>
+          )}
         </div>
       </div>
 
@@ -822,94 +980,6 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
         />
       )}
       </div>
-      {showEdit && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={() => setShowEdit(false)}>
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-xl text-slate-800">Edit Song</h3>
-              <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600">
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
-              <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Notes</label>
-                  <textarea
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 h-24 text-base"
-                    value={editForm.details}
-                    onChange={(e) => setEditForm({ ...editForm, details: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Artwork (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200"
-                    onChange={handleArtworkChange}
-                  />
-                  <p className="text-[10px] text-slate-400 mt-2">Max size 5MB.</p>
-                </div>
-                {onAddCollaborator && onRemoveCollaborator && (
-                  <CollaboratorEditor
-                    submissionId={submission.id}
-                    collaborations={collaborations.filter(c => c.submissionId === submission.id)}
-                    campers={campers}
-                    primaryCamperId={submission.camperId}
-                    onAdd={onAddCollaborator}
-                    onRemove={onRemoveCollaborator}
-                  />
-                )}
-              </div>
-              <div className="p-6 border-t border-slate-100 shrink-0 space-y-3">
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin"></i>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-check"></i>
-                      Save Changes
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
-                    onUpdate?.({
-                      ...submission,
-                      deletedAt: new Date().toISOString(),
-                      deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
-                    });
-                    onNavigate('submissions');
-                  }}
-                  className="w-full bg-white text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-50 transition-all"
-                >
-                  Delete Song
-                </button>
-              </div>
-            </form>
-        </div>
-      </div>
-    )}
     </>
   );
 };

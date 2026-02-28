@@ -389,24 +389,22 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           <div className={`flex flex-col items-center px-6 pb-6 ${isShort ? 'h-full lg:flex-row lg:items-start lg:pb-0 lg:py-4 lg:gap-6 lg:px-6' : 'md:flex-row md:items-start md:pb-0 md:py-4 md:gap-12 xl:gap-16 md:px-10 xl:px-16'}`}>
             {/* Left: Player controls */}
             <div className={`flex items-center w-full ${isShort ? 'flex-row gap-5 max-w-none flex-shrink-0 lg:w-auto lg:flex-1' : 'flex-col max-w-sm md:flex-shrink-0 md:max-w-none md:w-96 lg:w-[26rem] xl:w-[32rem] 2xl:w-[40rem] min-[1800px]:w-[48rem] min-[2200px]:w-[56rem]'}`}>
-              {/* Artwork — padding-bottom trick guarantees 1:1 square */}
-              <div className={isShort ? 'flex-shrink-0' : 'w-full mt-2 md:mt-0'} style={isShort ? { width: 'min(35vh, 240px)' } : undefined}>
-                <div className={`w-full relative pb-[100%] overflow-hidden bg-slate-200 shadow-xl ${isShort ? 'rounded-xl' : 'rounded-2xl xl:rounded-3xl'}`}>
-                  <div className="absolute inset-0">
-                    <ArtworkImage
-                      fileId={player.artworkFileId}
-                      fallbackUrl={player.artworkUrl}
-                      alt={player.title}
-                      className="w-full h-full object-cover"
-                      containerClassName="w-full h-full"
-                      fallback={
-                        <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                          <i className={`fa-solid fa-compact-disc text-slate-400 animate-spin ${isShort ? 'text-4xl' : 'text-6xl xl:text-7xl'}`} style={{ animationDuration: '3s' }}></i>
-                        </div>
-                      }
-                      lazy={false}
-                    />
-                  </div>
+              {/* Artwork — aspect-square with viewport-capped height */}
+              <div className={isShort ? 'flex-shrink-0' : 'w-full mt-2 md:mt-0 flex justify-center'} style={isShort ? { width: 'min(35vh, 240px)' } : undefined}>
+                <div className={`relative overflow-hidden bg-slate-200 shadow-xl aspect-square ${isShort ? 'rounded-xl w-full' : 'rounded-2xl xl:rounded-3xl max-h-[55vh] max-w-[55vh] w-full'}`}>
+                  <ArtworkImage
+                    fileId={player.artworkFileId}
+                    fallbackUrl={player.artworkUrl}
+                    alt={player.title}
+                    className="w-full h-full object-cover"
+                    containerClassName="w-full h-full"
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-slate-200">
+                        <i className={`fa-solid fa-compact-disc text-slate-400 animate-spin ${isShort ? 'text-4xl' : 'text-6xl xl:text-7xl'}`} style={{ animationDuration: '3s' }}></i>
+                      </div>
+                    }
+                    lazy={false}
+                  />
                   {isLoading && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <div className="flex flex-col items-center gap-2">
@@ -602,7 +600,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
             {/* Right: Side panel (Queue or Lyrics) */}
             {showQueue && (sidePanel === 'lyrics' ? !!lyricsDocUrl : (queue.length > 0 || isJukeboxMode)) && (
-              <div className={`w-full border-t border-slate-200 pt-3 mt-2 ${isShort ? 'flex-1 min-h-0 overflow-y-auto lg:overflow-y-visible lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:max-w-none lg:flex-shrink-0 lg:flex lg:flex-col lg:py-2 lg:pl-5 lg:w-56 lg:max-h-[90vh]' : 'md:border-t-0 md:border-l md:pt-0 md:mt-0 md:max-w-none md:flex-shrink-0 md:flex md:flex-col md:py-2 max-w-sm md:pl-8 xl:pl-10 md:w-80 xl:w-96 md:max-h-[70vh]'}`}>
+              <div className={`w-full border-t border-slate-200 pt-3 mt-2 ${isShort ? 'flex-1 min-h-0 overflow-y-auto lg:overflow-y-visible lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:max-w-none lg:flex-shrink-0 lg:flex lg:flex-col lg:py-2 lg:pl-5 lg:w-56 lg:max-h-[90vh]' : 'md:border-t-0 md:border-l md:pt-0 md:mt-0 md:max-w-none md:flex-shrink-0 md:flex md:flex-col md:py-2 max-w-sm md:pl-8 xl:pl-10 md:w-96 xl:w-[28rem] 2xl:w-[32rem] md:max-h-[85vh]'}`}>
               {sidePanel === 'lyrics' ? (
                 <>
                   <div className="flex items-center justify-between mb-3 flex-shrink-0 pr-1">

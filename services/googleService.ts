@@ -577,7 +577,7 @@ export const updateAssignmentRow = async (spreadsheetId: string, assignment: Ass
 };
 
 export const updateSubmissionRow = async (spreadsheetId: string, submission: Submission) => {
-  const rowsResult = await callSheetsGet('Submissions!A2:R1000');
+  const rowsResult = await callSheetsGet('Submissions!A2:S1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === submission.id);
   const rowValues = [[
@@ -598,7 +598,8 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
     submission.deletedBy || '',
     submission.primaryVersionId || '',
     submission.status || '',
-    submission.isExtraCredit ? 'true' : ''
+    submission.isExtraCredit ? 'true' : '',
+    submission.aboutDocUrl || ''
   ]];
 
   if (rowIndex === -1) {
@@ -606,12 +607,12 @@ export const updateSubmissionRow = async (spreadsheetId: string, submission: Sub
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Submissions!A${sheetRow}:R${sheetRow}`;
+  const range = `Submissions!A${sheetRow}:S${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const clearLyricsForDocSongs = async (spreadsheetId: string) => {
-  const rowsResult = await callSheetsGet('Submissions!A2:R1000');
+  const rowsResult = await callSheetsGet('Submissions!A2:S1000');
   const rows = rowsResult.values || [];
   // Column F (index 5) = lyrics, Column J (index 9) = lyricsDocUrl
   const updates: { range: string; values: string[][] }[] = [];
@@ -639,7 +640,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
   const ranges = [
     'Prompts!A2:J1000',
     'Assignments!A2:N1000',
-    'Submissions!A2:R1000',
+    'Submissions!A2:S1000',
     'Comments!A2:J5000',
     'Users!A2:J1000',
     'Events!A2:O5000',
@@ -743,7 +744,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       deletedBy: rawDeletedBy || '',
       primaryVersionId: row[15] || '',
       status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
-      isExtraCredit: row[17] === 'true'
+      isExtraCredit: row[17] === 'true',
+      aboutDocUrl: row[18] || ''
     };
   });
 
@@ -905,7 +907,8 @@ const parseSubmissionRow = (row: any[]): Submission => {
     deletedBy: rawDeletedBy || '',
     primaryVersionId: row[15] || '',
     status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
-    isExtraCredit: row[17] === 'true'
+    isExtraCredit: row[17] === 'true',
+    aboutDocUrl: row[18] || ''
   };
 };
 
@@ -960,7 +963,7 @@ export const fetchPublicData = async () => {
   } catch {
     // Fallback: direct Sheets API for local dev
     const ranges = [
-      'Assignments!A2:N1000', 'Submissions!A2:R1000', 'Users!A2:J1000',
+      'Assignments!A2:N1000', 'Submissions!A2:S1000', 'Users!A2:J1000',
       'Collaborators!A2:F5000', 'BOCAs!A2:D5000', 'StatusUpdates!A2:E5000'
     ];
     const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
@@ -1369,6 +1372,29 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
   };
 };
 
+export const createAboutDoc = async (title: string, userLabel: string, folderId?: string) => {
+  const safeTitle = title.trim() || 'Untitled Song';
+  const safeUser = userLabel.trim() || 'Anonymous';
+  const docName = `About: ${safeTitle} - ${safeUser}`;
+  const createUrl = 'https://www.googleapis.com/drive/v3/files';
+  const docFile = await callGoogleApi(createUrl, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: docName,
+      mimeType: 'application/vnd.google-apps.document',
+      parents: folderId ? [folderId] : []
+    })
+  });
+
+  const docId = docFile.id as string;
+  // Share publicly so all camp members (and the proxy) can read it
+  shareFilePublicly(docId).catch(() => {});
+  return {
+    id: docId,
+    webViewLink: `https://docs.google.com/document/d/${docId}/edit`
+  };
+};
+
 export const appendLyricsRevision = async (
   docId: string,
   revisionLabel: string,
@@ -1397,6 +1423,37 @@ export const appendLyricsRevision = async (
 export const extractDocIdFromUrl = (url: string): string | null => {
   const match = url.match(/document\/(?:u\/\d+\/)?d\/([^/]+)/);
   return match ? match[1] : null;
+};
+
+// Extract file ID from any Drive or Docs URL pattern
+export const extractFileIdFromUrl = (url: string): string | null => {
+  const match = url.match(/(?:document|file|spreadsheets)\/(?:u\/\d+\/)?d\/([^/]+)/);
+  return match ? match[1] : null;
+};
+
+// Check if a Drive file is a Word doc and convert it to a native Google Doc
+// Returns the new Google Doc webViewLink, or null if not a Word file
+export const convertWordFileToGoogleDoc = async (fileId: string): Promise<string | null> => {
+  const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+  // 1. Check file mimeType
+  const meta = await callGoogleApi(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=mimeType,name`);
+  if (meta.mimeType !== WORD_MIME) return null;
+
+  // 2. Copy with conversion to Google Doc
+  const copy = await callGoogleApi(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
+    method: 'POST',
+    body: JSON.stringify({
+      mimeType: 'application/vnd.google-apps.document',
+      name: meta.name?.replace(/\.docx?$/i, '') || meta.name,
+    })
+  });
+
+  // 3. Share publicly
+  await shareFilePublicly(copy.id);
+
+  // 4. Return the Docs URL
+  return `https://docs.google.com/document/d/${copy.id}/edit`;
 };
 
 export const fetchDocContent = async (docId: string): Promise<import('../types').DocTextSegment[]> => {
