@@ -90,7 +90,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 key={notification.id}
                 onClick={() => handleClick(notification)}
                 className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${
-                  !notification.read ? 'bg-indigo-50/50' : ''
+                  !notification.read ? 'bg-indigo-50' : ''
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg ${iconConfig.bg} ${iconConfig.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
