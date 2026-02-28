@@ -383,7 +383,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
                   </>
                 )}
               </button>
-              <p className="text-[10px] text-slate-400 mt-2">Creates notification entries from existing comments, replies, reactions, and BOCAs. All are marked as read. Safe to run multiple times (will create duplicates if run again).</p>
+              <p className="text-[10px] text-slate-400 mt-2">Creates notification entries from existing comments, replies, reactions, and BOCAs. All are marked as read. Warning: running again will create duplicates.</p>
             </div>
           )}
           {spreadsheetId && (

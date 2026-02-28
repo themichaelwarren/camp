@@ -31,6 +31,8 @@ interface CamperDetailProps {
   isAdmin?: boolean;
   allSemesters?: string[];
   onUpdateCamperIntake?: (camperEmail: string, intakeSemester: string) => void;
+  isOwnProfile?: boolean;
+  onUpdateProfile?: (data: { location?: string; status?: string }) => void;
 }
 
 const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPrompts: Prompt[]): string[] => {
@@ -56,9 +58,17 @@ const getFirstVersionDate = (sub: Submission): number => {
 };
 
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake, isOwnProfile, onUpdateProfile }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [editingField, setEditingField] = useState<'location' | 'status' | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  const handleProfileSave = (field: 'location' | 'status', value: string) => {
+    const trimmed = value.trim();
+    onUpdateProfile?.({ [field]: trimmed });
+    setEditingField(null);
+  };
 
   const earnedSemesters = useMemo(() => {
     const terms = new Set<string>();
@@ -108,97 +118,175 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => onNavigate('campers')}
-          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          <i className="fa-solid fa-arrow-left"></i>
-        </button>
-        <div className="flex items-center gap-4">
+      <div className="space-y-3">
+        {/* Top row: back, photo, name/email, settings */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onNavigate('campers')}
+            className="hidden sm:flex w-10 h-10 rounded-full border border-slate-200 items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0"
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+          </button>
           {camper.pictureOverrideUrl || camper.picture ? (
             <ArtworkImage
               fileId={undefined}
               fallbackUrl={camper.pictureOverrideUrl || camper.picture}
               alt={camper.name}
-              className="w-16 h-16 rounded-2xl object-cover"
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover flex-shrink-0"
               fallback={
-                <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold flex-shrink-0">
                   {camper.name?.[0] || 'C'}
                 </div>
               }
             />
           ) : (
-            <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold flex-shrink-0">
               {camper.name?.[0] || 'C'}
             </div>
           )}
+          <div className="flex-1 min-w-0">
+            {/* Mobile: intake badge above name */}
+            {camper.intakeSemester && (() => {
+              const intakeStyle = getSeasonStyle(camper.intakeSemester);
+              return <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${intakeStyle.bg} ${intakeStyle.text} text-[10px] font-semibold whitespace-nowrap mb-1`}>
+                <i className={`fa-solid ${intakeStyle.icon} text-[9px]`}></i>
+                {camper.intakeSemester.replace(/^(\w)\w+\s+\d{2}(\d{2})$/, "$1 '$2")}
+              </span>;
+            })()}
+            <h2 className="text-xl sm:text-3xl font-bold text-slate-800 truncate">{camper.name || 'Unknown Camper'}</h2>
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5 truncate">{camper.email}</p>
+            {camper.lastSignedInAt && (
+              <p className="text-[11px] text-slate-400 mt-0.5">Last active {new Date(camper.lastSignedInAt).toLocaleDateString()}</p>
+            )}
+          </div>
+          {/* Desktop: intake badge + settings on the right */}
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+            {camper.intakeSemester && (() => {
+              const intakeStyle = getSeasonStyle(camper.intakeSemester);
+              return isAdmin && onUpdateCamperIntake ? (
+                <select
+                  className={`text-xs font-semibold ${intakeStyle.text} ${intakeStyle.bg} border border-slate-200 rounded-full px-3 py-1 focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none`}
+                  value={camper.intakeSemester || ''}
+                  onChange={(e) => onUpdateCamperIntake(camper.email, e.target.value)}
+                >
+                  <option value="">Not set</option>
+                  {allSemesters.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${intakeStyle.bg} ${intakeStyle.text} text-xs font-semibold whitespace-nowrap`}>
+                  <i className={`fa-solid ${intakeStyle.icon} text-[10px]`}></i>
+                  {camper.intakeSemester}
+                </span>
+              );
+            })()}
+            {isOwnProfile && (
+              <button
+                onClick={() => onNavigate('settings')}
+                className="px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-colors flex items-center"
+              >
+                <i className="fa-solid fa-gear mr-2"></i>
+                Settings
+              </button>
+            )}
+          </div>
+          {/* Mobile: settings icon only */}
+          {isOwnProfile && (
+            <button
+              onClick={() => onNavigate('settings')}
+              className="sm:hidden flex-shrink-0 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center justify-center"
+            >
+              <i className="fa-solid fa-gear"></i>
+            </button>
+          )}
+        </div>
+        {/* Details: location, status — aligned with photo */}
+        <div className="space-y-1 text-sm text-slate-500 sm:pl-[52px]">
+          {editingField === 'location' ? (
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleProfileSave('location', editValue);
+                if (e.key === 'Escape') setEditingField(null);
+              }}
+              onBlur={() => handleProfileSave('location', editValue)}
+              placeholder="Add location"
+              className="text-sm text-slate-700 bg-transparent border-b-2 border-indigo-400 outline-none py-0.5 w-40"
+              autoFocus
+            />
+          ) : (
+            <span
+              className={`inline-flex items-center gap-1 ${onUpdateProfile ? 'cursor-pointer hover:text-slate-700 group/loc' : ''}`}
+              onClick={() => {
+                if (!onUpdateProfile) return;
+                setEditingField('location');
+                setEditValue(camper.location || '');
+              }}
+            >
+              <i className="fa-solid fa-location-dot text-xs text-slate-400"></i>
+              {camper.location || (onUpdateProfile ? <span className="italic text-slate-400">Add location</span> : '—')}
+              {onUpdateProfile && <i className="fa-solid fa-pencil text-[10px] text-slate-300 opacity-0 group-hover/loc:opacity-100 transition-opacity ml-0.5"></i>}
+            </span>
+          )}
           <div>
-            <h2 className="text-3xl font-bold text-slate-800">{camper.name || 'Unknown Camper'}</h2>
-            <p className="text-slate-500 text-sm">{camper.email}</p>
+            {editingField === 'status' ? (
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleProfileSave('status', editValue);
+                  if (e.key === 'Escape') setEditingField(null);
+                }}
+                onBlur={() => handleProfileSave('status', editValue)}
+                placeholder="Add status"
+                className="text-sm text-slate-700 bg-transparent border-b-2 border-indigo-400 outline-none py-0.5 w-full max-w-xs"
+                autoFocus
+              />
+            ) : (camper.status || onUpdateProfile) && (
+              <span
+                className={`inline-flex items-center gap-1 ${onUpdateProfile ? 'cursor-pointer hover:text-slate-700 group/status' : ''}`}
+                onClick={() => {
+                  if (!onUpdateProfile) return;
+                  setEditingField('status');
+                  setEditValue(camper.status || '');
+                }}
+              >
+                <i className="fa-solid fa-comment text-xs text-slate-400"></i>
+                {camper.status || <span className="italic text-slate-400">Add status</span>}
+                {onUpdateProfile && <i className="fa-solid fa-pencil text-[10px] text-slate-300 opacity-0 group-hover/status:opacity-100 transition-opacity ml-0.5"></i>}
+              </span>
+            )}
+            {camper.status && camper.statusUpdatedAt && (
+              <p className="text-[11px] text-slate-400 mt-0.5 pl-4">{new Date(camper.statusUpdatedAt).toLocaleDateString()}</p>
+            )}
           </div>
         </div>
       </div>
 
-      <section className="bg-white border border-slate-200 rounded-3xl p-6">
-        <h3 className="text-lg font-bold text-slate-800">Profile</h3>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Location</p>
-            <p className="text-slate-700 font-semibold mt-2">{camper.location || '—'}</p>
+      {earnedSemesters.length > 0 && (
+        <section className="bg-white border border-slate-200 rounded-3xl p-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Semesters</p>
+          <div className="flex flex-wrap gap-2">
+            {earnedSemesters.map(term => {
+              const style = getSeasonStyle(term);
+              return (
+                <button
+                  key={term}
+                  onClick={() => onNavigate('semester-detail', term)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text}`}
+                >
+                  <i className={`fa-solid ${style.icon} text-xs`}></i>
+                  {term}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</p>
-            <p className="text-slate-700 font-semibold mt-2">{camper.status || '—'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Intake Semester</p>
-            {isAdmin && onUpdateCamperIntake ? (
-              <select
-                className="mt-2 text-sm font-semibold text-slate-700 bg-transparent border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                value={camper.intakeSemester || ''}
-                onChange={(e) => onUpdateCamperIntake(camper.email, e.target.value)}
-              >
-                <option value="">Not set</option>
-                {allSemesters.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            ) : (
-              <p className="text-slate-700 font-semibold mt-2 flex items-center gap-1.5">
-                <i className="fa-solid fa-graduation-cap text-indigo-400 text-xs"></i>
-                {camper.intakeSemester || '—'}
-              </p>
-            )}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Last Signed In</p>
-            <p className="text-slate-700 font-semibold mt-2">
-              {camper.lastSignedInAt ? new Date(camper.lastSignedInAt).toLocaleString() : '—'}
-            </p>
-          </div>
-        </div>
-        {earnedSemesters.length > 0 && (
-          <div className="mt-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Semesters</p>
-            <div className="flex flex-wrap gap-2">
-              {earnedSemesters.map(term => {
-                const style = getSeasonStyle(term);
-                return (
-                  <button
-                    key={term}
-                    onClick={() => onNavigate('semester-detail', term)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text}`}
-                  >
-                    <i className={`fa-solid ${style.icon} text-xs`}></i>
-                    {term}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="bg-white border border-slate-200 rounded-3xl p-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">

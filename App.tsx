@@ -1698,6 +1698,13 @@ const App: React.FC = () => {
               await googleService.updateUserProfileDetails(spreadsheetId, { email, intakeSemester: semester });
               setCampers(prev => prev.map(c => c.email === email ? { ...c, intakeSemester: semester } : c));
             }}
+            isOwnProfile={camper.email === userProfile?.email}
+            onUpdateProfile={camper.email === userProfile?.email ? async (data) => {
+              if (!spreadsheetId) return;
+              const updates = data.status !== undefined ? { ...data, statusUpdatedAt: new Date().toISOString() } : data;
+              await googleService.updateUserProfileDetails(spreadsheetId, { email: camper.email, ...updates });
+              setCampers(prev => prev.map(c => c.email === camper.email ? { ...c, ...updates } : c));
+            } : undefined}
           />
         ) : null;
       default:
