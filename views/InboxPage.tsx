@@ -334,9 +334,9 @@ const InboxPage: React.FC<InboxPageProps> = ({ prompts, assignments, submissions
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         {groupedItems.map((group) => (
-          <div key={group.label}>
+          <div key={group.label} className="space-y-2">
             <div className="sticky top-0 z-10 py-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">{group.label}</span>
             </div>

@@ -17,6 +17,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, { icon: string; color: string
   reaction_on_comment: { icon: 'fa-face-smile', color: 'text-pink-600', bg: 'bg-pink-100' },
   new_assignment: { icon: 'fa-clipboard-list', color: 'text-green-600', bg: 'bg-green-100' },
   deadline_reminder: { icon: 'fa-clock', color: 'text-red-600', bg: 'bg-red-100' },
+  mention_in_comment: { icon: 'fa-at', color: 'text-cyan-600', bg: 'bg-cyan-100' },
 };
 
 const getViewForEntityType = (entityType: string): ViewState => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Comment as CommentType, CamperProfile } from '../types';
+import { parseMentions } from '../utils';
 import CommentForm from './CommentForm';
 import ReactionPicker from './ReactionPicker';
 import ArtworkImage from './ArtworkImage';
@@ -8,7 +9,7 @@ interface CommentProps {
   comment: CommentType;
   replies: CommentType[];
   currentUserEmail: string;
-  onReply: (parentId: string, text: string) => Promise<void>;
+  onReply: (parentId: string, text: string, mentionedEmails?: string[]) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: string) => void;
   onEditComment: (commentId: string, newText: string) => Promise<void>;
   campers?: CamperProfile[];
@@ -33,8 +34,8 @@ const Comment: React.FC<CommentProps> = ({
   const camper = campers.find(c => c.email?.toLowerCase() === comment.authorEmail?.toLowerCase() || c.name === comment.author);
   const photoUrl = camper?.pictureOverrideUrl || camper?.picture;
 
-  const handleReplySubmit = async (text: string) => {
-    await onReply(comment.id, text);
+  const handleReplySubmit = async (text: string, mentionedEmails?: string[]) => {
+    await onReply(comment.id, text, mentionedEmails);
     setShowReplyForm(false);
   };
 
@@ -144,7 +145,13 @@ const Comment: React.FC<CommentProps> = ({
               </div>
             ) : (
               <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
-                {comment.text}
+                {parseMentions(comment.text, campers).map((seg, i) =>
+                  seg.type === 'mention' ? (
+                    <span key={i} className="font-semibold text-indigo-600" style={{ color: '#4f46e5' }}>@{seg.value}</span>
+                  ) : (
+                    <span key={i}>{seg.value}</span>
+                  )
+                )}
               </p>
             )}
           </div>
@@ -179,6 +186,7 @@ const Comment: React.FC<CommentProps> = ({
                 placeholder="Write a reply..."
                 submitLabel="Reply"
                 autoFocus
+                campers={campers}
               />
             </div>
           )}

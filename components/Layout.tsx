@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ViewState, Notification } from '../types';
 import NotificationPanel from './NotificationPanel';
-import { getTerm } from '../utils';
+import { getTerm, getSeasonStyle } from '../utils';
 import ArtworkImage from './ArtworkImage';
 import NowPlayingOverlay from './NowPlayingOverlay';
 import * as googleService from '../services/googleService';
@@ -19,6 +19,8 @@ interface LayoutProps {
   player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
   queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
+  onPlayPrevious?: () => void;
+  playHistory?: any[];
   onRemoveFromQueue?: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onClearQueue?: () => void;
@@ -44,7 +46,7 @@ interface LayoutProps {
   onNotificationNavigate?: (view: ViewState, id: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackLyricsDocUrl, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onPlayPrevious, playHistory = [], onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackLyricsDocUrl, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       { id: 'assignments', label: 'Assignments', icon: 'fa-tasks' },
       { id: 'prompts', label: 'Prompts', icon: 'fa-lightbulb' },
       { id: 'events', label: 'Events', icon: 'fa-calendar-days' },
-      { id: 'semesters', label: 'Semesters', icon: 'fa-graduation-cap' },
+      { id: 'semesters', label: 'Semesters', icon: 'fa-book-open' },
     ]},
     { label: 'Community', items: [
       { id: 'campers', label: 'Campers', icon: 'fa-users' },
@@ -202,12 +204,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     navigator.mediaSession.setActionHandler('play', () => { audio?.play().catch(() => undefined); });
     navigator.mediaSession.setActionHandler('pause', () => { audio?.pause(); });
     navigator.mediaSession.setActionHandler('nexttrack', queue.length > 0 || isJukeboxMode ? () => { onPlayNext?.(); } : null);
-    navigator.mediaSession.setActionHandler('previoustrack', null);
+    navigator.mediaSession.setActionHandler('previoustrack', playHistory.length > 0 ? () => { onPlayPrevious?.(); } : null);
 
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.setActionHandler('previoustrack', null);
     };
   }, [queue.length, isJukeboxMode, onPlayNext]);
 
@@ -229,7 +232,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 <span aria-hidden="true" className="text-2xl leading-none">⛺️</span>
                 <span>Camp</span>
               </h1>
-              <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60">{getTerm(new Date().toISOString())}</p>
+              <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold opacity-60 flex items-center gap-1.5">
+                <i className={`fa-solid ${getSeasonStyle(getTerm(new Date().toISOString())).icon}`}></i>
+                {getTerm(new Date().toISOString())}
+              </p>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -251,7 +257,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
         ) : (
           <>
             <span aria-hidden="true" className="text-xl leading-none">⛺️</span>
-            <p className="text-indigo-300 text-[8px] uppercase tracking-widest font-bold opacity-60">
+            <p className="text-indigo-300 text-[8px] uppercase tracking-widest font-bold opacity-60 flex items-center gap-1">
+              <i className={`fa-solid ${getSeasonStyle(getTerm(new Date().toISOString())).icon}`}></i>
               {(() => { const t = getTerm(new Date().toISOString()); const [season, year] = t.split(' '); return `${season[0]}${year?.slice(-2)}`; })()}
             </p>
             <button
@@ -304,7 +311,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
           collapsed ? (
             <button
               onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}
-              className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+              className="w-10 h-10 rounded-lg flex-shrink-0 transition-opacity relative group/mini-collapsed overflow-hidden ring-1 ring-indigo-700/50"
               title={`${player.title} — ${player.artist}`}
             >
               <ArtworkImage
@@ -315,6 +322,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 containerClassName="w-full h-full flex items-center justify-center bg-indigo-100"
                 fallback={<i className="fa-solid fa-compact-disc text-sm text-indigo-400"></i>}
               />
+              <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini-collapsed:opacity-100 transition-opacity rounded-lg">
+                <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
+              </div>
             </button>
           ) : (
             <div className={`rounded-xl p-3 cursor-pointer transition-colors group/mini ${isJukeboxMode ? 'bg-indigo-950/70 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]' : 'bg-indigo-950/70 border border-indigo-800 hover:border-indigo-600'}`} onClick={() => { setShowNowPlaying(true); setIsMobileNavOpen(false); }}>
@@ -328,8 +338,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                     containerClassName="w-full h-full flex items-center justify-center"
                     fallback={<i className="fa-solid fa-compact-disc text-sm"></i>}
                   />
-                  <div className="absolute inset-0 bg-indigo-100 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
-                    <i className="fa-solid fa-chevron-up text-indigo-600 text-sm"></i>
+                  <div className="absolute inset-0 bg-indigo-950 flex items-center justify-center opacity-0 group-hover/mini:opacity-100 transition-opacity rounded-lg">
+                    <i className="fa-solid fa-chevron-up text-indigo-200 text-sm"></i>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -580,10 +590,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
              >
                <i className="fa-solid fa-bars"></i>
              </button>
-             <h2 className="text-lg font-semibold text-slate-800 capitalize">
+             <h2 className="text-lg font-semibold text-slate-800 capitalize flex items-center gap-2">
                {(() => {
+                 const icons: Record<string, string> = { dashboard: 'fa-campground', inbox: 'fa-inbox', submissions: 'fa-music', favorites: 'fa-heart', bocas: 'fa-star', assignments: 'fa-tasks', prompts: 'fa-lightbulb', events: 'fa-calendar-days', semesters: 'fa-book-open', campers: 'fa-users', settings: 'fa-gear', changelog: 'fa-sparkles', about: 'fa-campground', feedback: 'fa-comment' };
+                 const icon = icons[activeView];
                  const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp', feedback: 'Feedback' };
-                 return labels[activeView] || activeView.split('-').join(' ');
+                 return <>
+                   {icon && <i className={`fa-solid ${icon} text-slate-400 text-sm`}></i>}
+                   {labels[activeView] || activeView.split('-').join(' ')}
+                 </>;
                })()}
              </h2>
           </div>
@@ -646,6 +661,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             isLoading={isPlayerLoading}
             onClose={() => setShowNowPlaying(false)}
             onPlayNext={() => onPlayNext?.()}
+            onPlayPrevious={() => onPlayPrevious?.()}
+            hasHistory={playHistory.length > 0}
             onRemoveFromQueue={(i) => onRemoveFromQueue?.(i)}
             onReorderQueue={(from, to) => onReorderQueue?.(from, to)}
             onClearQueue={() => onClearQueue?.()}

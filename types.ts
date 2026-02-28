@@ -142,7 +142,7 @@ export interface Collaboration {
   createdAt: string;
 }
 
-export type NotificationType = 'comment_on_song' | 'reply_to_comment' | 'boca_received' | 'reaction_on_comment' | 'new_assignment' | 'deadline_reminder';
+export type NotificationType = 'comment_on_song' | 'reply_to_comment' | 'boca_received' | 'reaction_on_comment' | 'new_assignment' | 'deadline_reminder' | 'mention_in_comment';
 
 export interface Notification {
   id: string;

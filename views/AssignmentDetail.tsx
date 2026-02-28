@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, isCurrentOrFutureTerm } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, getTermSortKey, isCurrentOrFutureTerm } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -67,9 +67,24 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
     location: ''
   });
 
-  const totalCampers = campersCount || 0;
-  const submissionRate = totalCampers > 0 ? Math.round((submissions.length / totalCampers) * 100) : 0;
-  const progressInset = totalCampers > 0 ? 100 - (submissions.length / totalCampers * 100) : 100;
+  // Count unique participants: submitters + collaborators
+  const participantEmails = new Set<string>();
+  submissions.forEach(sub => {
+    if (sub.camperId) participantEmails.add(sub.camperId.toLowerCase());
+    collaborations.filter(c => c.submissionId === sub.id).forEach(c => {
+      if (c.camperId) participantEmails.add(c.camperId.toLowerCase());
+    });
+  });
+  const participantCount = participantEmails.size;
+
+  // Total campers = those whose intake semester is on or before the assignment's semester
+  const assignmentTerm = assignment.dueDate ? getTerm(assignment.dueDate) : null;
+  const assignmentTermKey = assignmentTerm ? getTermSortKey(assignmentTerm) : null;
+  const activeCampers = assignmentTermKey !== null
+    ? campers.filter(c => c.intakeSemester && getTermSortKey(c.intakeSemester) <= assignmentTermKey).length
+    : campers.length;
+  const totalCampers = activeCampers || campersCount || 0;
+  const submissionRate = totalCampers > 0 ? Math.min(Math.round((participantCount / totalCampers) * 100), 100) : 0;
 
   // Find the event associated with this assignment
   const assignmentEvent = assignment.eventId ? events.find(e => e.id === assignment.eventId) : null;
@@ -250,8 +265,110 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Compact activity ring */}
+          <div className="flex items-center gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4">
+            <svg width="48" height="48" viewBox="0 0 48 48" className="flex-shrink-0 text-slate-800 dark:text-slate-100">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="#f1f5f9" strokeWidth="5" />
+              <circle
+                cx="24" cy="24" r="20" fill="none"
+                stroke="#6366f1" strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 20}`}
+                strokeDashoffset={`${2 * Math.PI * 20 * (1 - submissionRate / 100)}`}
+                transform="rotate(-90 24 24)"
+              />
+              <text x="24" y="25" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-black" fill="currentColor">
+                {submissionRate}%
+              </text>
+            </svg>
+            <div>
+              <p className="text-sm font-bold text-slate-700">{participantCount} / {totalCampers} Campers</p>
+              <p className="text-[11px] text-slate-400">Submission Rate</p>
+            </div>
+          </div>
+
+          {/* Listening Party inline */}
+          {assignmentEvent ? (
+            assignment.status === 'Closed' ? (
+              <div className="flex items-center gap-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-calendar-days text-slate-500 text-sm"></i>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-700 truncate">Listening Party</p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {formatEventDateTime(assignmentEvent.startDateTime).dateStr} · {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
+                    {assignmentEvent.location && ` · ${assignmentEvent.location}`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 bg-gradient-to-r from-green-50 to-green-100 rounded-2xl border border-green-200 shadow-sm px-5 py-4 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-calendar-days text-green-700 text-sm"></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-green-900 truncate">Listening Party</p>
+                  <p className="text-[11px] text-green-700 truncate">
+                    {formatEventDateTime(assignmentEvent.startDateTime).dateStr} · {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
+                    {assignmentEvent.location && ` · ${assignmentEvent.location}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {assignmentEvent.meetLink && (
+                    <a
+                      href={assignmentEvent.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      title="Join Google Meet"
+                    >
+                      <i className="fa-solid fa-video text-xs"></i>
+                    </a>
+                  )}
+                  <button
+                    onClick={handleEditEvent}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-green-700 border border-green-300 hover:bg-green-50 transition-colors"
+                    title="Edit event"
+                  >
+                    <i className="fa-solid fa-pen text-xs"></i>
+                  </button>
+                  <button
+                    onClick={handleSyncFromCalendar}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-green-700 border border-green-300 hover:bg-green-50 transition-colors"
+                    title="Sync from Google Calendar"
+                  >
+                    <i className="fa-solid fa-rotate text-xs"></i>
+                  </button>
+                </div>
+              </div>
+            )
+          ) : assignment.status !== 'Closed' && currentUser && onCreateEvent ? (
+            <button
+              onClick={async () => {
+                setIsCreatingEvent(true);
+                try {
+                  await onCreateEvent(assignment.id);
+                } finally {
+                  setIsCreatingEvent(false);
+                }
+              }}
+              disabled={isCreatingEvent}
+              className="flex items-center gap-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 shadow-sm px-5 py-4 hover:border-green-300 hover:bg-green-50 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <i className={`fa-solid ${isCreatingEvent ? 'fa-spinner fa-spin' : 'fa-calendar-plus'} text-slate-400 text-sm`}></i>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-500">{isCreatingEvent ? 'Creating...' : 'Create Listening Party'}</p>
+                <p className="text-[11px] text-slate-400">No event scheduled yet</p>
+              </div>
+            </button>
+          ) : null}
+        </div>
+
+        <div className="space-y-6">
           <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-slate-100">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Instructions</h3>
@@ -497,150 +614,6 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           </>);
           })()}
         </div>
-
-        <div className="space-y-6">
-          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Project Progress</h3>
-            <div className="flex flex-col items-center">
-               <div className="w-32 h-32 rounded-full border-8 border-slate-50 flex items-center justify-center relative mb-4">
-                 <div className="absolute inset-0 border-8 border-indigo-500 rounded-full" style={{ clipPath: `inset(0 0 ${progressInset}% 0)` }}></div>
-                 <span className="text-2xl font-black text-slate-800">{submissionRate}%</span>
-               </div>
-               <p className="text-sm font-bold text-slate-600 mb-1">{submissions.length} / {totalCampers} Campers</p>
-               <p className="text-xs text-slate-400">Submission Rate</p>
-            </div>
-          </section>
-
-          {assignmentEvent ? (
-            assignment.status === 'Closed' ? (
-              <section className="bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <i className="fa-solid fa-calendar-days"></i>
-                  Listening Party
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-400 font-bold mb-1">Date & Time</p>
-                    <p className="text-sm text-slate-700 font-semibold">
-                      {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
-                    </p>
-                  </div>
-                  {assignmentEvent.location && (
-                    <div>
-                      <p className="text-xs text-slate-400 font-bold mb-1">Location</p>
-                      <p className="text-sm text-slate-700">{assignmentEvent.location}</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            ) : (
-              <section className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-3xl border border-green-200 shadow-sm">
-                <h3 className="text-xs font-bold text-green-700 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <i className="fa-solid fa-calendar-days"></i>
-                  Listening Party
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-green-600 font-bold mb-1">Date & Time</p>
-                    <p className="text-sm text-green-900 font-semibold">
-                      {formatEventDateTime(assignmentEvent.startDateTime).dateStr}
-                    </p>
-                    <p className="text-sm text-green-800">
-                      {formatEventDateTime(assignmentEvent.startDateTime).timeStr}
-                    </p>
-                  </div>
-                  {assignmentEvent.location && (
-                    <div>
-                      <p className="text-xs text-green-600 font-bold mb-1">Location</p>
-                      <p className="text-sm text-green-900">{assignmentEvent.location}</p>
-                    </div>
-                  )}
-                  {assignmentEvent.attendees.length > 0 && (
-                    <div>
-                      <p className="text-xs text-green-600 font-bold mb-1">Attendees</p>
-                      <p className="text-sm text-green-900">
-                        {assignmentEvent.attendees.length} invited
-                      </p>
-                    </div>
-                  )}
-                  <div className="pt-3 space-y-2">
-                    {assignmentEvent.meetLink && (
-                      <a
-                        href={assignmentEvent.meetLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors"
-                      >
-                        <i className="fa-solid fa-video"></i>
-                        Join Google Meet
-                      </a>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={handleEditEvent}
-                        className="inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
-                      >
-                        <i className="fa-solid fa-pen"></i>
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleSyncFromCalendar}
-                        className="inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
-                        title="Sync changes from Google Calendar"
-                      >
-                        <i className="fa-solid fa-rotate"></i>
-                        Sync
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => onNavigate('events')}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-white text-green-700 border border-green-300 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-50 transition-colors"
-                    >
-                      <i className="fa-solid fa-calendar"></i>
-                      View All Events
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )
-          ) : assignment.status !== 'Closed' && currentUser && onCreateEvent ? (
-            <section className="bg-white p-6 rounded-3xl border-2 border-dashed border-slate-200 shadow-sm">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-calendar-days"></i>
-                Listening Party
-              </h3>
-              <p className="text-sm text-slate-500 mb-4">No listening party event has been created for this assignment yet.</p>
-              <button
-                onClick={async () => {
-                  setIsCreatingEvent(true);
-                  try {
-                    await onCreateEvent(assignment.id);
-                  } finally {
-                    setIsCreatingEvent(false);
-                  }
-                }}
-                disabled={isCreatingEvent}
-                className="w-full inline-flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isCreatingEvent ? (
-                  <>
-                    <i className="fa-solid fa-spinner fa-spin"></i>
-                    Creating Event...
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-calendar-plus"></i>
-                    Create Listening Party
-                  </>
-                )}
-              </button>
-            </section>
-          ) : null}
-
-        </div>
       </div>
 
       {currentUser && (
@@ -706,7 +679,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="overflow-hidden">
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
                     <input
                       type="date"
@@ -715,7 +688,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       onChange={e => setEditForm({...editForm, startDate: e.target.value})}
                     />
                   </div>
-                  <div className="overflow-hidden">
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
                     <input
                       required
@@ -808,7 +781,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="overflow-hidden">
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date & Time</label>
                     <input
                       required
@@ -818,7 +791,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                       onChange={e => setEditEventForm({...editEventForm, startDateTime: e.target.value})}
                     />
                   </div>
-                  <div className="overflow-hidden">
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date & Time</label>
                     <input
                       required

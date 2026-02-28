@@ -215,7 +215,6 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-slate-800">
-              <i className="fa-solid fa-heart text-red-500 mr-2"></i>
               Favorites
             </h2>
             <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">{submissions.length} song{submissions.length !== 1 ? 's' : ''}</span>

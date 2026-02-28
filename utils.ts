@@ -1,4 +1,4 @@
-import { Assignment, PromptStatus, Submission, SongVersion, Collaboration, CollaboratorRole, PlayableTrack } from './types';
+import { Assignment, PromptStatus, Submission, SongVersion, Collaboration, CollaboratorRole, PlayableTrack, CamperProfile } from './types';
 
 export function isSubmissionVisible(
   sub: Submission,
@@ -145,4 +145,27 @@ export function trackFromSubmission(sub: Submission, collaborations: Collaborati
     artworkFileId: sub.artworkFileId,
     artworkUrl: sub.artworkUrl
   };
+}
+
+export type MentionSegment = { type: 'text'; value: string } | { type: 'mention'; value: string; email?: string };
+
+export function parseMentions(text: string, campers: CamperProfile[]): MentionSegment[] {
+  const names = campers.map(c => c.name).filter(Boolean).sort((a, b) => b.length - a.length);
+  if (names.length === 0) return [{ type: 'text', value: text }];
+
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`@(${escaped.join('|')})(?=\\s|$|[.,!?;:)]|\\n)`, 'g');
+
+  const segments: MentionSegment[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    const name = match[1];
+    const camper = campers.find(c => c.name === name);
+    segments.push({ type: 'mention', value: name, email: camper?.email });
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < text.length) segments.push({ type: 'text', value: text.slice(lastIndex) });
+  return segments;
 }

@@ -112,6 +112,17 @@ const App: React.FC = () => {
     artworkFileId?: string;
     artworkUrl?: string;
   }[]>([]);
+  const [playHistory, setPlayHistory] = useState<{
+    src: string;
+    title: string;
+    artist: string;
+    camperId?: string;
+    submissionId?: string;
+    assignmentId?: string;
+    assignmentTitle?: string;
+    artworkFileId?: string;
+    artworkUrl?: string;
+  }[]>([]);
   const [rememberMe, setRememberMe] = useState(() => window.localStorage.getItem('camp-remember') !== '0');
   const visualTheme = 'modern';
   const previousAudioUrl = useRef<string | null>(null);
@@ -1014,6 +1025,10 @@ const App: React.FC = () => {
     artworkFileId?: string;
     artworkUrl?: string;
   }) => {
+    // Save current track to history before playing new one
+    if (player && player.src) {
+      setPlayHistory(prev => [player, ...prev].slice(0, 50));
+    }
     setPlayingTrackId(track.versionId);
     const info = getAssignmentInfo(track.submissionId);
     const assignmentId = track.assignmentId || info.id;
@@ -1167,16 +1182,29 @@ const App: React.FC = () => {
 
   useEffect(() => { isJukeboxModeRef.current = isJukeboxMode; }, [isJukeboxMode]);
 
+  const handlePlayPrevious = () => {
+    if (playHistory.length === 0) return;
+    const [prev, ...restHistory] = playHistory;
+    // Push current track back to front of queue
+    if (player && player.src) {
+      setQueue(q => [player, ...q]);
+    }
+    previousAudioUrl.current = prev.src;
+    setPlayer(prev);
+    setPlayHistory(restHistory);
+  };
+
   const handlePlayNext = () => {
     if (queue.length === 0) {
       setPlayer(null);
       setIsJukeboxMode(false);
       return;
     }
-    const [next, ...rest] = queue;
-    if (previousAudioUrl.current) {
-      URL.revokeObjectURL(previousAudioUrl.current);
+    // Save current track to history
+    if (player && player.src) {
+      setPlayHistory(prev => [player, ...prev].slice(0, 50));
     }
+    const [next, ...rest] = queue;
     previousAudioUrl.current = next.src;
     setPlayer(next);
     setQueue(rest);
@@ -1704,6 +1732,14 @@ const App: React.FC = () => {
               const updates = data.status !== undefined ? { ...data, statusUpdatedAt: new Date().toISOString() } : data;
               await googleService.updateUserProfileDetails(spreadsheetId, { email: camper.email, ...updates });
               setCampers(prev => prev.map(c => c.email === camper.email ? { ...c, ...updates } : c));
+              if (data.status !== undefined && data.status && userProfile) {
+                const entry = await googleService.createStatusUpdate(spreadsheetId, {
+                  camperEmail: camper.email,
+                  camperName: userProfile.name,
+                  status: data.status
+                });
+                setStatusUpdates(prev => [entry, ...prev]);
+              }
             } : undefined}
           />
         ) : null;
@@ -1775,6 +1811,8 @@ const App: React.FC = () => {
       isPlayerLoading={isPlayerLoading}
       queue={queue}
       onPlayNext={handlePlayNext}
+      onPlayPrevious={handlePlayPrevious}
+      playHistory={playHistory}
       onRemoveFromQueue={handleRemoveFromQueue}
       onReorderQueue={handleReorderQueue}
       onClearQueue={handleClearQueue}

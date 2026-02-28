@@ -83,7 +83,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     }
   };
 
-  const handleCreateComment = async (text: string) => {
+  const handleCreateComment = async (text: string, mentionedEmails?: string[]) => {
     const newComment = await googleService.createComment(spreadsheetId, {
       entityType,
       entityId,
@@ -106,9 +106,27 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
         message: `commented on "${entityTitle || 'your song'}"`
       }).catch(err => console.error('Failed to create comment notification', err));
     }
+
+    // Mention notifications
+    if (mentionedEmails && mentionedEmails.length > 0) {
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      const recipients = mentionedEmails.filter(e => e !== currentUser.email && e !== entityOwnerEmail);
+      if (recipients.length > 0) {
+        googleService.createNotifications(spreadsheetId, recipients.map(email => ({
+          recipientEmail: email,
+          type: 'mention_in_comment' as const,
+          triggerUserEmail: currentUser.email,
+          triggerUserName: currentUser.name,
+          entityType,
+          entityId,
+          referenceId: newComment.id,
+          message: `mentioned you in a comment on ${label}`
+        }))).catch(err => console.error('Failed to create mention notifications', err));
+      }
+    }
   };
 
-  const handleReply = async (parentId: string, text: string) => {
+  const handleReply = async (parentId: string, text: string, mentionedEmails?: string[]) => {
     const newComment = await googleService.createComment(spreadsheetId, {
       entityType,
       entityId,
@@ -132,6 +150,26 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
         referenceId: newComment.id,
         message: `replied to your comment on ${label}`
       }).catch(err => console.error('Failed to create reply notification', err));
+    }
+
+    // Mention notifications for replies
+    if (mentionedEmails && mentionedEmails.length > 0) {
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      const alreadyNotified = new Set([currentUser.email]);
+      if (parentComment) alreadyNotified.add(parentComment.authorEmail);
+      const recipients = mentionedEmails.filter(e => !alreadyNotified.has(e));
+      if (recipients.length > 0) {
+        googleService.createNotifications(spreadsheetId, recipients.map(email => ({
+          recipientEmail: email,
+          type: 'mention_in_comment' as const,
+          triggerUserEmail: currentUser.email,
+          triggerUserName: currentUser.name,
+          entityType,
+          entityId,
+          referenceId: newComment.id,
+          message: `mentioned you in a reply on ${label}`
+        }))).catch(err => console.error('Failed to create mention notifications', err));
+      }
     }
   };
 
@@ -211,7 +249,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       </h3>
 
       <div className="space-y-6">
-        <CommentForm onSubmit={handleCreateComment} />
+        <CommentForm onSubmit={handleCreateComment} campers={campers} />
 
         {sortedComments.length > 0 ? (
           <div className="space-y-6 pt-6 border-t border-slate-100">

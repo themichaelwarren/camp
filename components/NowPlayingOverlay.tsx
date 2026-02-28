@@ -23,6 +23,8 @@ interface NowPlayingOverlayProps {
   isLoading?: boolean;
   onClose: () => void;
   onPlayNext: () => void;
+  onPlayPrevious?: () => void;
+  hasHistory?: boolean;
   onRemoveFromQueue: (index: number) => void;
   onReorderQueue?: (fromIndex: number, toIndex: number) => void;
   onClearQueue?: () => void;
@@ -52,6 +54,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   isLoading,
   onClose,
   onPlayNext,
+  onPlayPrevious,
+  hasHistory,
   onRemoveFromQueue,
   onReorderQueue,
   onClearQueue,
@@ -432,6 +436,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto md:flex md:items-center md:justify-center"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}
           onTouchStart={handleContentTouchStart}
           onTouchMove={handleContentTouchMove}
           onTouchEnd={handleContentTouchEnd}
@@ -660,8 +665,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                 {/* Transport Controls */}
                 <div className={`flex items-center w-full ${isShort ? 'justify-start gap-3 py-1' : 'justify-center gap-6 xl:gap-8 py-3'}`}>
                   <button
-                    className={`rounded-full flex items-center justify-center text-slate-400 cursor-not-allowed ${isShort ? 'w-8 h-8' : 'w-11 h-11 xl:w-12 xl:h-12'}`}
-                    disabled
+                    onClick={() => onPlayPrevious?.()}
+                    className={`rounded-full flex items-center justify-center transition-colors ${hasHistory ? 'text-slate-700 hover:text-indigo-600' : 'text-slate-400 cursor-not-allowed'} ${isShort ? 'w-8 h-8' : 'w-11 h-11 xl:w-12 xl:h-12'}`}
+                    disabled={!hasHistory}
                   >
                     <i className={`fa-solid fa-backward-step ${isShort ? 'text-sm' : 'text-xl'}`}></i>
                   </button>
@@ -756,7 +762,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     {queue.map((track, i) => (
                       <div key={i} className="relative overflow-hidden rounded-lg">
                         {/* Red delete zone revealed behind the item */}
-                        {isMobile && (
+                        {isMobile && touchDragging === null && (
                           <div className="absolute inset-y-0 right-0 left-0 bg-red-500 flex items-center justify-end text-white">
                             <button
                               onClick={() => handleSwipeDelete(i)}

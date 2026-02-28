@@ -19,7 +19,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden min-w-0">
+    <div className="border border-slate-200 rounded-xl overflow-hidden min-w-0 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500">
       {/* Tabs */}
       <div className="flex border-b border-slate-200 bg-slate-50">
         <button
@@ -53,7 +53,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         {activeTab === 'write' ? (
           <textarea
             required={required}
-            className={`w-full px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${minHeight}`}
+            className={`w-full px-4 py-3 text-base focus:outline-none resize-none ${minHeight}`}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
