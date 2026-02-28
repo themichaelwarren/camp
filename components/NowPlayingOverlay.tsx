@@ -113,6 +113,78 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const SWIPE_SNAP = 72; // px to reveal delete button
 
+  // Touch-based drag reorder state (mobile)
+  const touchDragIndex = useRef<number | null>(null);
+  const touchDragClone = useRef<HTMLDivElement | null>(null);
+  const queueItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [touchDragOver, setTouchDragOver] = useState<number | null>(null);
+  const [touchDragging, setTouchDragging] = useState<number | null>(null);
+
+  const handleDragHandleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
+    e.stopPropagation(); // prevent swipe-to-delete
+    touchDragIndex.current = index;
+    setTouchDragging(index);
+    setTouchDragOver(index);
+
+    // Create a floating clone of the item
+    const el = queueItemRefs.current[index];
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'fixed';
+      clone.style.left = `${rect.left}px`;
+      clone.style.top = `${rect.top}px`;
+      clone.style.width = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      clone.style.zIndex = '99999';
+      clone.style.opacity = '0.9';
+      clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+      clone.style.borderRadius = '8px';
+      clone.style.pointerEvents = 'none';
+      clone.style.transition = 'none';
+      clone.style.transform = 'scale(1.03)';
+      document.body.appendChild(clone);
+      touchDragClone.current = clone;
+    }
+  }, []);
+
+  const handleDragHandleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchDragIndex.current === null) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+
+    // Move clone to follow finger
+    if (touchDragClone.current) {
+      touchDragClone.current.style.top = `${touch.clientY - (touchDragClone.current.offsetHeight / 2)}px`;
+    }
+
+    // Determine which item we're hovering over
+    for (let i = 0; i < queueItemRefs.current.length; i++) {
+      const ref = queueItemRefs.current[i];
+      if (ref) {
+        const rect = ref.getBoundingClientRect();
+        if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          setTouchDragOver(i);
+          break;
+        }
+      }
+    }
+  }, []);
+
+  const handleDragHandleTouchEnd = useCallback(() => {
+    if (touchDragIndex.current !== null && touchDragOver !== null && touchDragIndex.current !== touchDragOver) {
+      onReorderQueue?.(touchDragIndex.current, touchDragOver);
+    }
+    // Clean up clone
+    if (touchDragClone.current) {
+      document.body.removeChild(touchDragClone.current);
+      touchDragClone.current = null;
+    }
+    touchDragIndex.current = null;
+    setTouchDragging(null);
+    setTouchDragOver(null);
+  }, [touchDragOver, onReorderQueue]);
+
   // Prevent background page scroll while overlay is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -215,26 +287,10 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     e.preventDefault(); // prevent scroll while swiping horizontally
     const base = openSwipeIndex === index ? -SWIPE_SNAP : 0;
     const raw = base + dx;
-    // Clamp: no right overshoot, max left = -SWIPE_SNAP * 1.3
-    const clamped = Math.max(-SWIPE_SNAP * 1.3, Math.min(0, raw));
+    // Clamp: no right overshoot, allow pulling far left for full-swipe delete
+    const clamped = Math.min(0, raw);
     setSwipeOffsets(prev => ({ ...prev, [index]: clamped }));
   }, [openSwipeIndex, SWIPE_SNAP]);
-
-  const handleSwipeEnd = useCallback((index: number) => {
-    const offset = swipeOffsets[index] || 0;
-    if (offset < -SWIPE_SNAP * 0.4) {
-      // Snap open — reveal delete button
-      setSwipeOffsets(prev => ({ ...prev, [index]: -SWIPE_SNAP }));
-      setOpenSwipeIndex(index);
-    } else {
-      // Snap closed
-      setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
-      setOpenSwipeIndex(prev => prev === index ? null : prev);
-    }
-    swipeStartX.current = null;
-    swipeStartY.current = null;
-    swipeLocked.current = false;
-  }, [swipeOffsets, SWIPE_SNAP]);
 
   const handleSwipeDelete = useCallback((index: number) => {
     setRemovingIndex(index);
@@ -246,6 +302,25 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
       setSwipeOffsets(prev => { const next = { ...prev }; delete next[index]; return next; });
     }, 250);
   }, [onRemoveFromQueue]);
+
+  const handleSwipeEnd = useCallback((index: number) => {
+    const offset = swipeOffsets[index] || 0;
+    if (offset < -SWIPE_SNAP * 2.5) {
+      // Full swipe — delete immediately
+      handleSwipeDelete(index);
+    } else if (offset < -SWIPE_SNAP * 0.4) {
+      // Snap open — reveal delete button
+      setSwipeOffsets(prev => ({ ...prev, [index]: -SWIPE_SNAP }));
+      setOpenSwipeIndex(index);
+    } else {
+      // Snap closed
+      setSwipeOffsets(prev => ({ ...prev, [index]: 0 }));
+      setOpenSwipeIndex(prev => prev === index ? null : prev);
+    }
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+    swipeLocked.current = false;
+  }, [swipeOffsets, SWIPE_SNAP, handleSwipeDelete]);
 
   // Close on Escape
   useEffect(() => {
@@ -259,28 +334,57 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
   const seekPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Pull-down-to-dismiss gesture
+  // Pull-down-to-dismiss gesture (works from handle + content when scrolled to top)
   const dragStartY = useRef<number | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const isDragging = dragStartY.current !== null;
+  const pullDismissActive = useRef(false); // true once we've committed to a pull-dismiss
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+  // Handle-only: always starts pull-dismiss
+  const handleHandleTouchStart = useCallback((e: React.TouchEvent) => {
     dragStartY.current = e.touches[0].clientY;
+    pullDismissActive.current = true;
     setDragOffsetY(0);
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (dragStartY.current === null) return;
-    const delta = e.touches[0].clientY - dragStartY.current;
-    // Only allow dragging downward
-    setDragOffsetY(Math.max(0, delta));
+  // Content area: starts pull-dismiss only when scrolled to top
+  const handleContentTouchStart = useCallback((e: React.TouchEvent) => {
+    const container = scrollContainerRef.current;
+    if (container && container.scrollTop <= 0) {
+      dragStartY.current = e.touches[0].clientY;
+      pullDismissActive.current = false; // not yet — wait for direction
+    }
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
-    if (dragOffsetY > 120) {
+  const handleContentTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const delta = e.touches[0].clientY - dragStartY.current;
+
+    if (!pullDismissActive.current) {
+      // Determine intent: if pulling down and container is at top, activate pull-dismiss
+      const container = scrollContainerRef.current;
+      if (delta > 8 && container && container.scrollTop <= 0) {
+        pullDismissActive.current = true;
+      } else if (delta < -5 || (container && container.scrollTop > 0)) {
+        // Scrolling up or container not at top — cancel
+        dragStartY.current = null;
+        return;
+      } else {
+        return; // waiting for clear direction
+      }
+    }
+
+    e.preventDefault();
+    setDragOffsetY(Math.max(0, e.touches[0].clientY - dragStartY.current));
+  }, []);
+
+  const handleContentTouchEnd = useCallback(() => {
+    if (pullDismissActive.current && dragOffsetY > 120) {
       onClose();
     }
     dragStartY.current = null;
+    pullDismissActive.current = false;
     setDragOffsetY(0);
   }, [dragOffsetY, onClose]);
 
@@ -304,9 +408,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         {!isCompact && (
           <div
             className="md:hidden flex items-center justify-center px-6 pt-3 pb-1 flex-shrink-0 touch-none"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            onTouchStart={handleHandleTouchStart}
+            onTouchMove={handleContentTouchMove}
+            onTouchEnd={handleContentTouchEnd}
           >
             <div className="w-10 h-1 rounded-full bg-slate-300" />
           </div>
@@ -323,7 +427,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
         )}
 
         {/* Content area — compact horizontal when viewport is very short, normal otherwise */}
-        <div className="flex-1 overflow-y-auto md:flex md:items-center md:justify-center">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto md:flex md:items-center md:justify-center"
+          onTouchStart={handleContentTouchStart}
+          onTouchMove={handleContentTouchMove}
+          onTouchEnd={handleContentTouchEnd}
+        >
           {isCompact ? (
             /* ===== COMPACT MINI PLAYER (short viewports / tiny Safari windows) ===== */
             <div className="flex flex-col h-full px-3 py-2">
@@ -645,14 +755,17 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                       <div key={i} className="relative overflow-hidden rounded-lg">
                         {/* Red delete zone revealed behind the item */}
                         {isMobile && (
-                          <button
-                            onClick={() => handleSwipeDelete(i)}
-                            className="absolute inset-y-0 right-0 w-[72px] bg-red-500 flex items-center justify-center text-white"
-                          >
-                            <i className="fa-solid fa-trash text-sm"></i>
-                          </button>
+                          <div className="absolute inset-y-0 right-0 left-0 bg-red-500 flex items-center justify-end text-white">
+                            <button
+                              onClick={() => handleSwipeDelete(i)}
+                              className="w-[72px] h-full flex items-center justify-center"
+                            >
+                              <i className="fa-solid fa-trash text-sm"></i>
+                            </button>
+                          </div>
                         )}
                       <div
+                        ref={el => { queueItemRefs.current[i] = el; }}
                         draggable={!isMobile}
                         onDragStart={() => setDragIndex(i)}
                         onDragOver={(e) => { e.preventDefault(); setDragOverIndex(i); }}
@@ -663,19 +776,28 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                           setDragIndex(null);
                           setDragOverIndex(null);
                         }}
-                        onTouchStart={(e) => handleSwipeStart(e, i)}
-                        onTouchMove={(e) => handleSwipeMove(e, i)}
-                        onTouchEnd={() => handleSwipeEnd(i)}
+                        onTouchStart={(e) => { if (touchDragging === null) handleSwipeStart(e, i); }}
+                        onTouchMove={(e) => { if (touchDragging === null) handleSwipeMove(e, i); }}
+                        onTouchEnd={() => { if (touchDragging === null) handleSwipeEnd(i); }}
                         className={`relative flex items-center group rounded-lg bg-slate-100 hover:bg-slate-200/50 ${isShort ? 'gap-2 px-1.5 py-1' : 'gap-3 px-2 py-1.5'} ${
-                          dragIndex === i ? 'opacity-40' : ''
-                        } ${dragOverIndex === i && dragIndex !== i ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
+                          dragIndex === i || touchDragging === i ? 'opacity-40' : ''
+                        } ${(dragOverIndex === i && dragIndex !== i) || (touchDragOver === i && touchDragging !== null && touchDragging !== i) ? 'border-t-2 border-indigo-400' : 'border-t-2 border-transparent'}`}
                         style={{
                           transform: `translateX(${swipeOffsets[i] || 0}px)`,
                           transition: swipeStartX.current !== null ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                           ...(removingIndex === i ? { transform: 'translateX(-110%)', transition: 'transform 0.25s ease-in' } : {})
                         }}
                       >
-                        {!isMobile && !isShort && <i className="fa-solid fa-grip-vertical text-slate-300 text-xs cursor-grab active:cursor-grabbing flex-shrink-0"></i>}
+                        {!isShort && (
+                          <div
+                            className="flex-shrink-0 flex items-center justify-center w-6 h-8 touch-none cursor-grab active:cursor-grabbing"
+                            onTouchStart={(e) => handleDragHandleTouchStart(e, i)}
+                            onTouchMove={handleDragHandleTouchMove}
+                            onTouchEnd={handleDragHandleTouchEnd}
+                          >
+                            <i className="fa-solid fa-grip-vertical text-slate-300 text-xs"></i>
+                          </div>
+                        )}
                         <div className={`rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 ${isShort ? 'w-7 h-7' : 'w-10 h-10'}`}>
                           <ArtworkImage
                             fileId={track.artworkFileId}
