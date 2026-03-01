@@ -270,14 +270,14 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
       {earnedSemesters.length > 0 && (
         <section className="bg-white border border-slate-200 rounded-3xl p-6">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Semesters</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             {earnedSemesters.map(term => {
               const style = getSeasonStyle(term);
               return (
                 <button
                   key={term}
                   onClick={() => onNavigate('semester-detail', term)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text}`}
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:shadow-md hover:scale-105 ${style.bg} ${style.text}`}
                 >
                   <i className={`fa-solid ${style.icon} text-xs`}></i>
                   {term}

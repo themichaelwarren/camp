@@ -46,15 +46,15 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
       </div>
 
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-left min-w-[600px]">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4">Camper</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4 hidden sm:table-cell">Status</th>
-                <th className="px-6 py-4">Intake</th>
-                <th className="px-6 py-4">Last Seen</th>
+                <th className="px-4 sm:px-6 py-4">Camper</th>
+                <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Location</th>
+                <th className="px-4 sm:px-6 py-4 hidden lg:table-cell">Status</th>
+                <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Intake</th>
+                <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Last Seen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -64,7 +64,7 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                   className="hover:bg-slate-50 transition-colors cursor-pointer"
                   onClick={() => onNavigate('camper-detail', camper.id || camper.email)}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-4">
                     <div className="flex items-center gap-3">
                       {camper.pictureOverrideUrl || camper.picture ? (
                         <ArtworkImage
@@ -83,15 +83,18 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                           {camper.name?.[0] || 'C'}
                         </div>
                       )}
-                      <div>
-                        <p className="font-semibold text-slate-800">{camper.name || 'Unknown'}</p>
-                        <p className="text-xs text-slate-500">{camper.email}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 truncate">{camper.name || 'Unknown'}</p>
+                        <p className="text-xs text-slate-500 truncate sm:hidden">
+                          {camper.intakeSemester || camper.location || camper.email}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate hidden sm:block">{camper.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{camper.location || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">{camper.status || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{camper.location || '—'}</td>
+                  <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden lg:table-cell">{camper.status || '—'}</td>
+                  <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">
                     {camper.intakeSemester ? (
                       <span className="inline-flex items-center gap-1">
                         <i className="fa-solid fa-graduation-cap text-indigo-400 text-[10px]"></i>
@@ -99,14 +102,14 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                       </span>
                     ) : '—'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
+                  <td className="px-4 sm:px-6 py-4 text-sm text-slate-500 hidden sm:table-cell">
                     {camper.lastSignedInAt ? formatDate(camper.lastSignedInAt, dateFormat) : '—'}
                   </td>
                 </tr>
               ))}
               {campers.length === 0 && (
                 <tr>
-                  <td className="px-6 py-10 text-center text-slate-400" colSpan={5}>
+                  <td className="px-4 sm:px-6 py-10 text-center text-slate-400" colSpan={5}>
                     No campers found yet.
                   </td>
                 </tr>

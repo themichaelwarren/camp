@@ -90,21 +90,28 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
         onClick={() => onViewDetail(semester)}
         className="hover:bg-slate-50 cursor-pointer transition-colors group"
       >
-        <td className="px-6 py-4">
+        <td className="px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg ${style.bg} ${style.text} flex items-center justify-center flex-shrink-0`}>
               <i className={`fa-solid ${style.icon} text-xs`}></i>
             </div>
-            <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{semester}</span>
-            {isCurrent && (
-              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Current</span>
-            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{semester}</span>
+                {isCurrent && (
+                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Current</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 sm:hidden">
+                {stats.campers} campers · {stats.songs} songs
+              </p>
+            </div>
           </div>
         </td>
-        <td className="px-6 py-4 text-sm text-slate-600">{stats.campers}</td>
-        <td className="px-6 py-4 text-sm text-slate-600">{stats.assignments}</td>
-        <td className="px-6 py-4 text-sm text-slate-600">{stats.songs}</td>
-        <td className="px-6 py-4 text-sm text-slate-600">{stats.prompts}</td>
+        <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">{stats.campers}</td>
+        <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">{stats.assignments}</td>
+        <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{stats.songs}</td>
+        <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{stats.prompts}</td>
       </tr>
     );
   };
@@ -144,11 +151,11 @@ const SemestersPage: React.FC<SemestersPageProps> = ({ semesters, assignments, s
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Semester</th>
-                  <th className="px-6 py-4">Campers</th>
-                  <th className="px-6 py-4">Assignments</th>
-                  <th className="px-6 py-4">Songs</th>
-                  <th className="px-6 py-4">Prompts</th>
+                  <th className="px-4 sm:px-6 py-4">Semester</th>
+                  <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Campers</th>
+                  <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Assignments</th>
+                  <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Songs</th>
+                  <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Prompts</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

@@ -172,11 +172,12 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
         className="hover:bg-slate-50 transition-colors cursor-pointer group"
         onClick={() => onViewDetail(a.id)}
       >
-        <td className="px-6 py-4 max-w-xs">
-          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{a.title}</h4>
-          <p className="text-xs text-slate-500 line-clamp-1">{a.instructions.substring(0, 60)}...</p>
+        <td className="px-4 sm:px-6 py-4 max-w-0 sm:max-w-xs">
+          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{a.title}</h4>
+          <p className="text-xs text-slate-500 line-clamp-1 hidden sm:block">{a.instructions.substring(0, 60)}...</p>
+          <p className="text-xs text-slate-500 sm:hidden">{formatDate(a.dueDate, dateFormat)}</p>
         </td>
-        <td className="px-6 py-4 max-w-[200px]">
+        <td className="px-4 sm:px-6 py-4 max-w-[200px] hidden md:table-cell">
           <div className="flex flex-wrap gap-1">
             {assignmentPrompts.length > 0 ? (
               <>
@@ -194,11 +195,11 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
             )}
           </div>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
           <div className="text-sm text-slate-700">{formatDate(a.dueDate, dateFormat)}</div>
           <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full font-semibold">{getTerm(a.dueDate)}</span>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 sm:px-6 py-4">
           <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${
             a.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
           }`}>
@@ -419,10 +420,10 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
               <table className="w-full text-left">
                 <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4">Assignment</th>
-                    <th className="px-6 py-4">Prompt</th>
-                    <th className="px-6 py-4">Due Date</th>
-                    <th className="px-6 py-4">Status</th>
+                    <th className="px-4 sm:px-6 py-4">Assignment</th>
+                    <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Prompt</th>
+                    <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Due Date</th>
+                    <th className="px-4 sm:px-6 py-4">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

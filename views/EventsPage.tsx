@@ -179,11 +179,11 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Event</th>
-                  <th className="px-6 py-4">Date & Time</th>
-                  <th className="px-6 py-4 hidden md:table-cell">Location</th>
-                  <th className="px-6 py-4 hidden md:table-cell">Attendees</th>
-                  <th className="px-6 py-4"></th>
+                  <th className="px-4 sm:px-6 py-4">Event</th>
+                  <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Date & Time</th>
+                  <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Location</th>
+                  <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Attendees</th>
+                  <th className="px-4 sm:px-6 py-4 hidden sm:table-cell"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -196,19 +196,22 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                       onClick={() => handleEditEvent(event)}
                       className="hover:bg-slate-50 cursor-pointer transition-colors group"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex flex-col items-center justify-center flex-shrink-0">
                             <p className="text-[8px] font-bold uppercase leading-none">{new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}</p>
                             <p className="text-sm font-bold leading-tight">{new Date(event.startDateTime).getDate()}</p>
                           </div>
-                          <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{event.title}</span>
+                          <div className="min-w-0">
+                            <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate block">{event.title}</span>
+                            <p className="text-xs text-slate-500 sm:hidden">{dateStr} at {timeStr}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{dateStr} at {timeStr}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{event.attendees.length || '—'}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 whitespace-nowrap hidden sm:table-cell">{dateStr} at {timeStr}</td>
+                      <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
+                      <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{event.attendees.length || '—'}</td>
+                      <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
                         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                           {event.meetLink && (
                             <a
@@ -327,10 +330,10 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
               <table className="w-full text-left">
                 <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4">Event</th>
-                    <th className="px-6 py-4">Date & Time</th>
-                    <th className="px-6 py-4 hidden md:table-cell">Location</th>
-                    <th className="px-6 py-4"></th>
+                    <th className="px-4 sm:px-6 py-4">Event</th>
+                    <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Date & Time</th>
+                    <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Location</th>
+                    <th className="px-4 sm:px-6 py-4 hidden sm:table-cell"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -343,18 +346,21 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                         onClick={() => handleEditEvent(event)}
                         className="hover:bg-slate-50 cursor-pointer transition-colors group"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-4 sm:px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-slate-200 text-slate-500 flex flex-col items-center justify-center flex-shrink-0">
                               <p className="text-[8px] font-bold uppercase leading-none">{new Date(event.startDateTime).toLocaleString('default', { month: 'short' })}</p>
                               <p className="text-sm font-bold leading-tight">{new Date(event.startDateTime).getDate()}</p>
                             </div>
-                            <span className="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors truncate">{event.title}</span>
+                            <div className="min-w-0">
+                              <span className="font-semibold text-slate-700 group-hover:text-indigo-600 transition-colors truncate block">{event.title}</span>
+                              <p className="text-xs text-slate-500 sm:hidden">{dateStr} at {timeStr}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{dateStr} at {timeStr}</td>
-                        <td className="px-6 py-4 text-sm text-slate-500 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
-                        <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-slate-500 whitespace-nowrap hidden sm:table-cell">{dateStr} at {timeStr}</td>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-slate-500 hidden md:table-cell truncate max-w-[160px]">{event.location || 'Virtual'}</td>
+                        <td className="px-4 sm:px-6 py-4 hidden sm:table-cell" onClick={e => e.stopPropagation()}>
                           {assignment && (
                             <button
                               onClick={() => onNavigate('assignment-detail', assignment.id)}
