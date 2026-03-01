@@ -743,7 +743,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       deletedAt: rawDeletedAt || '',
       deletedBy: rawDeletedBy || '',
       primaryVersionId: row[15] || '',
-      status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
+      status: (row[16] === 'private' || row[16] === 'shared' || row[16] === 'public') ? row[16] : undefined,
       isExtraCredit: row[17] === 'true',
       aboutDocUrl: row[18] || ''
     };
@@ -901,7 +901,7 @@ const parseSubmissionRow = (row: any[]): Submission => {
     deletedAt: rawDeletedAt || '',
     deletedBy: rawDeletedBy || '',
     primaryVersionId: row[15] || '',
-    status: (row[16] === 'private' || row[16] === 'shared') ? row[16] : undefined,
+    status: (row[16] === 'private' || row[16] === 'shared' || row[16] === 'public') ? row[16] : undefined,
     isExtraCredit: row[17] === 'true',
     aboutDocUrl: row[18] || ''
   };

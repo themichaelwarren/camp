@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion } from '../types';
 import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion } from '../utils';
 import { buildPath } from '../router';
@@ -149,6 +149,18 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
   const [docLoading, setDocLoading] = useState(false);
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [statusDropdownOpen]);
   const [isRefreshingLyrics, setIsRefreshingLyrics] = useState(false);
   const [isUploadingVersion, setIsUploadingVersion] = useState(false);
   const [newVersionFile, setNewVersionFile] = useState<File | null>(null);
@@ -359,35 +371,65 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           <i className="fa-solid fa-arrow-left"></i>
         </button>
         <div className="flex items-center gap-2">
-          {canManageVersions ? (
-            <button
-              onClick={() => {
-                if (submission.status !== 'shared') {
-                  if (!window.confirm('Share this song? It will become visible to all campers.')) return;
-                }
-                const newStatus = submission.status === 'shared' ? 'private' : 'shared';
-                onUpdate?.({ ...submission, status: newStatus, updatedAt: new Date().toISOString() });
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${
-                submission.status === 'shared'
-                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-              }`}
-              title={submission.status === 'shared' ? 'Click to make private' : 'Click to share'}
-            >
-              <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
-              {submission.status === 'shared' ? 'Shared' : 'Private'}
-            </button>
-          ) : currentUserEmail ? (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-              submission.status === 'shared'
-                ? 'bg-green-50 text-green-600 border-green-200'
-                : 'bg-slate-50 text-slate-400 border-slate-200'
-            }`}>
-              <i className={`fa-solid ${submission.status === 'shared' ? 'fa-globe' : 'fa-lock'}`}></i>
-              {submission.status === 'shared' ? 'Shared' : 'Private'}
-            </span>
-          ) : null}
+          {(() => {
+            const st = submission.status || 'shared';
+            const statusConfig = {
+              private: { icon: 'fa-lock', label: 'Private', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', hover: 'hover:bg-amber-100', readonlyText: 'text-amber-600' },
+              shared: { icon: 'fa-campground', label: 'Shared', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', hover: 'hover:bg-indigo-100', readonlyText: 'text-indigo-600' },
+              public: { icon: 'fa-globe', label: 'Public', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', hover: 'hover:bg-green-100', readonlyText: 'text-green-600' },
+            };
+            const cfg = statusConfig[st];
+            return canManageVersions ? (
+              <div className="relative" ref={statusDropdownRef}>
+                <button
+                  onClick={() => setStatusDropdownOpen(prev => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${cfg.bg} ${cfg.text} ${cfg.border} ${cfg.hover}`}
+                >
+                  <i className={`fa-solid ${cfg.icon}`}></i>
+                  {cfg.label}
+                  <i className={`fa-solid fa-chevron-down text-[8px] opacity-40 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`}></i>
+                </button>
+                {statusDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 w-56 animate-in fade-in zoom-in-95 duration-150">
+                    {([
+                      { value: 'private' as const, icon: 'fa-lock', label: 'Private', desc: 'Only you & collaborators' },
+                      { value: 'shared' as const, icon: 'fa-campground', label: 'Shared', desc: 'All campers can see' },
+                      { value: 'public' as const, icon: 'fa-globe', label: 'Public', desc: 'Anyone with the link' },
+                    ]).map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          if (opt.value === st) { setStatusDropdownOpen(false); return; }
+                          if (opt.value === 'public') {
+                            if (!window.confirm('Make public? Anyone with the link can view this song.')) return;
+                          }
+                          onUpdate?.({ ...submission, status: opt.value, updatedAt: new Date().toISOString() });
+                          setStatusDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          opt.value === st ? 'bg-slate-50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${statusConfig[opt.value].bg} ${statusConfig[opt.value].text} flex items-center justify-center flex-shrink-0`}>
+                          <i className={`fa-solid ${opt.icon} text-xs`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${opt.value === st ? 'text-slate-900' : 'text-slate-700'}`}>{opt.label}</p>
+                          <p className="text-[10px] text-slate-400">{opt.desc}</p>
+                        </div>
+                        {opt.value === st && <i className="fa-solid fa-check text-indigo-500 text-xs"></i>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : currentUserEmail ? (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${cfg.bg} ${cfg.readonlyText} ${cfg.border}`}>
+                <i className={`fa-solid ${cfg.icon}`}></i>
+                {cfg.label}
+              </span>
+            ) : null;
+          })()}
           {alreadyBocad && (
             <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border bg-amber-50 text-amber-600 border-amber-200">
               <i className="fa-solid fa-star text-[9px]"></i>

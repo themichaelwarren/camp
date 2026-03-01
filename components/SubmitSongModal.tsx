@@ -268,7 +268,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
             <div className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl border border-slate-200">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase">Visibility</label>
-                <p className="text-[10px] text-slate-400 mt-0.5">Private songs are only visible to you and collaborators</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{isPrivate ? 'Only you and collaborators can see this' : 'All campers can see this song'}</p>
               </div>
               <button
                 type="button"
@@ -276,10 +276,10 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors flex items-center gap-1.5 ${
                   isPrivate
                     ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                    : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
                 }`}
               >
-                <i className={`fa-solid ${isPrivate ? 'fa-lock' : 'fa-globe'} text-[10px]`}></i>
+                <i className={`fa-solid ${isPrivate ? 'fa-lock' : 'fa-campground'} text-[10px]`}></i>
                 {isPrivate ? 'Private' : 'Shared'}
               </button>
             </div>

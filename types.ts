@@ -61,7 +61,7 @@ export interface Submission {
   artworkUrl?: string;
   deletedAt?: string;
   deletedBy?: string;
-  status?: 'private' | 'shared';
+  status?: 'private' | 'shared' | 'public';
   isExtraCredit?: boolean;
   aboutDocUrl?: string;
 }

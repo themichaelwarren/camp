@@ -82,30 +82,30 @@ const Comment: React.FC<CommentProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3">
-        <div className="flex-shrink-0">
-          {photoUrl ? (
-            <ArtworkImage
-              fileId={undefined}
-              fallbackUrl={photoUrl}
-              alt={camper?.name || comment.author}
-              className="w-8 h-8 rounded-full object-cover"
-              containerClassName="w-8 h-8 rounded-full overflow-hidden"
-              fallback={
-                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
-                  {initial}
-                </div>
-              }
-            />
-          ) : (
-            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
-              {initial}
-            </div>
-          )}
-        </div>
+      <div>
         <div className="flex-1 min-w-0">
           <div className="bg-slate-50 rounded-2xl px-4 py-3">
-            <div className="flex items-baseline gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex-shrink-0">
+                {photoUrl ? (
+                  <ArtworkImage
+                    fileId={undefined}
+                    fallbackUrl={photoUrl}
+                    alt={camper?.name || comment.author}
+                    className="w-5 h-5 rounded-full object-cover"
+                    containerClassName="w-5 h-5 rounded-full overflow-hidden"
+                    fallback={
+                      <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[9px]">
+                        {initial}
+                      </div>
+                    }
+                  />
+                ) : (
+                  <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-[9px]">
+                    {initial}
+                  </div>
+                )}
+              </div>
               <span className="font-bold text-sm text-slate-800">
                 {comment.author}
               </span>

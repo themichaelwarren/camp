@@ -6,7 +6,9 @@ export function isSubmissionVisible(
   collaborations: Collaboration[]
 ): boolean {
   if (sub.deletedAt) return false;
-  if (!sub.status || sub.status === 'shared') return true;
+  if (sub.status === 'public') return true;
+  if (!currentUserEmail) return false; // Public visitors only see 'public' songs
+  if (!sub.status || sub.status === 'shared') return true; // All logged-in users see 'shared'
   if (sub.camperId === currentUserEmail) return true;
   return collaborations.some(c => c.submissionId === sub.id && c.camperId === currentUserEmail);
 }
