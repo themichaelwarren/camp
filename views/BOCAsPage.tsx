@@ -16,6 +16,7 @@ interface BOCAsPageProps {
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
   playingTrackId?: string | null;
   onGiveBoca: (submissionId: string, reason?: string) => Promise<void>;
+  onUpdateBocaReason: (bocaId: string, reason: string) => Promise<void>;
   viewMode: 'cards' | 'list';
   onViewModeChange: (value: 'cards' | 'list') => void;
   searchTerm: string;
@@ -28,12 +29,13 @@ interface BOCAsPageProps {
   collaborations: Collaboration[];
 }
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, onGiveBoca, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, onGiveBoca, onUpdateBocaReason, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
   const [bocaModalId, setBocaModalId] = useState<string | null>(null);
   const [bocaReason, setBocaReason] = useState('');
+  const [editingBocaId, setEditingBocaId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   // Build list of months that have at least one BOCA, plus current month
@@ -347,15 +349,33 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                       </p>
                     )}
                     <div className="mt-3 flex items-center justify-between">
-                      {alreadyBocad ? (
-                        <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1">
-                          <i className="fa-solid fa-star text-[8px]"></i>
-                          You BOCA'd this
-                        </span>
-                      ) : canGive ? (
+                      {alreadyBocad ? (() => {
+                        const myBoca = bocas.find(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
+                        return (
+                          <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1">
+                            <i className="fa-solid fa-star text-[8px]"></i>
+                            You BOCA'd this
+                            {myBoca && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingBocaId(myBoca.id);
+                                  setBocaReason(myBoca.reason || '');
+                                  setBocaModalId(submissionId);
+                                }}
+                                className="ml-0.5 text-amber-400 hover:text-amber-600 transition-colors"
+                                title="Edit reason"
+                              >
+                                <i className="fa-solid fa-pen text-[8px]"></i>
+                              </button>
+                            )}
+                          </span>
+                        );
+                      })() : canGive ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setEditingBocaId(null);
                             setBocaReason('');
                             setBocaModalId(submissionId);
                           }}
@@ -430,15 +450,33 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell" onClick={e => e.stopPropagation()}>
-                        {alreadyBocad ? (
-                          <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1 w-fit">
-                            <i className="fa-solid fa-star text-[8px]"></i>
-                            You BOCA'd this
-                          </span>
-                        ) : canGive ? (
+                        {alreadyBocad ? (() => {
+                          const myBoca = bocas.find(b => b.submissionId === submissionId && b.fromEmail === currentUserEmail);
+                          return (
+                            <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200 font-bold uppercase tracking-tighter flex items-center gap-1 w-fit">
+                              <i className="fa-solid fa-star text-[8px]"></i>
+                              You BOCA'd this
+                              {myBoca && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingBocaId(myBoca.id);
+                                    setBocaReason(myBoca.reason || '');
+                                    setBocaModalId(submissionId);
+                                  }}
+                                  className="ml-0.5 text-amber-400 hover:text-amber-600 transition-colors"
+                                  title="Edit reason"
+                                >
+                                  <i className="fa-solid fa-pen text-[8px]"></i>
+                                </button>
+                              )}
+                            </span>
+                          );
+                        })() : canGive ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              setEditingBocaId(null);
                               setBocaReason('');
                               setBocaModalId(submissionId);
                             }}
@@ -496,19 +534,19 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
         </div>
       )}
 
-      {/* BOCA Reason Modal */}
+      {/* BOCA Reason Modal (create or edit) */}
       {bocaModalId && (() => {
         const modalSub = submissions.find(s => s.id === bocaModalId);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setBocaModalId(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => { setBocaModalId(null); setEditingBocaId(null); }}>
             <div className="absolute inset-0 bg-black/40" />
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-star"></i>
+                  <i className={`fa-solid ${editingBocaId ? 'fa-pen' : 'fa-star'}`}></i>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-slate-800">Give a BOCA</h3>
+                  <h3 className="font-bold text-slate-800">{editingBocaId ? 'Edit BOCA Reason' : 'Give a BOCA'}</h3>
                   {modalSub && <p className="text-xs text-slate-500 truncate">{modalSub.title} by {getDisplayArtist(modalSub, collaborations)}</p>}
                 </div>
               </div>
@@ -527,7 +565,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setBocaModalId(null)}
+                  onClick={() => { setBocaModalId(null); setEditingBocaId(null); }}
                   className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
@@ -536,14 +574,19 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
                   onClick={async () => {
                     const id = bocaModalId;
                     setBocaModalId(null);
-                    setGivingBocaId(id);
-                    try { await onGiveBoca(id, bocaReason.trim() || undefined); } finally { setGivingBocaId(null); }
+                    if (editingBocaId) {
+                      setGivingBocaId(id);
+                      try { await onUpdateBocaReason(editingBocaId, bocaReason.trim()); } finally { setGivingBocaId(null); setEditingBocaId(null); }
+                    } else {
+                      setGivingBocaId(id);
+                      try { await onGiveBoca(id, bocaReason.trim() || undefined); } finally { setGivingBocaId(null); }
+                    }
                   }}
                   disabled={givingBocaId === bocaModalId}
                   className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-900 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <i className={`fa-solid ${givingBocaId === bocaModalId ? 'fa-spinner fa-spin' : 'fa-star'} text-xs`}></i>
-                  Give BOCA
+                  <i className={`fa-solid ${givingBocaId === bocaModalId ? 'fa-spinner fa-spin' : editingBocaId ? 'fa-check' : 'fa-star'} text-xs`}></i>
+                  {editingBocaId ? 'Save' : 'Give BOCA'}
                 </button>
               </div>
             </div>

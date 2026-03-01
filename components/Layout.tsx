@@ -55,6 +55,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [isPlaying, setIsPlaying] = useState(false);
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
+  const nowPlayingDisplayRef = useRef<{ title: string; artist: string } | null>(null);
+  if (nowPlayingToast) nowPlayingDisplayRef.current = nowPlayingToast;
   const hadPlayerRef = useRef(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const notificationPanelRef = useRef<HTMLDivElement>(null);
@@ -786,25 +788,40 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
              <button
-               className="md:hidden text-indigo-900 text-xl"
+               className="md:hidden text-indigo-900 text-xl flex-shrink-0"
                onClick={() => setIsMobileNavOpen(true)}
                aria-label="Open navigation"
              >
                <i className="fa-solid fa-bars"></i>
              </button>
-             <h2 className="text-lg font-semibold text-slate-800 capitalize flex items-center gap-2">
-               {(() => {
-                 const icons: Record<string, string> = { dashboard: 'fa-campground', inbox: 'fa-inbox', submissions: 'fa-music', favorites: 'fa-heart', bocas: 'fa-star', assignments: 'fa-tasks', prompts: 'fa-lightbulb', events: 'fa-calendar-days', semesters: 'fa-book-open', campers: 'fa-users', settings: 'fa-gear', changelog: 'fa-sparkles', about: 'fa-campground', feedback: 'fa-comment' };
-                 const icon = icons[activeView];
-                 const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp', feedback: 'Feedback' };
-                 return <>
-                   {icon && <i className={`fa-solid ${icon} text-slate-400 text-sm`}></i>}
-                   {labels[activeView] || activeView.split('-').join(' ')}
-                 </>;
-               })()}
-             </h2>
+             <div className="relative overflow-hidden h-7 flex-1 min-w-0">
+               <h2 className={`text-lg font-semibold text-slate-800 capitalize flex items-center gap-2 transition-all duration-300 ease-out ${
+                 nowPlayingToast ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+               }`}>
+                 {(() => {
+                   const icons: Record<string, string> = { dashboard: 'fa-campground', inbox: 'fa-inbox', submissions: 'fa-music', favorites: 'fa-heart', bocas: 'fa-star', assignments: 'fa-tasks', prompts: 'fa-lightbulb', events: 'fa-calendar-days', semesters: 'fa-book-open', campers: 'fa-users', settings: 'fa-gear', changelog: 'fa-sparkles', about: 'fa-campground', feedback: 'fa-comment' };
+                   const icon = icons[activeView];
+                   const labels: Record<string, string> = { dashboard: 'Home', prompts: 'Prompts', assignments: 'Assignments', submissions: 'Songs', events: 'Events', campers: 'Campers', inbox: 'Inbox', bocas: 'BOCAs', semesters: 'Semesters', settings: 'Settings', changelog: "What's New", about: 'About Camp', feedback: 'Feedback' };
+                   return <>
+                     {icon && <i className={`fa-solid ${icon} text-slate-400 text-sm`}></i>}
+                     {labels[activeView] || activeView.split('-').join(' ')}
+                   </>;
+                 })()}
+               </h2>
+               <button
+                 onClick={() => { setNowPlayingToast(null); setShowNowPlaying(true); }}
+                 className={`absolute inset-0 flex items-center gap-2 min-w-0 transition-all duration-300 ease-out ${
+                   nowPlayingToast ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+                 }`}
+               >
+                 <i className="fa-solid fa-music text-indigo-500 text-sm flex-shrink-0 animate-pulse"></i>
+                 <span className="text-sm font-semibold text-slate-800 truncate">{nowPlayingDisplayRef.current?.title}</span>
+                 <span className="text-sm text-slate-400 flex-shrink-0">&mdash;</span>
+                 <span className="text-sm text-slate-500 truncate">{nowPlayingDisplayRef.current?.artist}</span>
+               </button>
+             </div>
           </div>
           <div className="flex items-center gap-2">
             {isLoggedIn && !isPublicMode && (
@@ -902,23 +919,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
       </main>
 
 
-      {nowPlayingToast && (
-        <button
-          onClick={() => { setNowPlayingToast(null); setShowNowPlaying(true); }}
-          className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom fade-in duration-300 max-w-xs"
-        >
-          <div className="flex items-center gap-3 bg-slate-900 text-white pl-3 pr-4 py-3 rounded-2xl shadow-2xl border border-white/10">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/30 flex items-center justify-center flex-shrink-0">
-              <i className="fa-solid fa-music text-indigo-400 text-sm"></i>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Now Playing</p>
-              <p className="text-sm font-semibold truncate">{nowPlayingToast.title}</p>
-              <p className="text-xs text-white/50 truncate">{nowPlayingToast.artist}</p>
-            </div>
-          </div>
-        </button>
-      )}
 
       {player && (
         <audio

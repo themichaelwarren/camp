@@ -24,6 +24,7 @@ interface SongDetailProps {
   bocas?: Boca[];
   currentUserEmail?: string;
   onGiveBoca?: (submissionId: string, reason?: string) => Promise<void>;
+  onUpdateBocaReason?: (bocaId: string, reason: string) => Promise<void>;
   campers?: CamperProfile[];
   dateFormat: DateFormat;
   isFavorited?: boolean;
@@ -131,7 +132,7 @@ const CollaboratorEditor: React.FC<{
   );
 };
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, campers = [], dateFormat, isFavorited = false, onToggleFavorite, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'title' | 'details' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -144,6 +145,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [isGivingBoca, setIsGivingBoca] = useState(false);
   const [showBocaModal, setShowBocaModal] = useState(false);
   const [bocaReason, setBocaReason] = useState('');
+  const [editingBocaId, setEditingBocaId] = useState<string | null>(null);
   const [docLyrics, setDocLyrics] = useState<DocTextSegment[] | null>(null);
   const [docLoading, setDocLoading] = useState(false);
   const [isCreatingDoc, setIsCreatingDoc] = useState(false);
@@ -170,7 +172,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const isCollaborator = collaborations.some(c => c.submissionId === submission.id && c.camperId === currentUserEmail);
   const canManageVersions = isOwnSong || isCollaborator;
   const primaryVersion = getPrimaryVersion(submission);
-  const alreadyBocad = bocas.some(b => b.submissionId === submission.id && b.fromEmail === currentUserEmail);
+  const userBoca = bocas.find(b => b.submissionId === submission.id && b.fromEmail === currentUserEmail);
+  const alreadyBocad = !!userBoca;
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -385,6 +388,25 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               {submission.status === 'shared' ? 'Shared' : 'Private'}
             </span>
           ) : null}
+          {alreadyBocad && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border bg-amber-50 text-amber-600 border-amber-200">
+              <i className="fa-solid fa-star text-[9px]"></i>
+              BOCA'd
+              {onUpdateBocaReason && userBoca && (
+                <button
+                  onClick={() => {
+                    setEditingBocaId(userBoca.id);
+                    setBocaReason(userBoca.reason || '');
+                    setShowBocaModal(true);
+                  }}
+                  className="ml-0.5 text-amber-400 hover:text-amber-600 transition-colors"
+                  title="Edit reason"
+                >
+                  <i className="fa-solid fa-pen text-[8px]"></i>
+                </button>
+              )}
+            </span>
+          )}
         </div>
       </div>
 
@@ -581,14 +603,9 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           )}
 
           {/* BOCA button */}
-          {currentUserEmail && onGiveBoca && (
+          {currentUserEmail && onGiveBoca && !alreadyBocad && (
             <div className="max-w-xs">
-              {alreadyBocad ? (
-                <div className="bg-amber-50 text-amber-700 border border-amber-200 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2">
-                  <i className="fa-solid fa-star"></i>
-                  You BOCA'd this
-                </div>
-              ) : isOwnSong ? (
+              {isOwnSong ? (
                 <button disabled className="bg-slate-50 text-slate-400 border border-slate-200 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 cursor-not-allowed">
                   <i className="fa-solid fa-star"></i>
                   Can't BOCA your own song
@@ -600,7 +617,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 </button>
               ) : (
                 <button
-                  onClick={() => { setBocaReason(''); setShowBocaModal(true); }}
+                  onClick={() => { setEditingBocaId(null); setBocaReason(''); setShowBocaModal(true); }}
                   className="bg-amber-400 hover:bg-amber-500 text-amber-900 py-2.5 px-4 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors shadow-sm"
                 >
                   <i className="fa-solid fa-star"></i>
@@ -621,10 +638,23 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                   return (
                     <div key={b.id} className="bg-amber-50/60 border border-amber-100 rounded-xl px-4 py-2.5 flex gap-3 items-start">
                       <i className="fa-solid fa-star text-amber-400 text-xs mt-1 flex-shrink-0"></i>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm text-slate-700">{b.reason}</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">— {giver?.name || b.fromEmail}</p>
                       </div>
+                      {b.fromEmail === currentUserEmail && onUpdateBocaReason && (
+                        <button
+                          onClick={() => {
+                            setEditingBocaId(b.id);
+                            setBocaReason(b.reason || '');
+                            setShowBocaModal(true);
+                          }}
+                          className="text-amber-400 hover:text-amber-600 transition-colors mt-0.5 flex-shrink-0"
+                          title="Edit reason"
+                        >
+                          <i className="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1001,17 +1031,17 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       )}
       </div>
 
-      {/* BOCA Reason Modal */}
-      {showBocaModal && onGiveBoca && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowBocaModal(false)}>
+      {/* BOCA Reason Modal (create or edit) */}
+      {showBocaModal && (editingBocaId ? onUpdateBocaReason : onGiveBoca) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => { setShowBocaModal(false); setEditingBocaId(null); }}>
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
-                <i className="fa-solid fa-star"></i>
+                <i className={`fa-solid ${editingBocaId ? 'fa-pen' : 'fa-star'}`}></i>
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-slate-800">Give a BOCA</h3>
+                <h3 className="font-bold text-slate-800">{editingBocaId ? 'Edit BOCA Reason' : 'Give a BOCA'}</h3>
                 <p className="text-xs text-slate-500 truncate">{submission.title} by {getDisplayArtist(submission, collaborations)}</p>
               </div>
             </div>
@@ -1030,7 +1060,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setShowBocaModal(false)}
+                onClick={() => { setShowBocaModal(false); setEditingBocaId(null); }}
                 className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancel
@@ -1038,14 +1068,19 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               <button
                 onClick={async () => {
                   setShowBocaModal(false);
-                  setIsGivingBoca(true);
-                  try { await onGiveBoca(submission.id, bocaReason.trim() || undefined); } finally { setIsGivingBoca(false); }
+                  if (editingBocaId && onUpdateBocaReason) {
+                    setIsGivingBoca(true);
+                    try { await onUpdateBocaReason(editingBocaId, bocaReason.trim()); } finally { setIsGivingBoca(false); setEditingBocaId(null); }
+                  } else if (onGiveBoca) {
+                    setIsGivingBoca(true);
+                    try { await onGiveBoca(submission.id, bocaReason.trim() || undefined); } finally { setIsGivingBoca(false); }
+                  }
                 }}
                 disabled={isGivingBoca}
                 className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-900 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
               >
-                <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : 'fa-star'} text-xs`}></i>
-                Give BOCA
+                <i className={`fa-solid ${isGivingBoca ? 'fa-spinner fa-spin' : editingBocaId ? 'fa-check' : 'fa-star'} text-xs`}></i>
+                {editingBocaId ? 'Save' : 'Give BOCA'}
               </button>
             </div>
           </div>

@@ -57,6 +57,31 @@ const App: React.FC = () => {
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Persist read notification IDs in localStorage so they survive re-auth
+  const cacheReadNotificationIds = (ids: string[]) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('camp-read-notifications') || '[]') as string[];
+      const merged = Array.from(new Set([...existing, ...ids]));
+      localStorage.setItem('camp-read-notifications', JSON.stringify(merged));
+    } catch {}
+  };
+  const mergeReadStatus = (notifs: Notification[]): Notification[] => {
+    try {
+      const cached = new Set(JSON.parse(localStorage.getItem('camp-read-notifications') || '[]') as string[]);
+      if (cached.size === 0) return notifs;
+      // Only clean up stale IDs when we actually have notifications to compare against;
+      // an empty list means we didn't fetch (e.g. not logged in), not that there are none.
+      if (notifs.length > 0) {
+        const currentIds = new Set(notifs.map(n => n.id));
+        const cleaned = [...cached].filter(id => currentIds.has(id));
+        if (cleaned.length !== cached.size) {
+          localStorage.setItem('camp-read-notifications', JSON.stringify(cleaned));
+        }
+      }
+      return notifs.map(n => cached.has(n.id) ? { ...n, read: true } : n);
+    } catch { return notifs; }
+  };
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
@@ -342,7 +367,7 @@ const App: React.FC = () => {
       setCollaborations(data.collaborations);
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
-      setNotifications(data.notifications);
+      setNotifications(mergeReadStatus(data.notifications));
       if (profile?.email && sId) {
         googleService.checkDeadlineReminders(sId, data.assignments, data.notifications, profile.email)
           .then(newReminders => {
@@ -425,7 +450,7 @@ const App: React.FC = () => {
       setCollaborations(data.collaborations);
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
-      setNotifications(data.notifications);
+      setNotifications(mergeReadStatus(data.notifications));
 
       if (userProfile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
@@ -469,6 +494,12 @@ const App: React.FC = () => {
         message: `gave a BOCA to "${submission.title}"`
       }).catch(err => console.error('Failed to create BOCA notification', err));
     }
+  };
+
+  const handleUpdateBocaReason = async (bocaId: string, reason: string) => {
+    if (!spreadsheetId) return;
+    setBocas(prev => prev.map(b => b.id === bocaId ? { ...b, reason } : b));
+    await googleService.updateBocaReason(spreadsheetId, bocaId, reason);
   };
 
   const getTitleForEntity = (view: ViewState, id: string | null): string | null => {
@@ -1298,6 +1329,7 @@ const App: React.FC = () => {
     setNotifications(prev => prev.map(n =>
       n.id === notificationId ? { ...n, read: true } : n
     ));
+    cacheReadNotificationIds([notificationId]);
     if (spreadsheetId) {
       googleService.markNotificationRead(spreadsheetId, notificationId)
         .catch(err => console.error('Failed to mark notification read', err));
@@ -1306,6 +1338,7 @@ const App: React.FC = () => {
 
   const handleMarkAllNotificationsRead = async () => {
     if (!userProfile?.email || !spreadsheetId) return;
+    cacheReadNotificationIds(notifications.map(n => n.id));
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     googleService.markAllNotificationsRead(spreadsheetId, userProfile.email)
       .catch(err => console.error('Failed to mark all notifications read', err));
@@ -1546,6 +1579,7 @@ const App: React.FC = () => {
             bocas={bocas}
             currentUserEmail={userProfile?.email || ''}
             onGiveBoca={isLoggedIn ? handleGiveBoca : undefined}
+            onUpdateBocaReason={isLoggedIn ? handleUpdateBocaReason : undefined}
             campers={campers}
             dateFormat={dateFormat}
             isFavorited={favoritedSubmissionIds.includes(s.id)}
@@ -1567,6 +1601,7 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
             onGiveBoca={handleGiveBoca}
+            onUpdateBocaReason={handleUpdateBocaReason}
             viewMode={bocasViewMode}
             onViewModeChange={setBocasViewMode}
             searchTerm={bocasSearch}

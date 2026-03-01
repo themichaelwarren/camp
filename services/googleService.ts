@@ -803,12 +803,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
       createdAt: row[5] || ''
     }));
 
-  const bocas = bocasRaw.map((row: any[]) => ({
-    id: row[0] || '',
-    fromEmail: row[1] || '',
-    submissionId: row[2] || '',
-    awardedAt: row[3] || ''
-  }));
+  const bocas: Boca[] = bocasRaw.map(parseBocaRow);
 
   const statusUpdates = statusUpdatesRaw.map((row: any[]) => ({
     id: row[0] || '',
@@ -2049,6 +2044,20 @@ export const createBoca = async (
     boca.id, boca.fromEmail, boca.submissionId, boca.awardedAt, boca.reason
   ]]);
   return boca;
+};
+
+export const updateBocaReason = async (
+  spreadsheetId: string,
+  bocaId: string,
+  reason: string
+): Promise<void> => {
+  const result = await callSheetsGet('BOCAs!A2:E5000');
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === bocaId);
+  if (rowIndex === -1) return;
+
+  const sheetRow = rowIndex + 2;
+  await updateSheetRows(spreadsheetId, `BOCAs!E${sheetRow}`, [[reason]]);
 };
 
 // --- Status Updates ---
