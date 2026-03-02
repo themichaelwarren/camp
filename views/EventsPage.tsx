@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Event, Assignment, ViewState } from '../types';
 import * as googleService from '../services/googleService';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface EventsPageProps {
   events: Event[];
@@ -25,6 +26,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
     endDateTime: '',
     location: ''
   });
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false);
   const formatEventDateTime = (isoDateTime: string) => {
     const date = new Date(isoDateTime);
     const dateStr = date.toLocaleDateString('en-US', {
@@ -97,7 +99,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
-    if (!window.confirm('Delete this event? It will be removed from the calendar and hidden from the app.')) return;
 
     const deletedEvent = {
       ...selectedEvent,
@@ -115,6 +116,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
     onUpdateEvent(deletedEvent);
     setShowEventEditModal(false);
     setSelectedEvent(null);
+    setConfirmDeleteEvent(false);
   };
 
   // Separate upcoming and past events
@@ -502,7 +504,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
                   </button>
                   <button
                     type="button"
-                    onClick={handleDeleteEvent}
+                    onClick={() => setConfirmDeleteEvent(true)}
                     className="px-5 py-3 rounded-xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                   >
                     <i className="fa-solid fa-trash"></i>
@@ -514,6 +516,15 @@ const EventsPage: React.FC<EventsPageProps> = ({ events, assignments, onNavigate
         </div>,
         document.body
       )}
+      <ConfirmModal
+        isOpen={confirmDeleteEvent}
+        onConfirm={handleDeleteEvent}
+        onCancel={() => setConfirmDeleteEvent(false)}
+        title="Delete event"
+        message="Delete this event? It will be removed from the calendar and hidden from the app."
+        confirmLabel="Delete"
+        confirmColor="red"
+      />
     </div>
   );
 };

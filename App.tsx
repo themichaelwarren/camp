@@ -32,6 +32,109 @@ const CAMP_QUOTES = [
   'Two pieces white bread, horseradish mustard',
 ];
 
+// Fisher-Yates shuffle — unbiased random permutation
+function fisherYatesShuffle<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Smart shuffle: maximally spaces out songs by the same artist/camper
+function smartShuffle(tracks: PlayableTrack[]): PlayableTrack[] {
+  if (tracks.length <= 2) return fisherYatesShuffle(tracks);
+
+  const getKey = (t: PlayableTrack) => t.camperId || t.artist;
+
+  // Group by artist, shuffle within each group
+  const byArtist = new Map<string, PlayableTrack[]>();
+  for (const t of tracks) {
+    const key = getKey(t);
+    if (!byArtist.has(key)) byArtist.set(key, []);
+    byArtist.get(key)!.push(t);
+  }
+  for (const [, group] of byArtist) {
+    const shuffled = fisherYatesShuffle(group);
+    group.length = 0;
+    group.push(...shuffled);
+  }
+
+  // Build result: always pick from the artist with the most remaining songs,
+  // avoiding same artist as previous pick when possible
+  const result: PlayableTrack[] = [];
+  const buckets = [...byArtist.entries()].map(([key, tracks]) => ({ key, tracks: [...tracks] }));
+
+  while (buckets.some(b => b.tracks.length > 0)) {
+    const lastKey = result.length > 0 ? getKey(result[result.length - 1]) : null;
+    const available = buckets.filter(b => b.tracks.length > 0);
+    const preferred = available.filter(b => b.key !== lastKey);
+    const candidates = preferred.length > 0 ? preferred : available;
+
+    // Pick from the fullest bucket (random tie-break)
+    const maxCount = Math.max(...candidates.map(b => b.tracks.length));
+    const top = candidates.filter(b => b.tracks.length === maxCount);
+    const chosen = top[Math.floor(Math.random() * top.length)];
+    result.push(chosen.tracks.shift()!);
+  }
+
+  return result;
+}
+
+// Pick the best next track for jukebox auto-replenishment
+function pickReplenishment(
+  pool: PlayableTrack[],
+  currentQueue: { submissionId?: string; camperId?: string; artist: string }[],
+  recentHistory: { submissionId?: string; camperId?: string; artist: string }[],
+  nowPlaying: { submissionId?: string; camperId?: string; artist: string } | null
+): PlayableTrack | null {
+  if (pool.length === 0) return null;
+
+  // Build sets of recently played/queued submission IDs
+  const recentIds = new Set<string>();
+  const queuedIds = new Set<string>();
+  const queueArtists = new Map<string, number>();
+
+  if (nowPlaying?.submissionId) recentIds.add(nowPlaying.submissionId);
+  for (const t of recentHistory) {
+    if (t.submissionId) recentIds.add(t.submissionId);
+  }
+  for (const t of currentQueue) {
+    if (t.submissionId) queuedIds.add(t.submissionId);
+    const key = t.camperId || t.artist;
+    queueArtists.set(key, (queueArtists.get(key) || 0) + 1);
+  }
+
+  // Score each candidate: lower = better
+  const scored = pool
+    .filter(t => !queuedIds.has(t.submissionId || ''))
+    .map(t => {
+      let score = 0;
+      // Heavily penalize recently played songs
+      if (recentIds.has(t.submissionId || '')) score += 100;
+      // Penalize artists already in queue (proportional to count)
+      const key = t.camperId || t.artist;
+      score += (queueArtists.get(key) || 0) * 10;
+      // Add small random jitter for variety
+      score += Math.random() * 5;
+      return { track: t, score };
+    });
+
+  if (scored.length === 0) {
+    // All songs already queued — fall back to any song not currently playing
+    const fallback = pool.filter(t => t.submissionId !== nowPlaying?.submissionId);
+    return fallback.length > 0
+      ? fallback[Math.floor(Math.random() * fallback.length)]
+      : pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  scored.sort((a, b) => a.score - b.score);
+  // Pick from the top ~3 candidates randomly for some variety
+  const topN = scored.slice(0, Math.min(3, scored.length));
+  return topN[Math.floor(Math.random() * topN.length)].track;
+}
+
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -85,14 +188,14 @@ const App: React.FC = () => {
   const [promptsSearch, setPromptsSearch] = useState('');
   const [promptsStatusFilter, setPromptsStatusFilter] = useState<'all' | PromptStatus>('all');
   const [promptsSortBy, setPromptsSortBy] = useState<'newest' | 'oldest' | 'upvotes' | 'title'>('newest');
-  const [promptsViewMode, setPromptsViewMode] = useState<'cards' | 'list'>('list');
-  const [assignmentsViewMode, setAssignmentsViewMode] = useState<'list' | 'cards'>('list');
+  const [promptsViewMode, setPromptsViewMode] = useState<'cards' | 'list'>(() => window.localStorage.getItem('camp-prompts-view') === 'cards' ? 'cards' : 'list');
+  const [assignmentsViewMode, setAssignmentsViewMode] = useState<'list' | 'cards'>(() => window.localStorage.getItem('camp-assignments-view') === 'cards' ? 'cards' : 'list');
   const [assignmentsSearch, setAssignmentsSearch] = useState('');
   const [assignmentsStatusFilter, setAssignmentsStatusFilter] = useState<'all' | 'Open' | 'Closed'>('all');
   const [assignmentsPromptFilter, setAssignmentsPromptFilter] = useState('all');
   const [assignmentsSortBy, setAssignmentsSortBy] = useState<'title-asc' | 'title-desc' | 'due-asc' | 'due-desc' | 'start-asc' | 'start-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc'>('due-asc');
   const [assignmentsSemesterFilter, setAssignmentsSemesterFilter] = useState('all');
-  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('list');
+  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>(() => window.localStorage.getItem('camp-submissions-view') === 'cards' ? 'cards' : 'list');
   const [submissionsGridSize, setSubmissionsGridSize] = useState<3 | 4 | 5>(() => {
     const stored = window.localStorage.getItem('camp-songs-grid');
     if (stored === '3' || stored === '4' || stored === '5') return Number(stored) as 3 | 4 | 5;
@@ -103,14 +206,17 @@ const App: React.FC = () => {
   const [submissionsPromptFilter, setSubmissionsPromptFilter] = useState('all');
   const [submissionsSortBy, setSubmissionsSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc'>('date-desc');
   const [submissionsSemesterFilter, setSubmissionsSemesterFilter] = useState('all');
-  const [campersViewMode, setCampersViewMode] = useState<'list' | 'cards'>('list');
+  const [campersViewMode, setCampersViewMode] = useState<'list' | 'cards'>(() => window.localStorage.getItem('camp-campers-view') === 'cards' ? 'cards' : 'list');
   const [camperDetailSongsView, setCamperDetailSongsView] = useState<'cards' | 'list'>('list');
   const [camperDetailSearch, setCamperDetailSearch] = useState('');
   const [camperDetailSelectedTags, setCamperDetailSelectedTags] = useState<string[]>([]);
-  const [bocasViewMode, setBocasViewMode] = useState<'cards' | 'list'>('cards');
+  const [bocasViewMode, setBocasViewMode] = useState<'cards' | 'list'>(() => {
+    const stored = window.localStorage.getItem('camp-bocas-view');
+    return stored === 'list' ? 'list' : 'cards';
+  });
   const [bocasSearch, setBocasSearch] = useState('');
-  const [semestersViewMode, setSemestersViewMode] = useState<'cards' | 'list'>('list');
-  const [eventsViewMode, setEventsViewMode] = useState<'cards' | 'list'>('list');
+  const [semestersViewMode, setSemestersViewMode] = useState<'cards' | 'list'>(() => window.localStorage.getItem('camp-semesters-view') === 'cards' ? 'cards' : 'list');
+  const [eventsViewMode, setEventsViewMode] = useState<'cards' | 'list'>(() => window.localStorage.getItem('camp-events-view') === 'cards' ? 'cards' : 'list');
   const [bocasSortBy, setBocasSortBy] = useState<'count-desc' | 'count-asc' | 'title-asc' | 'title-desc' | 'artist-asc' | 'artist-desc' | 'recent'>('count-desc');
   const [player, setPlayer] = useState<{
     src: string;
@@ -126,6 +232,8 @@ const App: React.FC = () => {
   const [isPlayerLoading, setIsPlayerLoading] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [queueingTrackId, setQueueingTrackId] = useState<string | null>(null);
+  const [upvotingPromptId, setUpvotingPromptId] = useState<string | null>(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [queue, setQueue] = useState<{
     src: string;
     title: string;
@@ -279,6 +387,16 @@ const App: React.FC = () => {
   useEffect(() => {
     window.localStorage.setItem('camp-songs-grid', String(submissionsGridSize));
   }, [submissionsGridSize]);
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-prompts-view', promptsViewMode);
+    window.localStorage.setItem('camp-assignments-view', assignmentsViewMode);
+    window.localStorage.setItem('camp-submissions-view', submissionsViewMode);
+    window.localStorage.setItem('camp-campers-view', campersViewMode);
+    window.localStorage.setItem('camp-bocas-view', bocasViewMode);
+    window.localStorage.setItem('camp-semesters-view', semestersViewMode);
+    window.localStorage.setItem('camp-events-view', eventsViewMode);
+  }, [promptsViewMode, assignmentsViewMode, submissionsViewMode, campersViewMode, bocasViewMode, semestersViewMode, eventsViewMode]);
 
   useEffect(() => {
     window.localStorage.setItem('camp-remember', rememberMe ? '1' : '0');
@@ -716,11 +834,12 @@ const App: React.FC = () => {
     }
     if (upvotedPromptIds.includes(prompt.id)) return;
 
+    setUpvotingPromptId(prompt.id);
     const updatedPrompt = { ...prompt, upvotes: prompt.upvotes + 1 };
     setPrompts(prev => prev.map(p => p.id === prompt.id ? updatedPrompt : p));
     setUpvotedPromptIds(prev => [...prev, prompt.id]);
 
-    if (!spreadsheetId) return;
+    if (!spreadsheetId) { setUpvotingPromptId(null); return; }
     try {
       await googleService.appendPromptUpvote(spreadsheetId, {
         promptId: prompt.id,
@@ -733,6 +852,8 @@ const App: React.FC = () => {
       setPrompts(prev => prev.map(p => p.id === prompt.id ? prompt : p));
       setUpvotedPromptIds(prev => prev.filter(id => id !== prompt.id));
       alert('Upvote failed to sync. Please try again.');
+    } finally {
+      setUpvotingPromptId(null);
     }
   };
 
@@ -779,6 +900,7 @@ const App: React.FC = () => {
 
   const handleToggleFavorite = async (submissionId: string) => {
     if (!userProfile?.email || !spreadsheetId) return;
+    setTogglingFavoriteId(submissionId);
     const isFavorited = favoritedSubmissionIds.includes(submissionId);
     if (isFavorited) {
       setFavoritedSubmissionIds(prev => prev.filter(id => id !== submissionId));
@@ -800,6 +922,7 @@ const App: React.FC = () => {
         setFavoritedSubmissionIds(prev => prev.filter(id => id !== submissionId));
       }
     }
+    setTogglingFavoriteId(null);
   };
 
   const handleAddCollaborator = async (submissionId: string, camperId: string, camperName: string, role: string) => {
@@ -1241,13 +1364,16 @@ const App: React.FC = () => {
     setPlayer(next);
     setQueue(rest);
 
-    // Jukebox: auto-add another random track
+    // Jukebox: smart replenishment — avoids recently played songs, spreads artists
     if (isJukeboxModeRef.current && jukeboxPoolRef.current.length > 0) {
-      const pool = jukeboxPoolRef.current;
-      const candidates = pool.filter(t => t.submissionId !== next.submissionId);
-      const pick = candidates.length > 0 ? candidates : pool;
-      const nextTrack = pick[Math.floor(Math.random() * pick.length)];
-      handleAddToQueue(nextTrack);
+      const historyForPick = player ? [player, ...playHistory] : playHistory;
+      const replenishment = pickReplenishment(
+        jukeboxPoolRef.current,
+        rest,
+        historyForPick,
+        next
+      );
+      if (replenishment) handleAddToQueue(replenishment);
     }
   };
 
@@ -1257,8 +1383,8 @@ const App: React.FC = () => {
     setIsJukeboxMode(true);
     queue.forEach(t => URL.revokeObjectURL(t.src));
     setQueue([]);
-    // Shuffle and pick up to 10 unique tracks for the initial queue
-    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+    // Smart shuffle: spread artists apart, avoid clusters
+    const shuffled = smartShuffle(tracks);
     await handlePlayTrack(shuffled[0]);
     const queueSize = Math.min(9, shuffled.length - 1);
     for (let i = 1; i <= queueSize; i++) {
@@ -1407,6 +1533,7 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('prompt-detail', id)}
             userProfile={userProfile}
             upvotedPromptIds={upvotedPromptIds}
+            upvotingPromptId={upvotingPromptId}
             spreadsheetId={spreadsheetId}
             searchTerm={promptsSearch}
             onSearchTermChange={setPromptsSearch}
@@ -1519,6 +1646,7 @@ const App: React.FC = () => {
             queueingTrackId={queueingTrackId}
             onUpvote={handlePromptUpvote}
             upvotedPromptIds={upvotedPromptIds}
+            upvotingPromptId={upvotingPromptId}
             currentUser={userProfile}
             spreadsheetId={spreadsheetId}
             bocas={bocas}
@@ -1584,6 +1712,7 @@ const App: React.FC = () => {
             dateFormat={dateFormat}
             isFavorited={favoritedSubmissionIds.includes(s.id)}
             onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
+            togglingFavorite={togglingFavoriteId === s.id}
             collaborations={collaborations}
             onAddCollaborator={isLoggedIn ? handleAddCollaborator : undefined}
             onRemoveCollaborator={isLoggedIn ? handleRemoveCollaborator : undefined}

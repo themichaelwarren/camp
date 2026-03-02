@@ -8,6 +8,7 @@ import ArtworkImage from '../components/ArtworkImage';
 import CommentsSection from '../components/CommentsSection';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface SongDetailProps {
   submission: Submission;
@@ -29,6 +30,7 @@ interface SongDetailProps {
   dateFormat: DateFormat;
   isFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
+  togglingFavorite?: boolean;
   collaborations?: Collaboration[];
   onAddCollaborator?: (submissionId: string, camperId: string, camperName: string, role: string) => Promise<void>;
   onRemoveCollaborator?: (collaboratorId: string) => Promise<void>;
@@ -132,7 +134,7 @@ const CollaboratorEditor: React.FC<{
   );
 };
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, togglingFavorite = false, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'title' | 'details' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -169,6 +171,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [editingNotesText, setEditingNotesText] = useState('');
   const [showCopied, setShowCopied] = useState(false);
+  const [confirmDeleteVersion, setConfirmDeleteVersion] = useState<string | null>(null);
+  const [confirmDeleteSong, setConfirmDeleteSong] = useState(false);
 
   const handleShare = useCallback(() => {
     const path = buildPath('song-detail', submission.id, submission.title);
@@ -353,10 +357,15 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
 
   const handleDeleteVersion = (versionId: string) => {
     if (submission.versions.length <= 1) return;
-    if (!window.confirm('Delete this version? The audio file will remain in Google Drive.')) return;
-    const updatedVersions = submission.versions.filter(v => v.id !== versionId);
-    const newPrimaryId = submission.primaryVersionId === versionId ? '' : (submission.primaryVersionId || '');
+    setConfirmDeleteVersion(versionId);
+  };
+
+  const executeDeleteVersion = () => {
+    if (!confirmDeleteVersion) return;
+    const updatedVersions = submission.versions.filter(v => v.id !== confirmDeleteVersion);
+    const newPrimaryId = submission.primaryVersionId === confirmDeleteVersion ? '' : (submission.primaryVersionId || '');
     onUpdate?.({ ...submission, versions: updatedVersions, primaryVersionId: newPrimaryId, updatedAt: new Date().toISOString() });
+    setConfirmDeleteVersion(null);
   };
 
   return (
@@ -550,7 +559,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
               {onToggleFavorite && (
                 <button
                   onClick={() => onToggleFavorite(submission.id)}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                  disabled={togglingFavorite}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 disabled:opacity-50 ${
                     isFavorited
                       ? 'bg-red-50 text-red-500 hover:bg-red-100'
                       : 'bg-slate-100 text-slate-300 hover:text-red-400 hover:bg-red-50'
@@ -1041,15 +1051,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           {canManageVersions && (
             <section className="bg-white rounded-3xl border border-rose-100 shadow-sm p-6">
               <button
-                onClick={() => {
-                  if (!window.confirm('Delete this song? It will be hidden but can be restored later.')) return;
-                  onUpdate?.({
-                    ...submission,
-                    deletedAt: new Date().toISOString(),
-                    deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
-                  });
-                  onNavigate('submissions');
-                }}
+                onClick={() => setConfirmDeleteSong(true)}
                 className="w-full text-rose-500 hover:text-rose-700 text-xs font-bold uppercase tracking-widest transition-colors"
               >
                 <i className="fa-solid fa-trash mr-2"></i>
@@ -1128,6 +1130,33 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmDeleteVersion !== null}
+        onConfirm={executeDeleteVersion}
+        onCancel={() => setConfirmDeleteVersion(null)}
+        title="Delete version"
+        message="Delete this version? The audio file will remain in Google Drive."
+        confirmLabel="Delete"
+        confirmColor="red"
+      />
+
+      <ConfirmModal
+        isOpen={confirmDeleteSong}
+        onConfirm={() => {
+          onUpdate?.({
+            ...submission,
+            deletedAt: new Date().toISOString(),
+            deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+          });
+          onNavigate('submissions');
+        }}
+        onCancel={() => setConfirmDeleteSong(false)}
+        title="Delete song"
+        message="Delete this song? It will be hidden but can be restored later."
+        confirmLabel="Delete"
+        confirmColor="red"
+      />
     </>
   );
 };

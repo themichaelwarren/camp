@@ -486,7 +486,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                       containerClassName="w-full h-full"
                       fallback={
                         <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                          <i className="fa-solid fa-compact-disc text-lg text-slate-400 animate-spin" style={{ animationDuration: '3s' }}></i>
+                          <i className={`fa-solid fa-compact-disc text-lg text-slate-400 ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }}></i>
                         </div>
                       }
                       lazy={false}
@@ -573,7 +573,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     containerClassName="w-full h-full"
                     fallback={
                       <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                        <i className="fa-solid fa-compact-disc text-lg text-slate-400 animate-spin" style={{ animationDuration: '3s' }}></i>
+                        <i className={`fa-solid fa-compact-disc text-lg text-slate-400 ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }}></i>
                       </div>
                     }
                     lazy={false}
@@ -631,7 +631,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     containerClassName="w-full h-full"
                     fallback={
                       <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                        <i className={`fa-solid fa-compact-disc text-slate-400 animate-spin ${isShort ? 'text-4xl' : 'text-6xl xl:text-7xl'}`} style={{ animationDuration: '3s' }}></i>
+                        <i className={`fa-solid fa-compact-disc text-slate-400 ${isPlaying ? 'animate-spin' : ''} ${isShort ? 'text-4xl' : 'text-6xl xl:text-7xl'}`} style={{ animationDuration: '3s' }}></i>
                       </div>
                     }
                     lazy={false}

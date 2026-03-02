@@ -6,6 +6,7 @@ import TagInput from '../components/TagInput';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 import CommentsSection from '../components/CommentsSection';
+import ConfirmModal from '../components/ConfirmModal';
 import * as googleService from '../services/googleService';
 import { getPromptStatus, getPromptStatusStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission } from '../utils';
 
@@ -21,6 +22,7 @@ interface PromptDetailProps {
   queueingTrackId?: string | null;
   onUpvote: (prompt: Prompt) => void;
   upvotedPromptIds: string[];
+  upvotingPromptId?: string | null;
   currentUser?: { name: string; email: string };
   spreadsheetId: string;
   bocas?: Boca[];
@@ -31,7 +33,7 @@ interface PromptDetailProps {
   collaborations: Collaboration[];
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, upvotingPromptId, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -39,6 +41,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
     tags: prompt.tags
   });
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [confirmDeletePrompt, setConfirmDeletePrompt] = useState(false);
 
   useEffect(() => {
     // Only sync form state when modal is closed to avoid overwriting user's edits
@@ -93,9 +96,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
   };
 
   const handleDeletePrompt = () => {
-    if (!window.confirm('Delete this prompt? It will be hidden but can be restored later.')) return;
-    onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser?.email || currentUser?.name || 'Unknown' });
-    onNavigate('prompts');
+    setConfirmDeletePrompt(true);
   };
 
   return (
@@ -298,7 +299,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider block mb-1">Hearts</span>
                 <button
                   onClick={() => onUpvote(prompt)}
-                  disabled={upvotedPromptIds.includes(prompt.id)}
+                  disabled={upvotedPromptIds.includes(prompt.id) || upvotingPromptId === prompt.id}
                   className={`text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                     upvotedPromptIds.includes(prompt.id)
                       ? 'bg-red-50 text-red-400 cursor-default'
@@ -385,6 +386,19 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
         document.body
       )}
     </div>
+
+    <ConfirmModal
+      isOpen={confirmDeletePrompt}
+      onConfirm={() => {
+        onUpdate({ ...prompt, deletedAt: new Date().toISOString(), deletedBy: currentUser?.email || currentUser?.name || 'Unknown' });
+        onNavigate('prompts');
+      }}
+      onCancel={() => setConfirmDeletePrompt(false)}
+      title="Delete prompt"
+      message="Delete this prompt? It will be hidden but can be restored later."
+      confirmLabel="Delete"
+      confirmColor="red"
+    />
     </>
   );
 };

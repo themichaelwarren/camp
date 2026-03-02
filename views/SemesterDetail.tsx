@@ -273,10 +273,9 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
       <div className="mb-8">
         <button
           onClick={() => onNavigate('semesters')}
-          className="text-sm text-slate-500 hover:text-indigo-600 mb-3 flex items-center gap-1.5 transition-colors"
+          className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors mb-3"
         >
-          <i className="fa-solid fa-arrow-left text-xs"></i>
-          Semesters
+          <i className="fa-solid fa-arrow-left"></i>
         </button>
         <div className="flex items-center gap-4">
           {(() => { const style = getSeasonStyle(semester); return (

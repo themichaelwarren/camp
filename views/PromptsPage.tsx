@@ -17,6 +17,7 @@ interface PromptsPageProps {
   onViewDetail: (id: string) => void;
   userProfile?: { name?: string; email?: string } | null;
   upvotedPromptIds: string[];
+  upvotingPromptId?: string | null;
   spreadsheetId: string;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -28,7 +29,7 @@ interface PromptsPageProps {
   onViewModeChange: (value: 'cards' | 'list') => void;
 }
 
-const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange, viewMode, onViewModeChange }) => {
+const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, onUpdate, onUpvote, onViewDetail, userProfile, upvotedPromptIds, upvotingPromptId, spreadsheetId, searchTerm, onSearchTermChange, statusFilter, onStatusFilterChange, sortBy, onSortByChange, viewMode, onViewModeChange }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -229,10 +230,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
         <table className="w-full text-left">
           <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest border-b border-slate-200">
             <tr>
-              <th className="px-6 py-4">Title & Description</th>
-              <th className="px-6 py-4">Tags</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Upvotes</th>
+              <th className="px-4 sm:px-6 py-4">Title & Description</th>
+              <th className="px-4 sm:px-6 py-4 hidden md:table-cell">Tags</th>
+              <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Status</th>
+              <th className="px-4 sm:px-6 py-4">Upvotes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -242,11 +243,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
                 className="hover:bg-slate-50 transition-colors group cursor-pointer"
                 onClick={() => onViewDetail(prompt.id)}
               >
-                <td className="px-6 py-4 max-w-xs">
-                  <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{prompt.title}</h4>
+                <td className="px-4 sm:px-6 py-4 max-w-0 sm:max-w-xs">
+                  <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors truncate">{prompt.title}</h4>
                   <p className="text-sm text-slate-500 line-clamp-1">{prompt.description}</p>
+                  <div className="sm:hidden mt-1">
+                    {(() => {
+                      const cs = getPromptStatus(prompt.id, assignments);
+                      return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${getPromptStatusStyle(cs)}`}>{cs}</span>;
+                    })()}
+                  </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {prompt.tags.map(tag => (
                       <span key={tag} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
@@ -255,16 +262,16 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
                   {(() => {
                     const cs = getPromptStatus(prompt.id, assignments);
                     return <span className={`text-[11px] font-bold px-2 py-1 rounded-lg ${getPromptStatusStyle(cs)}`}>{cs}</span>;
                   })()}
                 </td>
-                <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                <td className="px-4 sm:px-6 py-4" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => handleUpvote(prompt)}
-                    disabled={upvotedPromptIds.includes(prompt.id)}
+                    disabled={upvotedPromptIds.includes(prompt.id) || upvotingPromptId === prompt.id}
                     className={`flex items-center gap-2 font-bold transition-colors ${
                       upvotedPromptIds.includes(prompt.id)
                         ? 'text-rose-500 cursor-not-allowed'
@@ -279,7 +286,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
             ))}
             {filteredPrompts.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
+                <td colSpan={4} className="px-4 sm:px-6 py-10 text-center text-slate-400">
                   No prompts match your filters.
                 </td>
               </tr>
@@ -289,12 +296,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
       </div>}
 
       {/* Card View */}
-      {viewMode === 'cards' && <div className="space-y-3">
+      {viewMode === 'cards' && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredPrompts.map(prompt => (
           <div
             key={prompt.id}
             onClick={() => onViewDetail(prompt.id)}
-            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm active:scale-[0.98] transition-all"
+            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm active:scale-[0.98] transition-all flex flex-col"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <h4 className="font-bold text-slate-800 flex-1">{prompt.title}</h4>

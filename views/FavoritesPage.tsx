@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Submission, Assignment, PlayableTrack, Boca, Collaboration } from '../types';
 import { getTerm, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
@@ -25,7 +25,14 @@ interface FavoritesPageProps {
 
 const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
+    const stored = window.localStorage.getItem('camp-favorites-view');
+    return stored === 'list' ? 'list' : 'cards';
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem('camp-favorites-view', viewMode);
+  }, [viewMode]);
 
   const getSubmissionDate = (sub: Submission): string => {
     return sub.versions?.length ? sub.versions[0].timestamp : sub.updatedAt;

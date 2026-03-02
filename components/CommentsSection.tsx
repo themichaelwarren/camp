@@ -249,7 +249,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       </h3>
 
       <div className="space-y-6">
-        <CommentForm onSubmit={handleCreateComment} campers={campers} />
+        {currentUser.email && <CommentForm onSubmit={handleCreateComment} campers={campers} />}
 
         {sortedComments.length > 0 ? (
           <div className="space-y-6 pt-6 border-t border-slate-100">

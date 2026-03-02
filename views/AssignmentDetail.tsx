@@ -9,6 +9,7 @@ import MarkdownEditor from '../components/MarkdownEditor';
 import CommentsSection from '../components/CommentsSection';
 import SubmitSongModal from '../components/SubmitSongModal';
 import * as googleService from '../services/googleService';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
@@ -46,6 +47,8 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('cards');
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Initialize promptIds from assignment, falling back to single promptId
   const initialPromptIds = assignment.promptIds?.length ? assignment.promptIds : [assignment.promptId].filter(Boolean);
@@ -138,18 +141,11 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
   };
 
   const handleCloseAssignment = () => {
-    if (!window.confirm('Close this assignment? This will prevent new submissions and mark it as archived.')) return;
-    onUpdate?.({ ...assignment, status: 'Closed' });
+    setConfirmClose(true);
   };
 
   const handleDeleteAssignment = () => {
-    if (!window.confirm('Delete this assignment? It will be hidden but can be restored later.')) return;
-    onUpdate?.({
-      ...assignment,
-      deletedAt: new Date().toISOString(),
-      deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
-    });
-    onNavigate('assignments');
+    setConfirmDelete(true);
   };
 
   const handleEditEvent = () => {
@@ -836,6 +832,37 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
         />
       )}
     </div>
+
+    <ConfirmModal
+      isOpen={confirmClose}
+      onConfirm={() => {
+        onUpdate?.({ ...assignment, status: 'Closed' });
+        setConfirmClose(false);
+      }}
+      onCancel={() => setConfirmClose(false)}
+      title="Close assignment"
+      message="Close this assignment? This will prevent new submissions and mark it as archived."
+      confirmLabel="Close"
+      confirmColor="amber"
+    />
+
+    <ConfirmModal
+      isOpen={confirmDelete}
+      onConfirm={() => {
+        onUpdate?.({
+          ...assignment,
+          deletedAt: new Date().toISOString(),
+          deletedBy: currentUser?.email || currentUser?.name || 'Unknown'
+        });
+        onNavigate('assignments');
+        setConfirmDelete(false);
+      }}
+      onCancel={() => setConfirmDelete(false)}
+      title="Delete assignment"
+      message="Delete this assignment? It will be hidden but can be restored later."
+      confirmLabel="Delete"
+      confirmColor="red"
+    />
     </>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Prompt } from '../types';
 import * as googleService from '../services/googleService';
+import ConfirmModal from './ConfirmModal';
 
 interface TagManagerProps {
   spreadsheetId: string;
@@ -15,6 +16,7 @@ const TagManager: React.FC<TagManagerProps> = ({ spreadsheetId, prompts, onClose
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDeleteTag, setConfirmDeleteTag] = useState<string | null>(null);
 
   useEffect(() => {
     loadTags();
@@ -32,7 +34,6 @@ const TagManager: React.FC<TagManagerProps> = ({ spreadsheetId, prompts, onClose
   };
 
   const handleDelete = async (tagName: string) => {
-    if (!window.confirm(`Delete tag "${tagName}"? It will be removed from suggestions. Existing prompts will keep the tag until manually edited.`)) return;
     setDeleting(tagName);
     try {
       await googleService.deleteTag(spreadsheetId, tagName);
@@ -49,7 +50,7 @@ const TagManager: React.FC<TagManagerProps> = ({ spreadsheetId, prompts, onClose
 
   const filtered = tags.filter(t => t.toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
-  return createPortal(
+  return <>{createPortal(
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[9999] p-4" onClick={onClose}>
       <div
         className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 flex flex-col max-h-[80vh]"
@@ -99,7 +100,7 @@ const TagManager: React.FC<TagManagerProps> = ({ spreadsheetId, prompts, onClose
                       <span className="text-xs text-slate-400 flex-shrink-0">{count} prompt{count !== 1 ? 's' : ''}</span>
                     </div>
                     <button
-                      onClick={() => handleDelete(tag)}
+                      onClick={() => setConfirmDeleteTag(tag)}
                       disabled={deleting === tag}
                       className="text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2"
                     >
@@ -122,7 +123,20 @@ const TagManager: React.FC<TagManagerProps> = ({ spreadsheetId, prompts, onClose
       </div>
     </div>,
     document.body
-  );
+  )}
+  <ConfirmModal
+    isOpen={confirmDeleteTag !== null}
+    onConfirm={() => {
+      if (confirmDeleteTag) handleDelete(confirmDeleteTag);
+      setConfirmDeleteTag(null);
+    }}
+    onCancel={() => setConfirmDeleteTag(null)}
+    title="Delete tag"
+    message={`Delete tag "${confirmDeleteTag}"? It will be removed from suggestions. Existing prompts will keep the tag until manually edited.`}
+    confirmLabel="Delete"
+    confirmColor="red"
+  />
+  </>;
 };
 
 export default TagManager;

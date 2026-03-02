@@ -430,8 +430,14 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ assignments, prompts,
                   {filteredAssignments.map(a => renderRow(a))}
                   {filteredAssignments.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
-                        No assignments match your filters.
+                      <td colSpan={4} className="p-4">
+                        <div className="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
+                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 text-3xl">
+                            <i className="fa-solid fa-clipboard-list"></i>
+                          </div>
+                          <h3 className="font-bold text-slate-800 text-xl">No assignments found</h3>
+                          <p className="text-slate-500 mt-2">No assignments match your current filters.</p>
+                        </div>
                       </td>
                     </tr>
                   )}
