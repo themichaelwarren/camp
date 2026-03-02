@@ -23,7 +23,7 @@ import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
 import FeedbackPage from './views/FeedbackPage';
 import * as googleService from './services/googleService';
-import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible } from './utils';
+import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible, smartShuffle } from './utils';
 
 const CAMP_QUOTES = [
   'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
@@ -31,56 +31,6 @@ const CAMP_QUOTES = [
   "Bury all the memories with your mother's shovel, do a couple pushups and build up those chest muscles",
   'Two pieces white bread, horseradish mustard',
 ];
-
-// Fisher-Yates shuffle — unbiased random permutation
-function fisherYatesShuffle<T>(array: T[]): T[] {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// Smart shuffle: maximally spaces out songs by the same artist/camper
-function smartShuffle(tracks: PlayableTrack[]): PlayableTrack[] {
-  if (tracks.length <= 2) return fisherYatesShuffle(tracks);
-
-  const getKey = (t: PlayableTrack) => t.camperId || t.artist;
-
-  // Group by artist, shuffle within each group
-  const byArtist = new Map<string, PlayableTrack[]>();
-  for (const t of tracks) {
-    const key = getKey(t);
-    if (!byArtist.has(key)) byArtist.set(key, []);
-    byArtist.get(key)!.push(t);
-  }
-  for (const [, group] of byArtist) {
-    const shuffled = fisherYatesShuffle(group);
-    group.length = 0;
-    group.push(...shuffled);
-  }
-
-  // Build result: always pick from the artist with the most remaining songs,
-  // avoiding same artist as previous pick when possible
-  const result: PlayableTrack[] = [];
-  const buckets = [...byArtist.entries()].map(([key, tracks]) => ({ key, tracks: [...tracks] }));
-
-  while (buckets.some(b => b.tracks.length > 0)) {
-    const lastKey = result.length > 0 ? getKey(result[result.length - 1]) : null;
-    const available = buckets.filter(b => b.tracks.length > 0);
-    const preferred = available.filter(b => b.key !== lastKey);
-    const candidates = preferred.length > 0 ? preferred : available;
-
-    // Pick from the fullest bucket (random tie-break)
-    const maxCount = Math.max(...candidates.map(b => b.tracks.length));
-    const top = candidates.filter(b => b.tracks.length === maxCount);
-    const chosen = top[Math.floor(Math.random() * top.length)];
-    result.push(chosen.tracks.shift()!);
-  }
-
-  return result;
-}
 
 // Pick the best next track for jukebox auto-replenishment
 function pickReplenishment(
@@ -146,6 +96,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [hasPublicData, setHasPublicData] = useState(false);
   const [isLoadingPublicData, setIsLoadingPublicData] = useState(true);
+  const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null>(null);
@@ -550,6 +501,7 @@ const App: React.FC = () => {
       console.error('Initial sync failed', e);
     } finally {
       setIsSyncing(false);
+      setIsInitialSyncDone(true);
     }
   };
 
@@ -1397,6 +1349,17 @@ const App: React.FC = () => {
     jukeboxPoolRef.current = [];
   };
 
+  // Shuffle play: clears queue, smart-shuffles tracks, plays first, queues rest in order
+  const handleShufflePlay = async (tracks: PlayableTrack[]) => {
+    if (tracks.length === 0) return;
+    setQueue(prev => { prev.forEach(t => URL.revokeObjectURL(t.src)); return []; });
+    const shuffled = smartShuffle(tracks);
+    await handlePlayTrack(shuffled[0]);
+    for (let i = 1; i < shuffled.length; i++) {
+      await handleAddToQueue(shuffled[i]);
+    }
+  };
+
   const handleProfileUpdate = async (updates: { location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }) => {
     if (!spreadsheetId || !userProfile?.email) return;
     try {
@@ -1642,6 +1605,7 @@ const App: React.FC = () => {
             onUpdate={handleUpdatePrompt}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
             onUpvote={handlePromptUpvote}
@@ -1672,6 +1636,7 @@ const App: React.FC = () => {
             onUpdate={isLoggedIn ? handleUpdateAssignment : undefined}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
             onAddSubmission={isLoggedIn ? handleAddSubmission : undefined}
@@ -1728,6 +1693,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             onGiveBoca={handleGiveBoca}
             onUpdateBocaReason={handleUpdateBocaReason}
@@ -1751,6 +1717,7 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
             onStartJukebox={handleStartJukebox}
@@ -1794,6 +1761,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
             onStartJukebox={handleStartJukebox}
@@ -1868,6 +1836,7 @@ const App: React.FC = () => {
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
             onStartJukebox={handleStartJukebox}
@@ -1970,7 +1939,7 @@ const App: React.FC = () => {
       isLoggedIn={isLoggedIn}
       isPublicMode={isPublicMode}
       onSignIn={isPublicMode ? googleService.signIn : undefined}
-      hasInitialData={isLoggedIn ? !!spreadsheetId : hasPublicData}
+      hasInitialData={isLoggedIn ? isInitialSyncDone : hasPublicData}
       userProfile={userProfile}
       player={player}
       isPlayerLoading={isPlayerLoading}

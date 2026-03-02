@@ -24,6 +24,7 @@ interface AssignmentDetailProps {
   onAddPrompt?: (prompt: Prompt) => Promise<void>;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   onAddSubmission?: (submission: Submission) => void;
@@ -40,7 +41,7 @@ interface AssignmentDetailProps {
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators }) => {
   const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
@@ -548,12 +549,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 <button
                   onClick={async () => {
                     const playable = submissions.map(s => trackFromSubmission(s, collaborations)).filter((t): t is PlayableTrack => t !== null);
-                    if (playable.length === 0) return;
-                    const shuffled = [...playable].sort(() => Math.random() - 0.5);
-                    await onPlayTrack(shuffled[0]);
-                    for (let i = 1; i < shuffled.length; i++) {
-                      onAddToQueue(shuffled[i]);
-                    }
+                    onShufflePlay(playable);
                   }}
                   disabled={!!playingTrackId}
                   className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-70"

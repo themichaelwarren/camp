@@ -151,6 +151,52 @@ export function trackFromSubmission(sub: Submission, collaborations: Collaborati
 
 export type MentionSegment = { type: 'text'; value: string } | { type: 'mention'; value: string; email?: string };
 
+// Fisher-Yates shuffle — unbiased random permutation
+export function fisherYatesShuffle<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Smart shuffle: maximally spaces out songs by the same artist/camper
+export function smartShuffle(tracks: PlayableTrack[]): PlayableTrack[] {
+  if (tracks.length <= 2) return fisherYatesShuffle(tracks);
+
+  const getKey = (t: PlayableTrack) => t.camperId || t.artist;
+
+  const byArtist = new Map<string, PlayableTrack[]>();
+  for (const t of tracks) {
+    const key = getKey(t);
+    if (!byArtist.has(key)) byArtist.set(key, []);
+    byArtist.get(key)!.push(t);
+  }
+  for (const [, group] of byArtist) {
+    const shuffled = fisherYatesShuffle(group);
+    group.length = 0;
+    group.push(...shuffled);
+  }
+
+  const result: PlayableTrack[] = [];
+  const buckets = [...byArtist.entries()].map(([key, tracks]) => ({ key, tracks: [...tracks] }));
+
+  while (buckets.some(b => b.tracks.length > 0)) {
+    const lastKey = result.length > 0 ? getKey(result[result.length - 1]) : null;
+    const available = buckets.filter(b => b.tracks.length > 0);
+    const preferred = available.filter(b => b.key !== lastKey);
+    const candidates = preferred.length > 0 ? preferred : available;
+
+    const maxCount = Math.max(...candidates.map(b => b.tracks.length));
+    const top = candidates.filter(b => b.tracks.length === maxCount);
+    const chosen = top[Math.floor(Math.random() * top.length)];
+    result.push(chosen.tracks.shift()!);
+  }
+
+  return result;
+}
+
 export function parseMentions(text: string, campers: CamperProfile[]): MentionSegment[] {
   const names = campers.map(c => c.name).filter(Boolean).sort((a, b) => b.length - a.length);
   if (names.length === 0) return [{ type: 'text', value: text }];

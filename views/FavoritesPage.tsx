@@ -10,6 +10,7 @@ interface FavoritesPageProps {
   onViewDetail: (id: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   onStartJukebox: (tracks: PlayableTrack[]) => void;
@@ -23,7 +24,7 @@ interface FavoritesPageProps {
 }
 
 
-const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments, onViewDetail, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, bocas, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
     const stored = window.localStorage.getItem('camp-favorites-view');
@@ -244,14 +245,7 @@ const FavoritesPage: React.FC<FavoritesPageProps> = ({ submissions, assignments,
               Play All
             </button>
             <button
-              onClick={async () => {
-                if (allTracks.length === 0) return;
-                const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-                await onPlayTrack(shuffled[0]);
-                for (let i = 1; i < shuffled.length; i++) {
-                  onAddToQueue(shuffled[i]);
-                }
-              }}
+              onClick={() => onShufflePlay(allTracks)}
               className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
             >
               <i className="fa-solid fa-shuffle"></i>

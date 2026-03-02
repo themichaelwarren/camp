@@ -53,6 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const userPausedRef = useRef(false);
   const [nowPlayingToast, setNowPlayingToast] = useState<{ title: string; artist: string } | null>(null);
   const nowPlayingToastRef = useRef<number | null>(null);
   const nowPlayingDisplayRef = useRef<{ title: string; artist: string } | null>(null);
@@ -160,9 +161,78 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
 
   useEffect(() => {
     if (player?.src && audioRef.current) {
+      userPausedRef.current = false;
       audioRef.current.play().catch(() => undefined);
       setIsPlaying(true);
     }
+  }, [player?.src]);
+
+  // iOS background playback recovery — resume audio when page becomes visible again
+  // iOS Safari can suspend audio when the screen locks or the app is backgrounded
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden || !audioRef.current || userPausedRef.current) return;
+      const audio = audioRef.current;
+      // If audio should be playing but got paused by the OS, resume it
+      if (audio.paused && audio.src && audio.currentTime < audio.duration) {
+        audio.play().catch(() => undefined);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Recover from audio stalls — iOS can stall audio output while reporting as playing
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let lastTime = audio.currentTime;
+    let stallCheckId: ReturnType<typeof setInterval> | null = null;
+
+    const startStallCheck = () => {
+      if (stallCheckId) return;
+      stallCheckId = setInterval(() => {
+        if (userPausedRef.current || !audioRef.current) return;
+        const a = audioRef.current;
+        // Detect phantom playing: not paused, but currentTime hasn't advanced
+        if (!a.paused && a.currentTime === lastTime && a.currentTime < a.duration) {
+          a.pause();
+          a.play().catch(() => undefined);
+        }
+        lastTime = a.currentTime;
+      }, 3000);
+    };
+
+    const stopStallCheck = () => {
+      if (stallCheckId) { clearInterval(stallCheckId); stallCheckId = null; }
+    };
+
+    const onStalled = () => {
+      if (userPausedRef.current || !audioRef.current) return;
+      // Nudge playback after a brief delay
+      setTimeout(() => {
+        if (audioRef.current && !audioRef.current.paused && !userPausedRef.current) {
+          audioRef.current.play().catch(() => undefined);
+        }
+      }, 500);
+    };
+
+    audio.addEventListener('stalled', onStalled);
+    audio.addEventListener('playing', startStallCheck);
+    audio.addEventListener('pause', stopStallCheck);
+    audio.addEventListener('ended', stopStallCheck);
+
+    if (!audio.paused) startStallCheck();
+
+    return () => {
+      stopStallCheck();
+      audio.removeEventListener('stalled', onStalled);
+      audio.removeEventListener('playing', startStallCheck);
+      audio.removeEventListener('pause', stopStallCheck);
+      audio.removeEventListener('ended', stopStallCheck);
+    };
   }, [player?.src]);
 
   // Media Session API — system media controls (lock screen, notification area, etc.)
@@ -203,8 +273,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     if (!('mediaSession' in navigator)) return;
     const audio = audioRef.current;
 
-    navigator.mediaSession.setActionHandler('play', () => { audio?.play().catch(() => undefined); });
-    navigator.mediaSession.setActionHandler('pause', () => { audio?.pause(); });
+    navigator.mediaSession.setActionHandler('play', () => { userPausedRef.current = false; audio?.play().catch(() => undefined); });
+    navigator.mediaSession.setActionHandler('pause', () => { userPausedRef.current = true; audio?.pause(); });
     navigator.mediaSession.setActionHandler('nexttrack', queue.length > 0 || isJukeboxMode ? () => { onPlayNext?.(); } : null);
     navigator.mediaSession.setActionHandler('previoustrack', playHistory.length > 0 ? () => { onPlayPrevious?.(); } : null);
 
@@ -435,9 +505,11 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                           e.stopPropagation();
                           if (!audioRef.current) return;
                           if (audioRef.current.paused) {
+                            userPausedRef.current = false;
                             audioRef.current.play().catch(() => undefined);
                             setIsPlaying(true);
                           } else {
+                            userPausedRef.current = true;
                             audioRef.current.pause();
                             setIsPlaying(false);
                           }
@@ -887,6 +959,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             player={player}
             queue={queue}
             audioRef={audioRef as React.RefObject<HTMLAudioElement>}
+            userPausedRef={userPausedRef}
             isLoading={isPlayerLoading}
             onClose={() => setShowNowPlaying(false)}
             onPlayNext={() => onPlayNext?.()}

@@ -18,6 +18,7 @@ interface PromptDetailProps {
   onUpdate: (prompt: Prompt) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   onUpvote: (prompt: Prompt) => void;
@@ -33,7 +34,7 @@ interface PromptDetailProps {
   collaborations: Collaboration[];
 }
 
-const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, upvotingPromptId, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
+const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submissions, onNavigate, onUpdate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onUpvote, upvotedPromptIds, upvotingPromptId, currentUser, spreadsheetId, bocas = [], campers = [], dateFormat, favoritedSubmissionIds, onToggleFavorite, collaborations = [] }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editPrompt, setEditPrompt] = useState({
     title: prompt.title,
@@ -185,13 +186,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({ prompt, assignments, submis
                 <button
                   onClick={async () => {
                     const playable = submissions.map(s => trackFromSubmission(s, collaborations)).filter((t): t is PlayableTrack => t !== null);
-                    if (playable.length === 0) return;
-                    // Shuffle for variety
-                    const shuffled = [...playable].sort(() => Math.random() - 0.5);
-                    await onPlayTrack(shuffled[0]);
-                    for (let i = 1; i < shuffled.length; i++) {
-                      onAddToQueue(shuffled[i]);
-                    }
+                    onShufflePlay(playable);
                   }}
                   disabled={!!playingTrackId}
                   className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-70"

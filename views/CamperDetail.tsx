@@ -12,6 +12,7 @@ interface CamperDetailProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   onStartJukebox: (tracks: PlayableTrack[]) => void;
@@ -58,7 +59,7 @@ const getFirstVersionDate = (sub: Submission): number => {
 };
 
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake, isOwnProfile, onUpdateProfile }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake, isOwnProfile, onUpdateProfile }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
   const [editingField, setEditingField] = useState<'location' | 'status' | null>(null);
@@ -312,14 +313,7 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                 Play All
               </button>
               <button
-                onClick={async () => {
-                  if (allTracks.length === 0) return;
-                  const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-                  await onPlayTrack(shuffled[0]);
-                  for (let i = 1; i < shuffled.length; i++) {
-                    onAddToQueue(shuffled[i]);
-                  }
-                }}
+                onClick={() => onShufflePlay(allTracks)}
                 className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
               >
                 <i className="fa-solid fa-shuffle"></i>

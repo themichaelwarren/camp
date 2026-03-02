@@ -14,6 +14,7 @@ interface SemesterDetailProps {
   onNavigate: (view: ViewState, id?: string | null) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   queueingTrackId?: string | null;
   onStartJukebox: (tracks: PlayableTrack[]) => void;
@@ -26,7 +27,7 @@ interface SemesterDetailProps {
 }
 
 
-const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, campers, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, campers, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   // Unique prompts used this semester (from assignments' promptIds)
@@ -403,14 +404,7 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                 Play All
               </button>
               <button
-                onClick={async () => {
-                  if (allTracks.length === 0) return;
-                  const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-                  await onPlayTrack(shuffled[0]);
-                  for (let i = 1; i < shuffled.length; i++) {
-                    onAddToQueue(shuffled[i]);
-                  }
-                }}
+                onClick={() => onShufflePlay(allTracks)}
                 className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
               >
                 <i className="fa-solid fa-shuffle"></i>

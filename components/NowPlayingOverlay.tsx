@@ -20,6 +20,7 @@ interface NowPlayingOverlayProps {
   player: Track;
   queue: Track[];
   audioRef: React.RefObject<HTMLAudioElement>;
+  userPausedRef?: React.MutableRefObject<boolean>;
   isLoading?: boolean;
   onClose: () => void;
   onPlayNext: () => void;
@@ -51,6 +52,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   player,
   queue,
   audioRef,
+  userPausedRef,
   isLoading,
   onClose,
   onPlayNext,
@@ -273,11 +275,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      if (userPausedRef) userPausedRef.current = false;
       audio.play();
     } else {
+      if (userPausedRef) userPausedRef.current = true;
       audio.pause();
     }
-  }, [audioRef]);
+  }, [audioRef, userPausedRef]);
 
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;

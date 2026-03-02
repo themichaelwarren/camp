@@ -14,6 +14,7 @@ interface BOCAsPageProps {
   onNavigate: (view: ViewState, id?: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
   onAddToQueue: (track: PlayableTrack) => Promise<void>;
+  onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   onGiveBoca: (submissionId: string, reason?: string) => Promise<void>;
   onUpdateBocaReason: (bocaId: string, reason: string) => Promise<void>;
@@ -29,7 +30,7 @@ interface BOCAsPageProps {
   collaborations: Collaboration[];
 }
 
-const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, playingTrackId, onGiveBoca, onUpdateBocaReason, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, currentUserEmail, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, onGiveBoca, onUpdateBocaReason, viewMode, onViewModeChange, searchTerm, onSearchTermChange, sortBy, onSortByChange, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [givingBocaId, setGivingBocaId] = useState<string | null>(null);
@@ -154,13 +155,7 @@ const BOCAsPage: React.FC<BOCAsPageProps> = ({ bocas, submissions, assignments, 
         </div>
         {allTracks.length > 0 && (
           <button
-            onClick={async () => {
-              const shuffled = [...allTracks].sort(() => Math.random() - 0.5);
-              await onPlayTrack(shuffled[0]);
-              for (let i = 1; i < shuffled.length; i++) {
-                onAddToQueue(shuffled[i]);
-              }
-            }}
+            onClick={() => onShufflePlay(allTracks)}
             className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors self-start md:self-auto"
           >
             <i className="fa-solid fa-shuffle"></i>
