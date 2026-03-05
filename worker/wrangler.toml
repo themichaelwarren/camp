@@ -10,3 +10,4 @@ ORIGIN_URL = "https://themichaelwarren.github.io"
 # SPREADSHEET_ID                    — the Camp spreadsheet ID
 # GOOGLE_SERVICE_ACCOUNT_EMAIL      — service account email for Sheets proxy
 # GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY — service account PEM private key
+# RESEND_API_KEY                    — Resend email API key for sending invitations

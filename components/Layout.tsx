@@ -15,7 +15,7 @@ interface LayoutProps {
   isLoggedIn?: boolean;
   hasInitialData?: boolean;
   isPlayerLoading?: boolean;
-  userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string } | null;
+  userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string; role?: string } | null;
   player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
   queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
@@ -669,10 +669,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
-                  <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
-                    {isSyncing ? 'Syncing...' : 'Connected'}
-                  </p>
+                  {userProfile?.role === 'visitor' ? (
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                      <i className="fa-solid fa-id-badge text-[8px]"></i>
+                      Visitor Pass
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                      {isSyncing ? 'Syncing...' : 'Connected'}
+                    </p>
+                  )}
                 </div>
                 {onThemeChange && (
                   <div className="flex items-center gap-0.5">
@@ -736,10 +743,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
                   <>
                     <div className="overflow-hidden flex-1">
                       <p className="text-sm font-semibold truncate">{userProfile?.name || 'Camp Admin'}</p>
-                      <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
-                        {isSyncing ? 'Syncing...' : 'Connected'}
-                      </p>
+                      {userProfile?.role === 'visitor' ? (
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                          <i className="fa-solid fa-id-badge text-[8px]"></i>
+                          Visitor Pass
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}></span>
+                          {isSyncing ? 'Syncing...' : 'Connected'}
+                        </p>
+                      )}
                     </div>
                     <i className={`fa-solid ${isUserMenuOpen ? 'fa-chevron-down' : 'fa-chevron-up'} text-indigo-200 text-xs`}></i>
                   </>

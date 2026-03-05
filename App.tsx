@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole, Notification } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, CamperRole, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole, Notification } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta, isPublicView, PUBLIC_DEFAULT_VIEW } from './router';
 import { DateFormat } from './utils';
 import Layout from './components/Layout';
@@ -99,7 +99,7 @@ const App: React.FC = () => {
   const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string; role?: CamperRole } | null>(null);
   const [campers, setCampers] = useState<CamperProfile[]>([]);
   const [upvotedPromptIds, setUpvotedPromptIds] = useState<string[]>([]);
   const [favoritedSubmissionIds, setFavoritedSubmissionIds] = useState<string[]>([]);
@@ -533,7 +533,8 @@ const App: React.FC = () => {
             location: match.location,
             status: match.status,
             pictureOverrideUrl: match.pictureOverrideUrl,
-            intakeSemester: match.intakeSemester || prev?.intakeSemester
+            intakeSemester: match.intakeSemester || prev?.intakeSemester,
+            role: match.role || 'camper'
           }));
         }
       }
@@ -745,6 +746,8 @@ const App: React.FC = () => {
 
   // Route guard: redirect non-public views when in public mode
   const isPublicMode = !isLoggedIn && hasPublicData;
+  const isVisitor = userProfile?.role === 'visitor';
+  const canWrite = isLoggedIn && !isVisitor;
   useEffect(() => {
     if (isPublicMode && !isPublicView(activeView)) {
       navigateTo(PUBLIC_DEFAULT_VIEW);
@@ -1407,6 +1410,35 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAddCamper = async (email: string, role: CamperRole, name?: string) => {
+    if (!spreadsheetId) return;
+    await googleService.addInvitedUser(spreadsheetId, { email, name, role });
+    // Send invite email via worker
+    try {
+      const baseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'https://camp.themichaelwarren.com' : '';
+      await fetch(`${baseUrl}/api/send-invite`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${googleService.getAccessToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, name, role }),
+      });
+    } catch (err) {
+      console.error('Failed to send invite email', err);
+    }
+    // Refresh campers list
+    const updatedCampers = await googleService.fetchCampers(spreadsheetId);
+    setCampers(updatedCampers);
+  };
+
+  const handleCancelInvite = async (email: string) => {
+    if (!spreadsheetId) return;
+    await googleService.deletePendingUser(spreadsheetId, email);
+    const updatedCampers = await googleService.fetchCampers(spreadsheetId);
+    setCampers(updatedCampers);
+  };
+
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
   const unreadNotificationCount = useMemo(
@@ -1490,9 +1522,9 @@ const App: React.FC = () => {
           <PromptsPage
             prompts={prompts.filter((p) => !p.deletedAt)}
             assignments={assignments.filter((a) => !a.deletedAt)}
-            onAdd={handleAddPrompt}
-            onUpdate={handleUpdatePrompt}
-            onUpvote={handlePromptUpvote}
+            onAdd={canWrite ? handleAddPrompt : undefined}
+            onUpdate={canWrite ? handleUpdatePrompt : undefined}
+            onUpvote={canWrite ? handlePromptUpvote : undefined}
             onViewDetail={(id) => navigateTo('prompt-detail', id)}
             userProfile={userProfile}
             upvotedPromptIds={upvotedPromptIds}
@@ -1514,9 +1546,9 @@ const App: React.FC = () => {
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
             campersCount={campers.length}
-            onAdd={isLoggedIn ? handleAddAssignment : undefined}
+            onAdd={canWrite ? handleAddAssignment : undefined}
             onViewDetail={(id) => navigateTo('assignment-detail', id)}
-            onAddPrompt={isLoggedIn ? handleAddPrompt : undefined}
+            onAddPrompt={canWrite ? handleAddPrompt : undefined}
             userProfile={userProfile}
             spreadsheetId={spreadsheetId}
             availableTags={availableTags}
@@ -1541,7 +1573,7 @@ const App: React.FC = () => {
             submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             assignments={assignments.filter((a) => !a.deletedAt)}
             prompts={prompts.filter((p) => !p.deletedAt)}
-            onAdd={isLoggedIn ? handleAddSubmission : undefined}
+            onAdd={canWrite ? handleAddSubmission : undefined}
             onViewDetail={(id) => navigateTo('song-detail', id)}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -1569,7 +1601,7 @@ const App: React.FC = () => {
             onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
             campers={campers}
-            onAddCollaborators={isLoggedIn ? handleAddCollaborators : undefined}
+            onAddCollaborators={canWrite ? handleAddCollaborators : undefined}
           />
         );
       case 'events':
@@ -1608,7 +1640,7 @@ const App: React.FC = () => {
             onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
-            onUpvote={handlePromptUpvote}
+            onUpvote={canWrite ? handlePromptUpvote : undefined}
             upvotedPromptIds={upvotedPromptIds}
             upvotingPromptId={upvotingPromptId}
             currentUser={userProfile}
@@ -1633,17 +1665,17 @@ const App: React.FC = () => {
             events={events.filter((e) => !e.deletedAt)}
             campersCount={campers.length}
             onNavigate={navigateTo}
-            onUpdate={isLoggedIn ? handleUpdateAssignment : undefined}
+            onUpdate={canWrite ? handleUpdateAssignment : undefined}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
             onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             queueingTrackId={queueingTrackId}
-            onAddSubmission={isLoggedIn ? handleAddSubmission : undefined}
-            onCreateEvent={isLoggedIn ? handleCreateEventForAssignment : undefined}
+            onAddSubmission={canWrite ? handleAddSubmission : undefined}
+            onCreateEvent={canWrite ? handleCreateEventForAssignment : undefined}
             currentUser={isLoggedIn ? userProfile : undefined}
             spreadsheetId={spreadsheetId || undefined}
-            onAddPrompt={isLoggedIn ? handleAddPrompt : undefined}
+            onAddPrompt={canWrite ? handleAddPrompt : undefined}
             availableTags={availableTags}
             bocas={bocas}
             campers={campers}
@@ -1651,7 +1683,7 @@ const App: React.FC = () => {
             favoritedSubmissionIds={isLoggedIn ? favoritedSubmissionIds : undefined}
             onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
-            onAddCollaborators={isLoggedIn ? handleAddCollaborators : undefined}
+            onAddCollaborators={canWrite ? handleAddCollaborators : undefined}
           />
         ) : null;
       case 'song-detail':
@@ -1662,7 +1694,7 @@ const App: React.FC = () => {
             assignment={assignments.find(as => as.id === s.assignmentId && !as.deletedAt)}
             prompt={prompts.find(pr => pr.id === assignments.find(as => as.id === s.assignmentId && !as.deletedAt)?.promptId)}
             onNavigate={navigateTo}
-            onUpdate={isLoggedIn ? handleUpdateSubmission : undefined}
+            onUpdate={canWrite ? handleUpdateSubmission : undefined}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
             playingTrackId={playingTrackId}
@@ -1671,16 +1703,16 @@ const App: React.FC = () => {
             spreadsheetId={spreadsheetId || undefined}
             bocas={bocas}
             currentUserEmail={userProfile?.email || ''}
-            onGiveBoca={isLoggedIn ? handleGiveBoca : undefined}
-            onUpdateBocaReason={isLoggedIn ? handleUpdateBocaReason : undefined}
+            onGiveBoca={canWrite ? handleGiveBoca : undefined}
+            onUpdateBocaReason={canWrite ? handleUpdateBocaReason : undefined}
             campers={campers}
             dateFormat={dateFormat}
             isFavorited={favoritedSubmissionIds.includes(s.id)}
             onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             togglingFavorite={togglingFavoriteId === s.id}
             collaborations={collaborations}
-            onAddCollaborator={isLoggedIn ? handleAddCollaborator : undefined}
-            onRemoveCollaborator={isLoggedIn ? handleRemoveCollaborator : undefined}
+            onAddCollaborator={canWrite ? handleAddCollaborator : undefined}
+            onRemoveCollaborator={canWrite ? handleRemoveCollaborator : undefined}
           />
         ) : null;
       case 'bocas':
@@ -1695,8 +1727,8 @@ const App: React.FC = () => {
             onAddToQueue={handleAddToQueue}
             onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
-            onGiveBoca={handleGiveBoca}
-            onUpdateBocaReason={handleUpdateBocaReason}
+            onGiveBoca={canWrite ? handleGiveBoca : undefined}
+            onUpdateBocaReason={canWrite ? handleUpdateBocaReason : undefined}
             viewMode={bocasViewMode}
             onViewModeChange={setBocasViewMode}
             searchTerm={bocasSearch}
@@ -1791,6 +1823,8 @@ const App: React.FC = () => {
             comments={comments}
             bocas={bocas}
             campers={campers}
+            onAddCamper={handleAddCamper}
+            onCancelInvite={handleCancelInvite}
           />
         );
       case 'changelog':

@@ -84,7 +84,12 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 truncate">{camper.name || 'Unknown'}</p>
+                        <p className="font-semibold text-slate-800 truncate">
+                          {camper.name || 'Unknown'}
+                          {camper.role === 'visitor' && (
+                            <span className="ml-2 text-[10px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full align-middle">Visitor</span>
+                          )}
+                        </p>
                         <p className="text-xs text-slate-500 truncate sm:hidden">
                           {camper.intakeSemester || camper.location || camper.email}
                         </p>
@@ -144,7 +149,12 @@ const CampersPage: React.FC<CampersPageProps> = ({ campers, onNavigate, viewMode
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">{camper.name || 'Unknown'}</h3>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {camper.name || 'Unknown'}
+                    {camper.role === 'visitor' && (
+                      <span className="ml-2 text-[10px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full align-middle">Visitor</span>
+                    )}
+                  </h3>
                   <p className="text-xs text-slate-500">{camper.email}</p>
                 </div>
               </div>

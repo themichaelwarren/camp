@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as googleService from '../services/googleService';
-import { Submission, Comment as CommentType, Boca, CamperProfile } from '../types';
+import { Submission, Comment as CommentType, Boca, CamperProfile, CamperRole } from '../types';
 import { DateFormat, formatDate } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
@@ -12,7 +12,7 @@ interface SettingsPageProps {
   onThemeChange: (value: 'light' | 'dark' | 'system') => void;
   dateFormat: DateFormat;
   onDateFormatChange: (value: DateFormat) => void;
-  userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string } | null;
+  userProfile?: { id?: string; name?: string; email?: string; picture?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string; role?: CamperRole } | null;
   onProfileUpdate: (updates: { location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }) => void;
   rememberMe: boolean;
   onRememberMeChange: (value: boolean) => void;
@@ -22,9 +22,11 @@ interface SettingsPageProps {
   comments?: CommentType[];
   bocas?: Boca[];
   campers?: CamperProfile[];
+  onAddCamper?: (email: string, role: CamperRole, name?: string) => Promise<void>;
+  onCancelInvite?: (email: string) => Promise<void>;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [], allSemesters = [], spreadsheetId, comments = [], bocas = [], campers = [] }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeChange, dateFormat, onDateFormatChange, userProfile, onProfileUpdate, rememberMe, onRememberMeChange, submissions = [], allSemesters = [], spreadsheetId, comments = [], bocas = [], campers = [], onAddCamper, onCancelInvite }) => {
   const [location, setLocation] = useState(userProfile?.location || '');
   const [status, setStatus] = useState(userProfile?.status || '');
   const [intakeSemester, setIntakeSemester] = useState(userProfile?.intakeSemester || '');
@@ -34,7 +36,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
   const [toast, setToast] = useState<string | null>(null);
   const [shareProgress, setShareProgress] = useState<string | null>(null);
   const [convertProgress, setConvertProgress] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState<CamperRole>('camper');
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [inviteError, setInviteError] = useState('');
+  const [cancellingEmail, setCancellingEmail] = useState<string | null>(null);
   const isAdmin = userProfile?.id === ADMIN_USER_ID;
+  const isVisitor = userProfile?.role === 'visitor';
 
   useEffect(() => {
     setLocation(userProfile?.location || '');
@@ -106,6 +115,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
         <h2 className="text-2xl font-bold text-slate-800">Settings</h2>
         <p className="text-slate-500 text-sm mt-2">Personalize your camp workspace.</p>
       </div>
+
+      {isVisitor && (
+        <section className="bg-amber-50 border border-amber-200 rounded-3xl p-6 flex items-start gap-4">
+          <i className="fa-solid fa-id-badge text-amber-500 text-xl mt-0.5"></i>
+          <div>
+            <h3 className="text-sm font-bold text-amber-800">Visitor Pass</h3>
+            <p className="text-xs text-amber-600 mt-1">You're browsing Camp as a visitor. You can explore all songs, assignments, and camper profiles, and leave comments and reactions.</p>
+          </div>
+        </section>
+      )}
 
       <section className="bg-white border border-slate-200 rounded-3xl p-8">
         <h3 className="text-lg font-bold text-slate-800">Profile</h3>
@@ -441,6 +460,170 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ themePreference, onThemeCha
               <p className="text-[10px] text-slate-400 mt-2">Scans all lyrics docs and converts any .docx Word files to native Google Docs so lyrics display in the player. Safe to run multiple times.</p>
             </div>
           )}
+        </section>
+      )}
+
+      {isAdmin && onAddCamper && (
+        <section className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-bold text-slate-800">Manage Campers</h3>
+          <p className="text-slate-500 text-sm mt-1">Invite new campers or send visitor passes.</p>
+
+          <form
+            className="mt-6 space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const email = inviteEmail.trim().toLowerCase();
+              if (!email) return;
+              if (campers.some(c => c.email.toLowerCase() === email)) {
+                setInviteError('A user with this email already exists.');
+                setInviteStatus('error');
+                return;
+              }
+              setInviteStatus('sending');
+              setInviteError('');
+              try {
+                await onAddCamper(email, inviteRole, inviteName.trim() || undefined);
+                setInviteStatus('success');
+                setInviteEmail('');
+                setInviteName('');
+                setInviteRole('camper');
+                setTimeout(() => setInviteStatus('idle'), 3000);
+              } catch (err: any) {
+                setInviteError(err?.message || 'Failed to send invite.');
+                setInviteStatus('error');
+              }
+            }}
+          >
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+              <input
+                type="email"
+                required
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                value={inviteEmail}
+                onChange={(e) => { setInviteEmail(e.target.value); setInviteStatus('idle'); setInviteError(''); }}
+                placeholder="camper@gmail.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Name (optional)</label>
+              <input
+                type="text"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 text-base focus:ring-2 focus:ring-indigo-500"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="Their name"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Access Level</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInviteRole('camper')}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all border ${
+                    inviteRole === 'camper'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200'
+                  }`}
+                >
+                  <i className="fa-solid fa-campground mr-1.5"></i>
+                  Full Camper
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInviteRole('visitor')}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all border ${
+                    inviteRole === 'visitor'
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-amber-200'
+                  }`}
+                >
+                  <i className="fa-solid fa-id-badge mr-1.5"></i>
+                  Visitor Pass
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1.5">
+                {inviteRole === 'camper'
+                  ? 'Full access: submit songs, create prompts, give BOCAs, and more.'
+                  : 'Read-only access with commenting. Can browse everything but cannot submit songs or create content.'}
+              </p>
+            </div>
+            {inviteError && (
+              <p className="text-sm text-red-600 font-medium">{inviteError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={inviteStatus === 'sending'}
+              className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                inviteStatus === 'success'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              } disabled:opacity-50`}
+            >
+              {inviteStatus === 'sending' ? (
+                <><i className="fa-solid fa-spinner fa-spin"></i> Sending Invite...</>
+              ) : inviteStatus === 'success' ? (
+                <><i className="fa-solid fa-check"></i> Invite Sent!</>
+              ) : (
+                <><i className="fa-solid fa-paper-plane"></i> Send Invite</>
+              )}
+            </button>
+          </form>
+
+          {/* Pending invites */}
+          {(() => {
+            const pending = campers.filter(c => !c.lastSignedInAt && c.email);
+            if (pending.length === 0) return null;
+            return (
+              <div className="mt-8">
+                <h4 className="text-sm font-bold text-slate-800 mb-3">Pending Invites</h4>
+                <div className="space-y-2">
+                  {pending.map(c => (
+                    <div key={c.email} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-envelope text-slate-400 text-xs"></i>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-700 truncate">{c.name || c.email}</p>
+                          {c.name && <p className="text-xs text-slate-400 truncate">{c.email}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                          c.role === 'visitor' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'
+                        }`}>
+                          {c.role === 'visitor' ? 'Visitor' : 'Camper'}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pending</span>
+                        {onCancelInvite && (
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Cancel invite for ${c.name || c.email}?`)) return;
+                              setCancellingEmail(c.email);
+                              try {
+                                await onCancelInvite(c.email);
+                              } catch (err) {
+                                console.error('Failed to cancel invite', err);
+                              } finally {
+                                setCancellingEmail(null);
+                              }
+                            }}
+                            disabled={cancellingEmail === c.email}
+                            className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                            title="Cancel invite"
+                          >
+                            <i className={`fa-solid ${cancellingEmail === c.email ? 'fa-spinner fa-spin' : 'fa-xmark'} text-xs`}></i>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </section>
       )}
     </div>

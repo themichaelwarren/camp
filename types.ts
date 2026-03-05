@@ -66,6 +66,8 @@ export interface Submission {
   aboutDocUrl?: string;
 }
 
+export type CamperRole = 'camper' | 'visitor';
+
 export interface CamperProfile {
   id: string;
   name: string;
@@ -77,6 +79,7 @@ export interface CamperProfile {
   pictureOverrideUrl?: string;
   statusUpdatedAt?: string;
   intakeSemester?: string;
+  role?: CamperRole;
 }
 
 export interface Comment {

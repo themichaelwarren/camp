@@ -5,6 +5,7 @@ interface Env {
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: string;
   GITHUB_PAT: string;
+  RESEND_API_KEY: string;
 }
 
 interface OgMeta {
@@ -326,7 +327,7 @@ async function handlePublicData(env: Env): Promise<Response> {
   const [assignments, submissions, campers, collaborators, bocas, statusUpdates] = await Promise.all([
     fetchSheet(env, 'Assignments!A2:N1000', 'pub-assignments'),
     fetchSheet(env, 'Submissions!A2:R1000', 'pub-submissions'),
-    fetchSheet(env, 'Users!A2:J1000', 'pub-campers'),
+    fetchSheet(env, 'Users!A2:K1000', 'pub-campers'),
     fetchSheet(env, 'Collaborators!A2:F5000', 'pub-collaborators'),
     fetchSheet(env, 'BOCAs!A2:E5000', 'pub-bocas'),
     fetchSheet(env, 'StatusUpdates!A2:E5000', 'pub-statusupdates'),
@@ -510,6 +511,101 @@ async function handleGitHubIssueCreate(request: Request, env: Env): Promise<Resp
   });
 }
 
+// --- Send Invite Email ---
+
+async function handleSendInvite(request: Request, env: Env): Promise<Response> {
+  const isValid = await verifyCallerToken(request.headers.get('Authorization'));
+  if (!isValid) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const body = await request.json() as {
+    email: string;
+    name?: string;
+    role: 'camper' | 'visitor';
+  };
+
+  if (!body.email?.trim()) {
+    return new Response(JSON.stringify({ error: 'Email is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const roleLabel = body.role === 'visitor' ? 'Visitor Pass' : 'Full Camper';
+  const greeting = body.name ? `Hi ${esc(body.name)}` : 'Hi there';
+  const appUrl = 'https://camp.themichaelwarren.com';
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#fff;border-radius:24px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:32px;text-align:center;">
+      <h1 style="margin:0;font-size:28px;color:#fff;font-weight:800;">Camp</h1>
+      <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.8);">Songwriter Toolkit</p>
+    </div>
+    <div style="padding:32px;">
+      <p style="color:#475569;font-size:16px;line-height:1.6;margin:0 0 16px;">${greeting},</p>
+      <p style="color:#475569;font-size:16px;line-height:1.6;margin:0 0 24px;">
+        You've been invited to join <strong>Camp</strong> as a <strong>${esc(roleLabel)}</strong>.
+        ${body.role === 'visitor'
+          ? 'As a visitor, you can browse all songs, assignments, and camper profiles, and leave comments and reactions.'
+          : 'As a full camper, you have full access to submit songs, create prompts, give BOCAs, and more.'}
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${appUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">
+          Sign in to Camp
+        </a>
+      </div>
+      <p style="color:#94a3b8;font-size:13px;line-height:1.5;margin:0;">
+        Sign in with your Google account (<strong>${esc(body.email)}</strong>) to get started.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  if (!env.RESEND_API_KEY) {
+    // Email not configured — silently succeed so the invite still works
+    return new Response(JSON.stringify({ message: 'Email skipped (no RESEND_API_KEY configured)' }), {
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Camp <camp@themichaelwarren.com>',
+      to: [body.email],
+      subject: body.role === 'visitor'
+        ? `You've got a Visitor Pass for Camp`
+        : `You're invited to join Camp`,
+      html: htmlBody,
+    }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    return new Response(JSON.stringify({ error: 'Failed to send email', details: err }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const result = await resp.json();
+  return new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  });
+}
+
 // --- Main Handler ---
 
 export default {
@@ -541,6 +637,11 @@ export default {
     const lyricsMatch = url.pathname.match(/^\/api\/lyrics\/(.+)$/);
     if (lyricsMatch) {
       return handleLyricsProxy(lyricsMatch[1], env);
+    }
+
+    // Send invite email
+    if (url.pathname === '/api/send-invite' && request.method === 'POST') {
+      return handleSendInvite(request, env);
     }
 
     // GitHub issues proxy

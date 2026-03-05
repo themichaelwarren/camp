@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, Boca, StatusUpdate, Notification, NotificationType } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, CamperRole, Boca, StatusUpdate, Notification, NotificationType } from '../types';
 import { getTerm } from '../utils';
 
 // Global declaration for the Google Identity Services script
@@ -642,7 +642,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'Assignments!A2:N1000',
     'Submissions!A2:S1000',
     'Comments!A2:J5000',
-    'Users!A2:J1000',
+    'Users!A2:K1000',
     'Events!A2:O5000',
     'Tags!A2:C1000',
     'PromptUpvotes!A2:E5000',
@@ -761,7 +761,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     status: row[6] || '',
     pictureOverrideUrl: row[7] || '',
     statusUpdatedAt: row[8] || '',
-    intakeSemester: row[9] || ''
+    intakeSemester: row[9] || '',
+    role: (row[10] === 'visitor' ? 'visitor' : 'camper') as CamperRole
   }));
 
   const events: Event[] = eventsRaw.map((row: any[]) => ({
@@ -917,7 +918,8 @@ const parseCamperRow = (row: any[]): CamperProfile => ({
   status: row[6] || '',
   pictureOverrideUrl: row[7] || '',
   statusUpdatedAt: row[8] || '',
-  intakeSemester: row[9] || ''
+  intakeSemester: row[9] || '',
+  role: (row[10] === 'visitor' ? 'visitor' : 'camper') as CamperRole
 });
 
 const parseCollaboratorRow = (row: any[]): Collaboration => ({
@@ -959,7 +961,7 @@ export const fetchPublicData = async () => {
   } catch {
     // Fallback: direct Sheets API for local dev
     const ranges = [
-      'Assignments!A2:N1000', 'Submissions!A2:S1000', 'Users!A2:J1000',
+      'Assignments!A2:N1000', 'Submissions!A2:S1000', 'Users!A2:K1000',
       'Collaborators!A2:F5000', 'BOCAs!A2:E5000', 'StatusUpdates!A2:E5000'
     ];
     const rangeParams = ranges.map(r => `ranges=${encodeURIComponent(r)}`).join('&');
@@ -994,7 +996,7 @@ export const fetchPublicData = async () => {
 };
 
 export const upsertUserProfile = async (spreadsheetId: string, profile: { id: string; name: string; email: string; picture?: string }) => {
-  const rowsResult = await callSheetsGet('Users!A2:J1000');
+  const rowsResult = await callSheetsGet('Users!A2:K1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === profile.id || row[2] === profile.email);
   const now = new Date().toISOString();
@@ -1010,7 +1012,8 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
     existingRow[6] || '',
     existingRow[7] || '',
     existingRow[8] || '',
-    isNew ? getTerm(now) : (existingRow[9] || '')
+    isNew ? getTerm(now) : (existingRow[9] || ''),
+    existingRow[10] || 'camper'
   ]];
 
   if (isNew) {
@@ -1018,12 +1021,12 @@ export const upsertUserProfile = async (spreadsheetId: string, profile: { id: st
   }
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:J${sheetRow}`;
+  const range = `Users!A${sheetRow}:K${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
 };
 
 export const fetchCampers = async (spreadsheetId: string) => {
-  const result = await callSheetsGet('Users!A2:J1000');
+  const result = await callSheetsGet('Users!A2:K1000');
   const rows = result.values || [];
   return rows.map((row: any[]) => ({
     id: row[0] || '',
@@ -1035,7 +1038,8 @@ export const fetchCampers = async (spreadsheetId: string) => {
     status: row[6] || '',
     pictureOverrideUrl: row[7] || '',
     statusUpdatedAt: row[8] || '',
-    intakeSemester: row[9] || ''
+    intakeSemester: row[9] || '',
+    role: (row[10] === 'visitor' ? 'visitor' : 'camper') as CamperRole
   }));
 };
 
@@ -1043,7 +1047,7 @@ export const updateUserProfileDetails = async (
   spreadsheetId: string,
   data: { id?: string; email?: string; name?: string; location?: string; status?: string; pictureOverrideUrl?: string; intakeSemester?: string }
 ) => {
-  const rowsResult = await callSheetsGet('Users!A2:J1000');
+  const rowsResult = await callSheetsGet('Users!A2:K1000');
   const rows = rowsResult.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === data.id || row[2] === data.email);
   if (rowIndex === -1) {
@@ -1065,12 +1069,62 @@ export const updateUserProfileDetails = async (
     newStatus,
     data.pictureOverrideUrl || existingRow[7] || '',
     statusUpdatedAt,
-    data.intakeSemester || existingRow[9] || ''
+    data.intakeSemester || existingRow[9] || '',
+    existingRow[10] || 'camper'
   ]];
 
   const sheetRow = rowIndex + 2;
-  const range = `Users!A${sheetRow}:J${sheetRow}`;
+  const range = `Users!A${sheetRow}:K${sheetRow}`;
   return updateSheetRows(spreadsheetId, range, rowValues);
+};
+
+export const addInvitedUser = async (
+  spreadsheetId: string,
+  data: { email: string; name?: string; role: CamperRole }
+) => {
+  const rowsResult = await callSheetsGet('Users!A2:K1000');
+  const rows = rowsResult.values || [];
+  const existing = rows.findIndex((row: any[]) => row[2]?.toLowerCase() === data.email.toLowerCase());
+  if (existing !== -1) {
+    throw new Error('A user with this email already exists.');
+  }
+  const rowValues = [[
+    '',             // id — filled on first login
+    data.name || '',
+    data.email,
+    '',             // picture
+    '',             // lastSignedInAt
+    '',             // location
+    '',             // status
+    '',             // pictureOverrideUrl
+    '',             // statusUpdatedAt
+    '',             // intakeSemester
+    data.role
+  ]];
+  return appendSheetRow(spreadsheetId, 'Users!A1', rowValues);
+};
+
+export const deletePendingUser = async (
+  spreadsheetId: string,
+  email: string
+): Promise<void> => {
+  const result = await callSheetsGet('Users!A2:K1000');
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[2]?.toLowerCase() === email.toLowerCase());
+  if (rowIndex === -1) throw new Error('User not found.');
+  // Only allow deleting users who haven't signed in yet (pending invites)
+  if (rows[rowIndex][5]) throw new Error('Cannot cancel invite for a user who has already signed in.');
+
+  const metadata = await callSheetsMetadata();
+  const usersSheet = metadata.sheets.find((s: any) => s.properties.title === 'Users');
+  const sheetId = usersSheet.properties.sheetId;
+
+  const sheetRow = rowIndex + 1; // +1 for header
+  await callSheetsBatchUpdate([{
+    deleteDimension: {
+      range: { sheetId, dimension: 'ROWS', startIndex: sheetRow, endIndex: sheetRow + 1 }
+    }
+  }]);
 };
 
 export const fetchUserUpvotes = async (spreadsheetId: string, userEmail: string) => {

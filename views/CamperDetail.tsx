@@ -154,7 +154,12 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                 {camper.intakeSemester.replace(/^(\w)\w+\s+\d{2}(\d{2})$/, "$1 '$2")}
               </span>;
             })()}
-            <h2 className="text-xl sm:text-3xl font-bold text-slate-800 truncate">{camper.name || 'Unknown Camper'}</h2>
+            <h2 className="text-xl sm:text-3xl font-bold text-slate-800 truncate">
+              {camper.name || 'Unknown Camper'}
+              {camper.role === 'visitor' && (
+                <span className="ml-2 text-xs font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full align-middle">Visitor</span>
+              )}
+            </h2>
             <p className="text-slate-500 text-xs sm:text-sm mt-0.5 truncate">{camper.email}</p>
             {camper.lastSignedInAt && (
               <p className="text-[11px] text-slate-400 mt-0.5">Last active {new Date(camper.lastSignedInAt).toLocaleDateString()}</p>
