@@ -275,11 +275,19 @@ export const findOrCreateDatabase = async () => {
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
-    await callSheetsBatchUpdate(missingSheets.map((title) => ({
-      addSheet: { properties: { title } }
-    })));
+    try {
+      await callSheetsBatchUpdate(missingSheets.map((title) => ({
+        addSheet: { properties: { title } }
+      })));
+    } catch (e) {
+      // Read-only users (visitors) can't create sheets — that's fine if they already exist
+      console.warn('Could not create missing sheets (read-only access?)', e);
+    }
   }
 
+  // Schema migration: ensure all headers exist. Wrapped in try/catch so
+  // read-only users (visitors in local dev) don't crash on 403.
+  try {
   const headerRanges = [
     'Prompts!A1:J1',
     'Assignments!A1:L1',
@@ -497,6 +505,9 @@ export const findOrCreateDatabase = async () => {
       'userName',
       'createdAt'
     ]]);
+  }
+  } catch (e) {
+    console.warn('Schema migration skipped (read-only access?)', e);
   }
 
   return SPREADSHEET_ID;

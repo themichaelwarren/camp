@@ -416,12 +416,17 @@ const App: React.FC = () => {
       const sId = await googleService.findOrCreateDatabase();
       setSpreadsheetId(sId);
       if (profile?.email) {
-        await googleService.upsertUserProfile(sId, {
-          id: profile.id || profile.email,
-          name: profile.name || profile.email,
-          email: profile.email,
-          picture: profile.picture
-        });
+        try {
+          await googleService.upsertUserProfile(sId, {
+            id: profile.id || profile.email,
+            name: profile.name || profile.email,
+            email: profile.email,
+            picture: profile.picture
+          });
+        } catch (e) {
+          // Visitors in local dev may not have sheet write access — continue with read-only
+          console.warn('Could not upsert user profile (read-only access?)', e);
+        }
       } else {
         window.localStorage.removeItem('camp-auth');
       }
