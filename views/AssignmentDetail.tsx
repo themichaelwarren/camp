@@ -240,9 +240,9 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
             </div>
           </div>
         </div>
-        {currentUser && (
+        {(onAddSubmission || onUpdate) && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            {!isPastSemester && (
+            {onAddSubmission && !isPastSemester && (
               <button
                 onClick={() => setShowSubmitModal(true)}
                 className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors"
@@ -251,13 +251,15 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                 <span className="hidden sm:inline">Submit Song</span>
               </button>
             )}
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
-            >
-              <i className="fa-solid fa-pen"></i>
-              <span className="hidden sm:inline">Edit</span>
-            </button>
+            {onUpdate && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="inline-flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors"
+              >
+                <i className="fa-solid fa-pen"></i>
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
           </div>
         )}
       </div>

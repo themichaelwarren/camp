@@ -11,9 +11,9 @@ import { getPromptStatus, getPromptStatusStyle } from '../utils';
 interface PromptsPageProps {
   prompts: Prompt[];
   assignments: Assignment[];
-  onAdd: (prompt: Prompt) => void;
-  onUpdate: (prompt: Prompt) => void;
-  onUpvote: (prompt: Prompt) => void;
+  onAdd?: (prompt: Prompt) => void;
+  onUpdate?: (prompt: Prompt) => void;
+  onUpvote?: (prompt: Prompt) => void;
   onViewDetail: (id: string) => void;
   userProfile?: { name?: string; email?: string } | null;
   upvotedPromptIds: string[];
@@ -50,7 +50,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
   };
 
   const handleUpvote = (prompt: Prompt) => {
-    onUpvote(prompt);
+    onUpvote?.(prompt);
   };
 
   const handleManualAdd = async (e: React.FormEvent) => {
@@ -81,7 +81,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
       createdAt: new Date().toISOString().split('T')[0],
       createdBy: userProfile?.email || userProfile?.name || 'Admin'
     };
-    onAdd(prompt);
+    onAdd?.(prompt);
     setShowAddModal(false);
     setNewPrompt({ title: '', description: '', tags: [] });
   };
@@ -121,13 +121,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({ prompts, assignments, onAdd, 
           </div>
           <p className="text-slate-500 text-sm">Collective inspiration for your next masterpiece.</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="self-start md:self-auto inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
-        >
-          <i className="fa-solid fa-plus"></i>
-          New Prompt
-        </button>
+        {onAdd && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="self-start md:self-auto inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
+          >
+            <i className="fa-solid fa-plus"></i>
+            New Prompt
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">

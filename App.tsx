@@ -473,7 +473,8 @@ const App: React.FC = () => {
             location: match.location,
             status: match.status,
             pictureOverrideUrl: match.pictureOverrideUrl,
-            intakeSemester
+            intakeSemester,
+            role: match.role || 'camper'
           }));
         }
       } else {
