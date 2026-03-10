@@ -162,6 +162,21 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface Playlist {
+  id: string;
+  title: string;
+  description: string;
+  creatorEmail: string;
+  creatorName: string;
+  submissionIds: string[];
+  artworkFileId?: string;
+  artworkUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
 export type DocTextSegment = { text: string; bold?: boolean; italic?: boolean };
 
 export interface PlayableTrack {
@@ -194,6 +209,8 @@ export type ViewState =
   | 'favorites'
   | 'semesters'
   | 'semester-detail'
+  | 'playlists'
+  | 'playlist-detail'
   | 'changelog'
   | 'about'
   | 'feedback';

@@ -1,4 +1,4 @@
-import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, CamperRole, Boca, StatusUpdate, Notification, NotificationType } from '../types';
+import { Prompt, Assignment, Submission, PromptStatus, Comment, Event, EventAttendee, Collaboration, CollaboratorRole, CamperProfile, CamperRole, Boca, StatusUpdate, Notification, NotificationType, Playlist } from '../types';
 import { getTerm } from '../utils';
 
 // Global declaration for the Google Identity Services script
@@ -271,7 +271,7 @@ export const findOrCreateDatabase = async () => {
   const metadata = await callSheetsMetadata();
 
   const existingSheets = (metadata.sheets || []).map((sheet: any) => sheet.properties?.title);
-  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators', 'Notifications', 'FeedbackUpvotes'];
+  const requiredSheets = ['Prompts', 'Assignments', 'Submissions', 'Users', 'PromptUpvotes', 'Comments', 'Tags', 'Events', 'BOCAs', 'StatusUpdates', 'Favorites', 'Collaborators', 'Notifications', 'FeedbackUpvotes', 'Playlists'];
   const missingSheets = requiredSheets.filter((title) => !existingSheets.includes(title));
 
   if (missingSheets.length > 0) {
@@ -302,7 +302,8 @@ export const findOrCreateDatabase = async () => {
     'Favorites!A1:D1',
     'Collaborators!A1:F1',
     'Notifications!A1:K1',
-    'FeedbackUpvotes!A1:E1'
+    'FeedbackUpvotes!A1:E1',
+    'Playlists!A1:L1'
   ];
   const headersResult = await callSheetsBatchGet(headerRanges);
   const headerValues = headersResult.valueRanges || [];
@@ -506,6 +507,24 @@ export const findOrCreateDatabase = async () => {
       'createdAt'
     ]]);
   }
+
+  const playlistsHeader = headerValues[14]?.values?.[0] || [];
+  if (playlistsHeader.length < 12) {
+    await updateSheetRows(SPREADSHEET_ID, 'Playlists!A1', [[
+      'id',
+      'title',
+      'description',
+      'creatorEmail',
+      'creatorName',
+      'submissionIdsJson',
+      'artworkFileId',
+      'artworkUrl',
+      'createdAt',
+      'updatedAt',
+      'deletedAt',
+      'deletedBy'
+    ]]);
+  }
   } catch (e) {
     console.warn('Schema migration skipped (read-only access?)', e);
   }
@@ -662,7 +681,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'BOCAs!A2:E5000',
     'StatusUpdates!A2:E5000',
     'Notifications!A2:K5000',
-    'FeedbackUpvotes!A2:E5000'
+    'FeedbackUpvotes!A2:E5000',
+    'Playlists!A2:L1000'
   ];
   const result = await callSheetsBatchGet(ranges);
 
@@ -850,7 +870,23 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
         .filter((n: number) => !isNaN(n))
     : [];
 
-  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications, upvotedIssueNumbers };
+  const playlistsRaw = result.valueRanges[14]?.values || [];
+  const playlists: Playlist[] = playlistsRaw.map((row: any[]) => ({
+    id: row[0] || '',
+    title: row[1] || 'Untitled Playlist',
+    description: row[2] || '',
+    creatorEmail: row[3] || '',
+    creatorName: row[4] || '',
+    submissionIds: (() => { try { return JSON.parse(row[5] || '[]'); } catch { return []; } })(),
+    artworkFileId: row[6] || '',
+    artworkUrl: row[7] || '',
+    createdAt: row[8] || '',
+    updatedAt: row[9] || '',
+    deletedAt: row[10] || '',
+    deletedBy: row[11] || ''
+  }));
+
+  return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications, upvotedIssueNumbers, playlists };
 };
 
 // --- Row parsers shared between fetchAllData and fetchPublicData ---
@@ -1311,6 +1347,73 @@ export const removeCollaborator = async (
       range: { sheetId, dimension: 'ROWS', startIndex: sheetRow, endIndex: sheetRow + 1 }
     }
   }]);
+};
+
+// --- Playlists ---
+
+export const createPlaylist = async (
+  spreadsheetId: string,
+  data: { title: string; description?: string; creatorEmail: string; creatorName: string }
+): Promise<string> => {
+  const id = Math.random().toString(36).substr(2, 9);
+  const now = new Date().toISOString();
+  const row = [[
+    id,
+    data.title,
+    data.description || '',
+    data.creatorEmail,
+    data.creatorName,
+    '[]',
+    '',
+    '',
+    now,
+    now,
+    '',
+    ''
+  ]];
+  await appendSheetRow(spreadsheetId, 'Playlists!A1', row);
+  return id;
+};
+
+export const updatePlaylistRow = async (spreadsheetId: string, playlist: Playlist) => {
+  const result = await callSheetsGet('Playlists!A2:L1000');
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === playlist.id);
+  if (rowIndex === -1) throw new Error('Playlist not found');
+  const sheetRow = rowIndex + 2;
+  await updateSheetRows(spreadsheetId, `Playlists!A${sheetRow}`, [[
+    playlist.id,
+    playlist.title,
+    playlist.description,
+    playlist.creatorEmail,
+    playlist.creatorName,
+    JSON.stringify(playlist.submissionIds),
+    playlist.artworkFileId || '',
+    playlist.artworkUrl || '',
+    playlist.createdAt,
+    playlist.updatedAt,
+    playlist.deletedAt || '',
+    playlist.deletedBy || ''
+  ]]);
+};
+
+export const deletePlaylist = async (
+  spreadsheetId: string,
+  playlistId: string,
+  userEmail: string
+) => {
+  const result = await callSheetsGet('Playlists!A2:L1000');
+  const rows = result.values || [];
+  const rowIndex = rows.findIndex((row: any[]) => row[0] === playlistId);
+  if (rowIndex === -1) throw new Error('Playlist not found');
+  const sheetRow = rowIndex + 2;
+  const row = rows[rowIndex];
+  await updateSheetRows(spreadsheetId, `Playlists!A${sheetRow}`, [[
+    row[0], row[1], row[2], row[3], row[4], row[5], row[6] || '', row[7] || '', row[8],
+    new Date().toISOString(),
+    new Date().toISOString(),
+    userEmail
+  ]]);
 };
 
 export const fetchUserProfile = async () => {

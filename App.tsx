@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, CamperRole, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole, Notification } from './types';
+import { Prompt, Assignment, Submission, ViewState, PromptStatus, CamperProfile, CamperRole, Event, PlayableTrack, Boca, StatusUpdate, Comment, Collaboration, CollaboratorRole, Notification, Playlist } from './types';
 import { buildPath, parsePath, parseHash, resolveShortId, getDefaultPageMeta, updateMetaTags, PageMeta, isPublicView, PUBLIC_DEFAULT_VIEW } from './router';
 import { DateFormat } from './utils';
 import Layout from './components/Layout';
@@ -22,6 +22,8 @@ import FavoritesPage from './views/FavoritesPage';
 import SemestersPage from './views/SemestersPage';
 import SemesterDetail from './views/SemesterDetail';
 import FeedbackPage from './views/FeedbackPage';
+import PlaylistsPage from './views/PlaylistsPage';
+import PlaylistDetail from './views/PlaylistDetail';
 import * as googleService from './services/googleService';
 import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible, smartShuffle } from './utils';
 
@@ -111,6 +113,7 @@ const App: React.FC = () => {
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
   // Persist read notification IDs in localStorage so they survive re-auth
   const cacheReadNotificationIds = (ids: string[]) => {
@@ -442,6 +445,7 @@ const App: React.FC = () => {
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
       setNotifications(mergeReadStatus(data.notifications));
+      setPlaylists(data.playlists || []);
       if (profile?.email && sId) {
         googleService.checkDeadlineReminders(sId, data.assignments, data.notifications, profile.email)
           .then(newReminders => {
@@ -527,6 +531,7 @@ const App: React.FC = () => {
       setBocas(data.bocas);
       setStatusUpdates(data.statusUpdates);
       setNotifications(mergeReadStatus(data.notifications));
+      setPlaylists(data.playlists || []);
 
       if (userProfile?.email) {
         setUpvotedPromptIds(data.upvotedPromptIds);
@@ -1445,6 +1450,47 @@ const App: React.FC = () => {
     setCampers(updatedCampers);
   };
 
+  // --- Playlists ---
+  const handleCreatePlaylist = async (title: string) => {
+    if (!spreadsheetId || !userProfile?.email) return;
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const now = new Date().toISOString();
+    const newPlaylist: Playlist = {
+      id: tempId, title, description: '', creatorEmail: userProfile.email, creatorName: userProfile.name || 'Unknown',
+      submissionIds: [], createdAt: now, updatedAt: now
+    };
+    setPlaylists(prev => [newPlaylist, ...prev]);
+    try {
+      const realId = await googleService.createPlaylist(spreadsheetId, { title, creatorEmail: userProfile.email, creatorName: userProfile.name || 'Unknown' });
+      setPlaylists(prev => prev.map(p => p.id === tempId ? { ...p, id: realId } : p));
+    } catch (e) {
+      console.error('Failed to create playlist', e);
+      setPlaylists(prev => prev.filter(p => p.id !== tempId));
+    }
+  };
+
+  const handleUpdatePlaylist = async (playlist: Playlist) => {
+    if (!spreadsheetId) return;
+    setPlaylists(prev => prev.map(p => p.id === playlist.id ? playlist : p));
+    try {
+      await googleService.updatePlaylistRow(spreadsheetId, playlist);
+    } catch (e) {
+      console.error('Failed to update playlist', e);
+    }
+  };
+
+  const handleDeletePlaylist = async (playlistId: string) => {
+    if (!spreadsheetId || !userProfile?.email) return;
+    const prev = playlists;
+    setPlaylists(p => p.map(pl => pl.id === playlistId ? { ...pl, deletedAt: new Date().toISOString(), deletedBy: userProfile.email } : pl));
+    try {
+      await googleService.deletePlaylist(spreadsheetId, playlistId, userProfile.email);
+    } catch (e) {
+      console.error('Failed to delete playlist', e);
+      setPlaylists(prev);
+    }
+  };
+
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
   const unreadNotificationCount = useMemo(
@@ -1768,6 +1814,43 @@ const App: React.FC = () => {
             collaborations={collaborations}
           />
         );
+      case 'playlists':
+        return (
+          <PlaylistsPage
+            playlists={playlists.filter(p => !p.deletedAt)}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
+            collaborations={collaborations}
+            onViewDetail={(id) => navigateTo('playlist-detail', id)}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
+            onPlayTrack={handlePlayTrack}
+            onShufflePlay={handleShufflePlay}
+            playingTrackId={playingTrackId}
+            bocas={bocas}
+            userProfile={userProfile}
+          />
+        );
+      case 'playlist-detail': {
+        const pl = playlists.find(p => p.id === selectedId || p.id.endsWith(selectedId || ''));
+        return pl && !pl.deletedAt ? (
+          <PlaylistDetail
+            playlist={pl}
+            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
+            assignments={assignments.filter(a => !a.deletedAt)}
+            collaborations={collaborations}
+            onNavigate={navigateTo}
+            onUpdate={canWrite && userProfile?.email === pl.creatorEmail ? handleUpdatePlaylist : undefined}
+            onDelete={canWrite && userProfile?.email === pl.creatorEmail ? handleDeletePlaylist : undefined}
+            onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
+            onShufflePlay={handleShufflePlay}
+            playingTrackId={playingTrackId}
+            queueingTrackId={queueingTrackId}
+            userProfile={userProfile}
+            bocas={bocas}
+            spreadsheetId={spreadsheetId || undefined}
+          />
+        ) : null;
+      }
       case 'semesters':
         return (
           <SemestersPage

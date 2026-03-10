@@ -99,6 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
     ]},
     { label: 'Music', items: [
       { id: 'submissions', label: 'Songs', icon: 'fa-music' },
+      { id: 'playlists', label: 'Playlists', icon: 'fa-rectangle-list' },
       { id: 'favorites', label: 'Favorites', icon: 'fa-heart' },
       { id: 'bocas', label: 'BOCAs', icon: 'fa-star' },
     ]},

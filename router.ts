@@ -51,6 +51,7 @@ const VIEW_TO_SEGMENT: Record<string, string> = {
   settings: 'settings',
   bocas: 'bocas',
   favorites: 'favorites',
+  playlists: 'playlists',
   semesters: 'semesters',
   changelog: 'whats-new',
   about: 'about',
@@ -64,6 +65,7 @@ const DETAIL_VIEW_TO_SEGMENT: Record<string, string> = {
   'event-detail': 'events',
   'camper-detail': 'campers',
   'semester-detail': 'semesters',
+  'playlist-detail': 'playlists',
 };
 
 const SEGMENT_TO_VIEW: Record<string, ViewState> = {
@@ -77,6 +79,7 @@ const SEGMENT_TO_VIEW: Record<string, ViewState> = {
   settings: 'settings',
   bocas: 'bocas',
   favorites: 'favorites',
+  playlists: 'playlists',
   semesters: 'semesters',
   'whats-new': 'changelog',
   about: 'about',
@@ -90,6 +93,7 @@ const SEGMENT_TO_DETAIL_VIEW: Record<string, ViewState> = {
   events: 'event-detail',
   campers: 'camper-detail',
   semesters: 'semester-detail',
+  playlists: 'playlist-detail',
 };
 
 // --- Building URLs ---
@@ -192,6 +196,7 @@ const VIEW_TITLES: Record<string, string> = {
   settings: 'Settings',
   bocas: 'BOCAs',
   favorites: 'Favorites',
+  playlists: 'Playlists',
   semesters: 'Semesters',
   changelog: "What's New",
   about: 'About Camp',
