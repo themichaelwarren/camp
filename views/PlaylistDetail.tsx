@@ -240,7 +240,13 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
               {tracks.length > 0 && (
                 <>
                   <button
-                    onClick={() => { if (tracks[0]) onPlayTrack(tracks[0].track); }}
+                    onClick={async () => {
+                      const allTracks = tracks.map(t => t.track);
+                      await onPlayTrack(allTracks[0]);
+                      for (let i = 1; i < allTracks.length; i++) {
+                        await onAddToQueue(allTracks[i]);
+                      }
+                    }}
                     className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors"
                   >
                     <i className="fa-solid fa-play text-[9px]"></i>

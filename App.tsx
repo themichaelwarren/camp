@@ -1823,6 +1823,7 @@ const App: React.FC = () => {
             onViewDetail={(id) => navigateTo('playlist-detail', id)}
             onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
             onPlayTrack={handlePlayTrack}
+            onAddToQueue={handleAddToQueue}
             onShufflePlay={handleShufflePlay}
             playingTrackId={playingTrackId}
             bocas={bocas}

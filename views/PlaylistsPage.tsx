@@ -10,13 +10,14 @@ interface PlaylistsPageProps {
   onViewDetail: (id: string) => void;
   onCreatePlaylist?: (title: string) => void;
   onPlayTrack: (track: PlayableTrack) => Promise<void>;
+  onAddToQueue: (track: PlayableTrack) => Promise<void>;
   onShufflePlay: (tracks: PlayableTrack[]) => Promise<void>;
   playingTrackId?: string | null;
   bocas: Boca[];
   userProfile?: { name?: string; email?: string } | null;
 }
 
-const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ playlists, submissions, collaborations, onViewDetail, onCreatePlaylist, onPlayTrack, onShufflePlay, playingTrackId, bocas, userProfile }) => {
+const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ playlists, submissions, collaborations, onViewDetail, onCreatePlaylist, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, bocas, userProfile }) => {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -149,7 +150,7 @@ const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ playlists, submissions, c
                       {tracks.length > 0 && (
                         <>
                           <button
-                            onClick={e => { e.stopPropagation(); if (tracks[0]) onPlayTrack(tracks[0]); }}
+                            onClick={async e => { e.stopPropagation(); await onPlayTrack(tracks[0]); for (let i = 1; i < tracks.length; i++) { await onAddToQueue(tracks[i]); } }}
                             className="w-10 h-10 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
                           >
                             <i className="fa-solid fa-play text-sm ml-0.5"></i>
