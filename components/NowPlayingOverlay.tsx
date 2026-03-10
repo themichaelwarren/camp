@@ -39,6 +39,8 @@ interface NowPlayingOverlayProps {
   bocaCount?: number;
   isFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -70,11 +72,13 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   lyricsDocUrl,
   bocaCount,
   isFavorited,
-  onToggleFavorite
+  onToggleFavorite,
+  playlists,
+  onAddToPlaylist
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
-  const [sidePanel, setSidePanel] = useState<'queue' | 'lyrics'>('queue');
+  const [sidePanel, setSidePanel] = useState<'queue' | 'lyrics'>('lyrics');
   const [lyrics, setLyrics] = useState<DocTextSegment[] | null>(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -87,6 +91,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [isCompact, setIsCompact] = useState(() => window.innerHeight < 480);
   const [isShort, setIsShort] = useState(() => window.innerHeight >= 480 && window.innerHeight < 700);
   const [showStickyMini, setShowStickyMini] = useState(false);
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
+  const [addedToPlaylistId, setAddedToPlaylistId] = useState<string | null>(null);
+  const playlistPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mqCompact = window.matchMedia('(max-height: 479px)');
@@ -100,6 +107,24 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
       mqShort.removeEventListener('change', handleShort);
     };
   }, []);
+
+  // Click-outside for playlist picker
+  useEffect(() => {
+    if (!showPlaylistPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (playlistPickerRef.current && !playlistPickerRef.current.contains(e.target as Node)) {
+        setShowPlaylistPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPlaylistPicker]);
+
+  // Reset "added" feedback when song changes
+  useEffect(() => {
+    setAddedToPlaylistId(null);
+    setShowPlaylistPicker(false);
+  }, [player.submissionId]);
 
   // Sticky mini player: show compact controls when user scrolls past player on mobile
   // One-way activation — only scroll triggers show; tap-to-expand dismisses
@@ -527,6 +552,11 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
                   </button>
                 )}
+                {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                  <button onClick={() => setShowPlaylistPicker(true)} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${addedToPlaylistId ? 'text-green-500' : 'text-slate-300 hover:text-slate-500'}`} title="Add to playlist">
+                    <i className={`fa-solid ${addedToPlaylistId ? 'fa-check' : 'fa-rectangle-list'} text-xs`}></i>
+                  </button>
+                )}
                 {lyricsDocUrl && (
                   <button onClick={() => { if (sidePanel === 'lyrics' && showQueue) { setShowQueue(false); } else { setSidePanel('lyrics'); setShowQueue(true); } }} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${showQueue && sidePanel === 'lyrics' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-500'}`}>
                     <i className="fa-solid fa-align-left text-xs"></i>
@@ -603,6 +633,11 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                   {onToggleFavorite && player.submissionId && (
                     <button onClick={() => onToggleFavorite(player.submissionId!)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isFavorited ? 'text-red-500' : 'text-slate-300 hover:text-red-400'}`}>
                       <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
+                    </button>
+                  )}
+                  {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                    <button onClick={() => setShowPlaylistPicker(true)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${addedToPlaylistId ? 'text-green-500' : 'text-slate-300 hover:text-slate-500'}`} title="Add to playlist">
+                      <i className={`fa-solid ${addedToPlaylistId ? 'fa-check' : 'fa-rectangle-list'} text-xs`}></i>
                     </button>
                   )}
                   <button onClick={isJukeboxMode ? onStopJukebox : onStartJukebox} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isJukeboxMode ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500'}`} title={isJukeboxMode ? 'Stop radio' : 'Start radio'}>
@@ -707,6 +742,19 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
                       >
                         <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart ${isShort ? 'text-xs' : 'text-base'}`}></i>
+                      </button>
+                    )}
+                    {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                      <button
+                        onClick={() => setShowPlaylistPicker(true)}
+                        className={`rounded-full flex items-center justify-center transition-all ${isShort ? 'w-7 h-7' : 'w-9 h-9'} ${
+                          addedToPlaylistId
+                            ? 'text-green-500 hover:bg-green-50'
+                            : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                        }`}
+                        title="Add to playlist"
+                      >
+                        <i className={`fa-solid ${addedToPlaylistId ? 'fa-check' : 'fa-rectangle-list'} ${isShort ? 'text-xs' : 'text-sm'}`}></i>
                       </button>
                     )}
                     {lyricsDocUrl && (
@@ -974,6 +1022,43 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
           )}
         </div>
       </div>
+
+      {/* Playlist picker overlay */}
+      {showPlaylistPicker && onAddToPlaylist && player.submissionId && playlists && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={() => setShowPlaylistPicker(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div ref={playlistPickerRef} className="relative bg-white rounded-2xl shadow-2xl w-72 max-h-80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-100">
+              <p className="text-sm font-bold text-slate-800">Add to playlist</p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">{player.title}</p>
+            </div>
+            <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin' }}>
+              {playlists.map(pl => {
+                const alreadyIn = pl.id === addedToPlaylistId;
+                return (
+                  <button
+                    key={pl.id}
+                    onClick={() => {
+                      if (player.submissionId) {
+                        onAddToPlaylist(player.submissionId, pl.id);
+                        setAddedToPlaylistId(pl.id);
+                        setTimeout(() => setShowPlaylistPicker(false), 400);
+                      }
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${alreadyIn ? 'bg-green-50' : 'hover:bg-slate-50'}`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-rectangle-list text-white text-[10px]"></i>
+                    </div>
+                    <span className={`text-sm truncate flex-1 ${alreadyIn ? 'text-green-700 font-semibold' : 'text-slate-700'}`}>{pl.title}</span>
+                    {alreadyIn && <i className="fa-solid fa-check text-green-500 text-xs flex-shrink-0"></i>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   );

@@ -6,7 +6,7 @@ import Comment from './Comment';
 import CommentForm from './CommentForm';
 
 interface CommentsSectionProps {
-  entityType: 'song' | 'prompt' | 'assignment';
+  entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
   entityId: string;
   spreadsheetId: string;
   currentUser: { name: string; email: string };
@@ -94,22 +94,23 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     });
     setComments(prev => [...prev, newComment]);
 
-    if (entityType === 'song' && entityOwnerEmail && entityOwnerEmail !== currentUser.email) {
+    if ((entityType === 'song' || entityType === 'playlist') && entityOwnerEmail && entityOwnerEmail !== currentUser.email) {
+      const ownerLabel = entityType === 'playlist' ? (entityTitle || 'your playlist') : (entityTitle || 'your song');
       googleService.createNotification(spreadsheetId, {
         recipientEmail: entityOwnerEmail,
         type: 'comment_on_song',
         triggerUserEmail: currentUser.email,
         triggerUserName: currentUser.name,
-        entityType: 'song',
+        entityType,
         entityId,
         referenceId: newComment.id,
-        message: `commented on "${entityTitle || 'your song'}"`
+        message: `commented on "${ownerLabel}"`
       }).catch(err => console.error('Failed to create comment notification', err));
     }
 
     // Mention notifications
     if (mentionedEmails && mentionedEmails.length > 0) {
-      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : entityType === 'playlist' ? 'a playlist' : 'a prompt');
       const recipients = mentionedEmails.filter(e => e !== currentUser.email && e !== entityOwnerEmail);
       if (recipients.length > 0) {
         googleService.createNotifications(spreadsheetId, recipients.map(email => ({
@@ -139,7 +140,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
     const parentComment = comments.find(c => c.id === parentId);
     if (parentComment && parentComment.authorEmail !== currentUser.email) {
-      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : entityType === 'playlist' ? 'a playlist' : 'a prompt');
       googleService.createNotification(spreadsheetId, {
         recipientEmail: parentComment.authorEmail,
         type: 'reply_to_comment',
@@ -154,7 +155,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
 
     // Mention notifications for replies
     if (mentionedEmails && mentionedEmails.length > 0) {
-      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+      const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : entityType === 'playlist' ? 'a playlist' : 'a prompt');
       const alreadyNotified = new Set([currentUser.email]);
       if (parentComment) alreadyNotified.add(parentComment.authorEmail);
       const recipients = mentionedEmails.filter(e => !alreadyNotified.has(e));
@@ -187,7 +188,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
       setComments(prev => prev.map((c) => (c.id === commentId ? updatedComment : c)));
 
       if (!wasAlreadyReacted && comment && comment.authorEmail !== currentUser.email) {
-        const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : 'a prompt');
+        const label = entityTitle ? `"${entityTitle}"` : (entityType === 'song' ? 'a song' : entityType === 'assignment' ? 'an assignment' : entityType === 'playlist' ? 'a playlist' : 'a prompt');
         googleService.createNotification(spreadsheetId, {
           recipientEmail: comment.authorEmail,
           type: 'reaction_on_comment',

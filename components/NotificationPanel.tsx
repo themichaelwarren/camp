@@ -25,6 +25,7 @@ const getViewForEntityType = (entityType: string): ViewState => {
     case 'song': return 'song-detail';
     case 'assignment': return 'assignment-detail';
     case 'prompt': return 'prompt-detail';
+    case 'playlist': return 'playlist-detail';
     default: return 'song-detail';
   }
 };

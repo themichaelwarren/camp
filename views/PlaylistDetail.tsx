@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Playlist, Submission, Assignment, Collaboration, Boca, PlayableTrack, ViewState } from '../types';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { Playlist, Submission, Assignment, Collaboration, Boca, PlayableTrack, ViewState, CamperProfile } from '../types';
 import { getDisplayArtist, getPrimaryVersion } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SongPickerModal from '../components/SongPickerModal';
+import CommentsSection from '../components/CommentsSection';
 import * as googleService from '../services/googleService';
 
 interface PlaylistDetailProps {
@@ -21,9 +22,10 @@ interface PlaylistDetailProps {
   userProfile?: { name?: string; email?: string } | null;
   bocas: Boca[];
   spreadsheetId?: string;
+  campers?: CamperProfile[];
 }
 
-const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, assignments, collaborations, onNavigate, onUpdate, onDelete, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, userProfile, bocas, spreadsheetId }) => {
+const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, assignments, collaborations, onNavigate, onUpdate, onDelete, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, userProfile, bocas, spreadsheetId, campers }) => {
   const [showSongPicker, setShowSongPicker] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -31,6 +33,8 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
   const [descValue, setDescValue] = useState(playlist.description);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isUploadingArtwork, setIsUploadingArtwork] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   // Drag state (desktop)
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -43,6 +47,31 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
   const [touchDragging, setTouchDragging] = useState<number | null>(null);
 
   const isMobile = typeof window !== 'undefined' && 'ontouchstart' in window;
+
+  const isOwner = userProfile?.email === playlist.creatorEmail;
+  const currentStatus = playlist.status || 'private';
+  const allSongsPublic = useMemo(() => {
+    const playlistSongs = playlist.submissionIds.map(id => submissions.find(s => s.id === id)).filter(Boolean) as Submission[];
+    return playlistSongs.length > 0 && playlistSongs.every(s => s.status === 'public');
+  }, [playlist.submissionIds, submissions]);
+
+  // Click-outside handler for status dropdown
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [statusDropdownOpen]);
+
+  const statusConfig = {
+    private: { icon: 'fa-lock', label: 'Private', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', hover: 'hover:bg-amber-100' },
+    shared: { icon: 'fa-campground', label: 'Shared', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', hover: 'hover:bg-indigo-100' },
+    public: { icon: 'fa-globe', label: 'Public', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', hover: 'hover:bg-green-100' },
+  };
 
   const tracks = useMemo(() => {
     return playlist.submissionIds
@@ -270,10 +299,63 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
                   Add Songs
                 </button>
               )}
+              {/* Share status dropdown (owner) or badge (non-owner) */}
+              {onUpdate && isOwner ? (
+                <div className="relative ml-auto" ref={statusDropdownRef}>
+                  <button
+                    onClick={() => setStatusDropdownOpen(prev => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors ${statusConfig[currentStatus].bg} ${statusConfig[currentStatus].text} ${statusConfig[currentStatus].border} ${statusConfig[currentStatus].hover}`}
+                  >
+                    <i className={`fa-solid ${statusConfig[currentStatus].icon}`}></i>
+                    {statusConfig[currentStatus].label}
+                    <i className={`fa-solid fa-chevron-down text-[8px] opacity-40 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`}></i>
+                  </button>
+                  {statusDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 w-56 animate-in fade-in zoom-in-95 duration-150">
+                      {([
+                        { value: 'private' as const, icon: 'fa-lock', label: 'Private', desc: 'Only you can see' },
+                        { value: 'shared' as const, icon: 'fa-campground', label: 'Shared', desc: 'All campers can see' },
+                        { value: 'public' as const, icon: 'fa-globe', label: 'Public', desc: allSongsPublic ? 'Anyone with the link' : 'All songs must be public first', disabled: !allSongsPublic },
+                      ] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          disabled={'disabled' in opt && opt.disabled}
+                          onClick={() => {
+                            if (opt.value === currentStatus) { setStatusDropdownOpen(false); return; }
+                            if ('disabled' in opt && opt.disabled) return;
+                            if (opt.value === 'public') {
+                              if (!window.confirm('Make public? Anyone with the link can view this playlist.')) return;
+                            }
+                            onUpdate({ ...playlist, status: opt.value, updatedAt: new Date().toISOString() });
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                            'disabled' in opt && opt.disabled ? 'opacity-40 cursor-not-allowed' : opt.value === currentStatus ? 'bg-slate-50' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg ${statusConfig[opt.value].bg} ${statusConfig[opt.value].text} flex items-center justify-center flex-shrink-0`}>
+                            <i className={`fa-solid ${opt.icon} text-xs`}></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-semibold ${opt.value === currentStatus ? 'text-slate-900' : 'text-slate-700'}`}>{opt.label}</p>
+                            <p className="text-[10px] text-slate-400">{'disabled' in opt && opt.disabled ? opt.desc : opt.desc}</p>
+                          </div>
+                          {opt.value === currentStatus && <i className="fa-solid fa-check text-indigo-500 text-xs"></i>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : userProfile?.email ? (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ml-auto ${statusConfig[currentStatus].bg} ${statusConfig[currentStatus].text} ${statusConfig[currentStatus].border}`}>
+                  <i className={`fa-solid ${statusConfig[currentStatus].icon}`}></i>
+                  {statusConfig[currentStatus].label}
+                </span>
+              ) : null}
               {onDelete && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="inline-flex items-center gap-2 text-slate-400 hover:text-red-500 px-2 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ml-auto"
+                  className={`inline-flex items-center gap-2 text-slate-400 hover:text-red-500 px-2 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${!onUpdate ? 'ml-auto' : ''}`}
                 >
                   <i className="fa-solid fa-trash text-[9px]"></i>
                 </button>
@@ -396,6 +478,19 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
             })}
           </div>
         </div>
+      )}
+
+      {/* Comments */}
+      {userProfile?.email && userProfile?.name && spreadsheetId && (
+        <CommentsSection
+          entityType="playlist"
+          entityId={playlist.id}
+          spreadsheetId={spreadsheetId}
+          currentUser={{ name: userProfile.name, email: userProfile.email }}
+          campers={campers}
+          entityOwnerEmail={playlist.creatorEmail}
+          entityTitle={playlist.title}
+        />
       )}
 
       {/* Delete confirmation */}

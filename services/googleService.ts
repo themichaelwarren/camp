@@ -303,7 +303,7 @@ export const findOrCreateDatabase = async () => {
     'Collaborators!A1:F1',
     'Notifications!A1:K1',
     'FeedbackUpvotes!A1:E1',
-    'Playlists!A1:L1'
+    'Playlists!A1:M1'
   ];
   const headersResult = await callSheetsBatchGet(headerRanges);
   const headerValues = headersResult.valueRanges || [];
@@ -509,7 +509,7 @@ export const findOrCreateDatabase = async () => {
   }
 
   const playlistsHeader = headerValues[14]?.values?.[0] || [];
-  if (playlistsHeader.length < 12) {
+  if (playlistsHeader.length < 13) {
     await updateSheetRows(SPREADSHEET_ID, 'Playlists!A1', [[
       'id',
       'title',
@@ -522,7 +522,8 @@ export const findOrCreateDatabase = async () => {
       'createdAt',
       'updatedAt',
       'deletedAt',
-      'deletedBy'
+      'deletedBy',
+      'status'
     ]]);
   }
   } catch (e) {
@@ -682,7 +683,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     'StatusUpdates!A2:E5000',
     'Notifications!A2:K5000',
     'FeedbackUpvotes!A2:E5000',
-    'Playlists!A2:L1000'
+    'Playlists!A2:M1000'
   ];
   const result = await callSheetsBatchGet(ranges);
 
@@ -854,7 +855,7 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
           type: (row[2] || '') as NotificationType,
           triggerUserEmail: row[3] || '',
           triggerUserName: row[4] || '',
-          entityType: (row[5] || 'song') as 'song' | 'prompt' | 'assignment',
+          entityType: (row[5] || 'song') as 'song' | 'prompt' | 'assignment' | 'playlist',
           entityId: row[6] || '',
           referenceId: row[7] || '',
           message: row[8] || '',
@@ -883,7 +884,8 @@ export const fetchAllData = async (spreadsheetId: string, userEmail?: string) =>
     createdAt: row[8] || '',
     updatedAt: row[9] || '',
     deletedAt: row[10] || '',
-    deletedBy: row[11] || ''
+    deletedBy: row[11] || '',
+    status: (row[12] === 'shared' || row[12] === 'public' ? row[12] : 'private') as 'private' | 'shared' | 'public'
   }));
 
   return { prompts, assignments, submissions, comments, campers, events, tags, upvotedPromptIds, favoritedSubmissionIds, collaborations, bocas, statusUpdates, notifications, upvotedIssueNumbers, playlists };
@@ -1369,14 +1371,15 @@ export const createPlaylist = async (
     now,
     now,
     '',
-    ''
+    '',
+    'private'
   ]];
   await appendSheetRow(spreadsheetId, 'Playlists!A1', row);
   return id;
 };
 
 export const updatePlaylistRow = async (spreadsheetId: string, playlist: Playlist) => {
-  const result = await callSheetsGet('Playlists!A2:L1000');
+  const result = await callSheetsGet('Playlists!A2:M1000');
   const rows = result.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === playlist.id);
   if (rowIndex === -1) throw new Error('Playlist not found');
@@ -1393,7 +1396,8 @@ export const updatePlaylistRow = async (spreadsheetId: string, playlist: Playlis
     playlist.createdAt,
     playlist.updatedAt,
     playlist.deletedAt || '',
-    playlist.deletedBy || ''
+    playlist.deletedBy || '',
+    playlist.status || 'private'
   ]]);
 };
 
@@ -1402,7 +1406,7 @@ export const deletePlaylist = async (
   playlistId: string,
   userEmail: string
 ) => {
-  const result = await callSheetsGet('Playlists!A2:L1000');
+  const result = await callSheetsGet('Playlists!A2:M1000');
   const rows = result.values || [];
   const rowIndex = rows.findIndex((row: any[]) => row[0] === playlistId);
   if (rowIndex === -1) throw new Error('Playlist not found');
@@ -1412,7 +1416,8 @@ export const deletePlaylist = async (
     row[0], row[1], row[2], row[3], row[4], row[5], row[6] || '', row[7] || '', row[8],
     new Date().toISOString(),
     new Date().toISOString(),
-    userEmail
+    userEmail,
+    row[12] || 'private'
   ]]);
 };
 
@@ -1754,7 +1759,7 @@ const parseCommentRow = (row: any[]): Comment => {
   try { if (row[8]) reactions = JSON.parse(row[8]); } catch { /* corrupted JSON */ }
   return {
     id: row[0] || '',
-    entityType: row[1] as 'song' | 'prompt' | 'assignment',
+    entityType: row[1] as 'song' | 'prompt' | 'assignment' | 'playlist',
     entityId: row[2] || '',
     parentId: row[3] || null,
     author: row[4] || 'Anonymous',
@@ -1768,7 +1773,7 @@ const parseCommentRow = (row: any[]): Comment => {
 
 export const fetchComments = async (
   spreadsheetId: string,
-  entityType: 'song' | 'prompt' | 'assignment',
+  entityType: 'song' | 'prompt' | 'assignment' | 'playlist',
   entityId: string
 ): Promise<Comment[]> => {
   const result = await callSheetsGet('Comments!A2:J5000');
@@ -1791,7 +1796,7 @@ export const fetchAllComments = async (
 export const createComment = async (
   spreadsheetId: string,
   data: {
-    entityType: 'song' | 'prompt' | 'assignment';
+    entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
     entityId: string;
     parentId: string | null;
     author: string;
@@ -2268,7 +2273,7 @@ export const createNotification = async (
     type: NotificationType;
     triggerUserEmail: string;
     triggerUserName: string;
-    entityType: 'song' | 'prompt' | 'assignment';
+    entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
     entityId: string;
     referenceId: string;
     message: string;
@@ -2307,7 +2312,7 @@ export const createNotifications = async (
     type: NotificationType;
     triggerUserEmail: string;
     triggerUserName: string;
-    entityType: 'song' | 'prompt' | 'assignment';
+    entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
     entityId: string;
     referenceId: string;
     message: string;

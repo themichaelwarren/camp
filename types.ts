@@ -84,7 +84,7 @@ export interface CamperProfile {
 
 export interface Comment {
   id: string;
-  entityType: 'song' | 'prompt' | 'assignment';
+  entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
   entityId: string;
   parentId: string | null;
   author: string;
@@ -154,7 +154,7 @@ export interface Notification {
   type: NotificationType;
   triggerUserEmail: string;
   triggerUserName: string;
-  entityType: 'song' | 'prompt' | 'assignment';
+  entityType: 'song' | 'prompt' | 'assignment' | 'playlist';
   entityId: string;
   referenceId: string;
   message: string;
@@ -171,6 +171,7 @@ export interface Playlist {
   submissionIds: string[];
   artworkFileId?: string;
   artworkUrl?: string;
+  status?: 'private' | 'shared' | 'public';
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

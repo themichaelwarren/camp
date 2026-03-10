@@ -1,4 +1,4 @@
-import { Assignment, PromptStatus, Submission, SongVersion, Collaboration, CollaboratorRole, PlayableTrack, CamperProfile } from './types';
+import { Assignment, PromptStatus, Submission, SongVersion, Collaboration, CollaboratorRole, PlayableTrack, CamperProfile, Playlist } from './types';
 
 export function isSubmissionVisible(
   sub: Submission,
@@ -11,6 +11,23 @@ export function isSubmissionVisible(
   if (!sub.status || sub.status === 'shared') return true; // All logged-in users see 'shared'
   if (sub.camperId === currentUserEmail) return true;
   return collaborations.some(c => c.submissionId === sub.id && c.camperId === currentUserEmail);
+}
+
+export function isPlaylistVisible(
+  playlist: Playlist,
+  currentUserEmail: string,
+  submissions: Submission[]
+): boolean {
+  if (playlist.deletedAt) return false;
+  if (playlist.creatorEmail === currentUserEmail) return true;
+  if (!playlist.status || playlist.status === 'private') return false;
+  if (playlist.status === 'shared') return !!currentUserEmail; // logged-in campers only
+  if (playlist.status === 'public') {
+    // Public only if all songs in the playlist are also public
+    const playlistSongs = playlist.submissionIds.map(id => submissions.find(s => s.id === id)).filter(Boolean) as Submission[];
+    return playlistSongs.length > 0 && playlistSongs.every(s => s.status === 'public');
+  }
+  return false;
 }
 
 export function getTerm(dateStr: string): string {

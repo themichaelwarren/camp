@@ -25,7 +25,7 @@ import FeedbackPage from './views/FeedbackPage';
 import PlaylistsPage from './views/PlaylistsPage';
 import PlaylistDetail from './views/PlaylistDetail';
 import * as googleService from './services/googleService';
-import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible, smartShuffle } from './utils';
+import { getTerm, getTermSortKey, getDisplayArtist, getPrimaryVersion, isSubmissionVisible, isPlaylistVisible, smartShuffle } from './utils';
 
 const CAMP_QUOTES = [
   'Raise a flag, grab your sleeping bag, every song lights a lamp, at camp sweet camp',
@@ -1817,7 +1817,7 @@ const App: React.FC = () => {
       case 'playlists':
         return (
           <PlaylistsPage
-            playlists={playlists.filter(p => !p.deletedAt)}
+            playlists={playlists.filter(p => isPlaylistVisible(p, userProfile?.email || '', submissions))}
             submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             collaborations={collaborations}
             onViewDetail={(id) => navigateTo('playlist-detail', id)}
@@ -1849,6 +1849,7 @@ const App: React.FC = () => {
             userProfile={userProfile}
             bocas={bocas}
             spreadsheetId={spreadsheetId || undefined}
+            campers={campers}
           />
         ) : null;
       }
@@ -2100,6 +2101,13 @@ const App: React.FC = () => {
       currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}
       isCurrentTrackFavorited={player?.submissionId ? favoritedSubmissionIds.includes(player.submissionId) : false}
       onToggleFavorite={handleToggleFavorite}
+      playlists={playlists.filter(p => !p.deletedAt && p.creatorEmail === userProfile?.email).map(p => ({ id: p.id, title: p.title }))}
+      onAddToPlaylist={(submissionId, playlistId) => {
+        const pl = playlists.find(p => p.id === playlistId);
+        if (pl && !pl.submissionIds.includes(submissionId)) {
+          handleUpdatePlaylist({ ...pl, submissionIds: [...pl.submissionIds, submissionId], updatedAt: new Date().toISOString() });
+        }
+      }}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {
