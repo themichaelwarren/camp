@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Assignment, Submission, Prompt, PlayableTrack, Boca, ViewState, Collaboration, CamperProfile } from '../types';
 import { getPromptStatus, getPromptStatusStyle, getTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
+import PlaylistPickerButton from '../components/PlaylistPickerButton';
 
 interface SemesterDetailProps {
   semester: string;
@@ -24,10 +25,13 @@ interface SemesterDetailProps {
   gridSize: 3 | 4 | 5;
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   collaborations: Collaboration[];
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
 
-const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, campers, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations }) => {
+const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, submissions, prompts, bocas, campers, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, favoritedSubmissionIds, onToggleFavorite, dateFormat, gridSize, onGridSizeChange, collaborations, playlists, onAddToPlaylist, onCreatePlaylist }) => {
   const [songsView, setSongsView] = useState<'cards' | 'list'>('cards');
 
   // Unique prompts used this semester (from assignments' promptIds)
@@ -156,6 +160,11 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
               >
                 <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-sm`}></i>
               </button>
+              {onAddToPlaylist && playlists && (
+                <div onClick={e => e.stopPropagation()}>
+                  <PlaylistPickerButton submissionId={sub.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 shadow-lg hover:bg-white hover:scale-105" />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -260,6 +269,11 @@ const SemesterDetail: React.FC<SemesterDetailProps> = ({ semester, assignments, 
                 >
                   <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                 </button>
+                {onAddToPlaylist && playlists && (
+                  <div onClick={e => e.stopPropagation()}>
+                    <PlaylistPickerButton submissionId={sub.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} />
+                  </div>
+                )}
               </>
             )}
           </div>

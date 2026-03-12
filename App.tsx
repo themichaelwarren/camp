@@ -1491,6 +1491,14 @@ const App: React.FC = () => {
     }
   };
 
+  const userPlaylistsList = playlists.filter(p => !p.deletedAt && p.creatorEmail === userProfile?.email).map(p => ({ id: p.id, title: p.title }));
+  const handleAddToPlaylist = (submissionId: string, playlistId: string) => {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (pl && !pl.submissionIds.includes(submissionId)) {
+      handleUpdatePlaylist({ ...pl, submissionIds: [...pl.submissionIds, submissionId], updatedAt: new Date().toISOString() });
+    }
+  };
+
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
   const unreadNotificationCount = useMemo(
@@ -1654,6 +1662,9 @@ const App: React.FC = () => {
             collaborations={collaborations}
             campers={campers}
             onAddCollaborators={canWrite ? handleAddCollaborators : undefined}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
           />
         );
       case 'events':
@@ -1736,6 +1747,9 @@ const App: React.FC = () => {
             onToggleFavorite={isLoggedIn ? handleToggleFavorite : undefined}
             collaborations={collaborations}
             onAddCollaborators={canWrite ? handleAddCollaborators : undefined}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
           />
         ) : null;
       case 'song-detail':
@@ -1765,6 +1779,9 @@ const App: React.FC = () => {
             collaborations={collaborations}
             onAddCollaborator={canWrite ? handleAddCollaborator : undefined}
             onRemoveCollaborator={canWrite ? handleRemoveCollaborator : undefined}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
           />
         ) : null;
       case 'bocas':
@@ -1812,6 +1829,9 @@ const App: React.FC = () => {
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
             collaborations={collaborations}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
           />
         );
       case 'playlists':
@@ -1894,6 +1914,9 @@ const App: React.FC = () => {
             gridSize={submissionsGridSize}
             onGridSizeChange={setSubmissionsGridSize}
             collaborations={collaborations}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
           />
         ) : null;
       }
@@ -1985,6 +2008,9 @@ const App: React.FC = () => {
               await googleService.updateUserProfileDetails(spreadsheetId, { email, intakeSemester: semester });
               setCampers(prev => prev.map(c => c.email === email ? { ...c, intakeSemester: semester } : c));
             }}
+            playlists={isLoggedIn ? userPlaylistsList : undefined}
+            onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
+            onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
             isOwnProfile={camper.email === userProfile?.email}
             onUpdateProfile={camper.email === userProfile?.email ? async (data) => {
               if (!spreadsheetId) return;
@@ -2101,13 +2127,9 @@ const App: React.FC = () => {
       currentTrackBocaCount={player ? bocas.filter(b => b.submissionId === player.submissionId).length : 0}
       isCurrentTrackFavorited={player?.submissionId ? favoritedSubmissionIds.includes(player.submissionId) : false}
       onToggleFavorite={handleToggleFavorite}
-      playlists={playlists.filter(p => !p.deletedAt && p.creatorEmail === userProfile?.email).map(p => ({ id: p.id, title: p.title }))}
-      onAddToPlaylist={(submissionId, playlistId) => {
-        const pl = playlists.find(p => p.id === playlistId);
-        if (pl && !pl.submissionIds.includes(submissionId)) {
-          handleUpdatePlaylist({ ...pl, submissionIds: [...pl.submissionIds, submissionId], updatedAt: new Date().toISOString() });
-        }
-      }}
+      playlists={userPlaylistsList}
+      onAddToPlaylist={handleAddToPlaylist}
+      onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
       onLogout={() => {
         window.localStorage.removeItem('camp-auth');
         if (!rememberMe) {

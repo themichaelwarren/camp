@@ -4,6 +4,7 @@ import { Submission, Assignment, Prompt, PlayableTrack, Boca, Collaboration, Cam
 import { getTerm, getTermSortKey, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SubmitSongModal from '../components/SubmitSongModal';
+import PlaylistPickerButton from '../components/PlaylistPickerButton';
 
 interface SubmissionsPageProps {
   submissions: Submission[];
@@ -38,12 +39,15 @@ interface SubmissionsPageProps {
   collaborations: Collaboration[];
   campers?: CamperProfile[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'assignment-asc' | 'assignment-desc' | 'prompt-asc' | 'prompt-desc' | 'semester-desc' | 'semester-asc';
 
 
-const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite, collaborations, campers, onAddCollaborators }) => {
+const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignments, prompts, onAdd, onViewDetail, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, onStartJukebox, userProfile, viewMode, onViewModeChange, searchTerm, onSearchTermChange, assignmentFilter, onAssignmentFilterChange, promptFilter, onPromptFilterChange, sortBy, onSortByChange, semesterFilter, onSemesterFilterChange, bocas, dateFormat, gridSize, onGridSizeChange, favoritedSubmissionIds, onToggleFavorite, collaborations, campers, onAddCollaborators, playlists, onAddToPlaylist, onCreatePlaylist }) => {
   const [showUpload, setShowUpload] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -213,6 +217,11 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
             >
               <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-sm`}></i>
             </button>
+            {onAddToPlaylist && playlists && (
+              <div onClick={e => e.stopPropagation()}>
+                <PlaylistPickerButton submissionId={sub.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 shadow-lg hover:bg-white hover:scale-105" />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -327,6 +336,11 @@ const SubmissionsPage: React.FC<SubmissionsPageProps> = ({ submissions, assignme
               >
                 <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
               </button>
+              {onAddToPlaylist && playlists && (
+                <div onClick={e => e.stopPropagation()}>
+                  <PlaylistPickerButton submissionId={sub.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} />
+                </div>
+              )}
             </>
           )}
         </div>

@@ -41,6 +41,7 @@ interface NowPlayingOverlayProps {
   onToggleFavorite?: (submissionId: string) => void;
   playlists?: { id: string; title: string }[];
   onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -74,7 +75,8 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   isFavorited,
   onToggleFavorite,
   playlists,
-  onAddToPlaylist
+  onAddToPlaylist,
+  onCreatePlaylist
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
@@ -93,6 +95,9 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
   const [showStickyMini, setShowStickyMini] = useState(false);
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
   const [addedToPlaylistId, setAddedToPlaylistId] = useState<string | null>(null);
+  const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const newPlaylistInputRef = useRef<HTMLInputElement>(null);
   const playlistPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -120,10 +125,16 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [showPlaylistPicker]);
 
+  useEffect(() => {
+    if (showCreatePlaylist) newPlaylistInputRef.current?.focus();
+  }, [showCreatePlaylist]);
+
   // Reset "added" feedback when song changes
   useEffect(() => {
     setAddedToPlaylistId(null);
     setShowPlaylistPicker(false);
+    setShowCreatePlaylist(false);
+    setNewPlaylistTitle('');
   }, [player.submissionId]);
 
   // Sticky mini player: show compact controls when user scrolls past player on mobile
@@ -552,7 +563,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
                   </button>
                 )}
-                {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                {onAddToPlaylist && player.submissionId && playlists && (
                   <button onClick={() => setShowPlaylistPicker(true)} className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${addedToPlaylistId ? 'text-green-500' : 'text-slate-300 hover:text-slate-500'}`} title="Add to playlist">
                     <i className={`fa-solid ${addedToPlaylistId ? 'fa-check' : 'fa-rectangle-list'} text-xs`}></i>
                   </button>
@@ -635,7 +646,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                       <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart text-xs`}></i>
                     </button>
                   )}
-                  {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                  {onAddToPlaylist && player.submissionId && playlists && (
                     <button onClick={() => setShowPlaylistPicker(true)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${addedToPlaylistId ? 'text-green-500' : 'text-slate-300 hover:text-slate-500'}`} title="Add to playlist">
                       <i className={`fa-solid ${addedToPlaylistId ? 'fa-check' : 'fa-rectangle-list'} text-xs`}></i>
                     </button>
@@ -744,7 +755,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                         <i className={`${isFavorited ? 'fa-solid' : 'fa-regular'} fa-heart ${isShort ? 'text-xs' : 'text-base'}`}></i>
                       </button>
                     )}
-                    {onAddToPlaylist && player.submissionId && playlists && playlists.length > 0 && (
+                    {onAddToPlaylist && player.submissionId && playlists && (
                       <button
                         onClick={() => setShowPlaylistPicker(true)}
                         className={`rounded-full flex items-center justify-center transition-all ${isShort ? 'w-7 h-7' : 'w-9 h-9'} ${
@@ -1025,15 +1036,58 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
 
       {/* Playlist picker overlay */}
       {showPlaylistPicker && onAddToPlaylist && player.submissionId && playlists && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={() => setShowPlaylistPicker(false)}>
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={() => { setShowPlaylistPicker(false); setShowCreatePlaylist(false); setNewPlaylistTitle(''); }}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div ref={playlistPickerRef} className="relative bg-white rounded-2xl shadow-2xl w-72 max-h-80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-3 border-b border-slate-100">
-              <p className="text-sm font-bold text-slate-800">Add to playlist</p>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">{player.title}</p>
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-800">Add to playlist</p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">{player.title}</p>
+              </div>
+              {onCreatePlaylist && !showCreatePlaylist && (
+                <button onClick={() => setShowCreatePlaylist(true)} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700">
+                  <i className="fa-solid fa-plus mr-1"></i>New
+                </button>
+              )}
             </div>
+            {showCreatePlaylist && onCreatePlaylist && (
+              <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
+                <input
+                  ref={newPlaylistInputRef}
+                  value={newPlaylistTitle}
+                  onChange={e => setNewPlaylistTitle(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newPlaylistTitle.trim()) {
+                      onCreatePlaylist(newPlaylistTitle.trim());
+                      setNewPlaylistTitle('');
+                      setShowCreatePlaylist(false);
+                      setTimeout(() => setShowPlaylistPicker(false), 300);
+                    }
+                    if (e.key === 'Escape') { setShowCreatePlaylist(false); setNewPlaylistTitle(''); }
+                  }}
+                  placeholder="Playlist name..."
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <button
+                  onClick={() => {
+                    if (newPlaylistTitle.trim()) {
+                      onCreatePlaylist(newPlaylistTitle.trim());
+                      setNewPlaylistTitle('');
+                      setShowCreatePlaylist(false);
+                      setTimeout(() => setShowPlaylistPicker(false), 300);
+                    }
+                  }}
+                  disabled={!newPlaylistTitle.trim()}
+                  className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 disabled:opacity-30 transition-colors flex-shrink-0"
+                >
+                  <i className="fa-solid fa-check text-xs"></i>
+                </button>
+              </div>
+            )}
             <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin' }}>
-              {playlists.map(pl => {
+              {playlists.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">No playlists yet</p>
+              ) : playlists.map(pl => {
                 const alreadyIn = pl.id === addedToPlaylistId;
                 return (
                   <button

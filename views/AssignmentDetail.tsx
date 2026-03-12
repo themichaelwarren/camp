@@ -10,6 +10,7 @@ import CommentsSection from '../components/CommentsSection';
 import SubmitSongModal from '../components/SubmitSongModal';
 import * as googleService from '../services/googleService';
 import ConfirmModal from '../components/ConfirmModal';
+import PlaylistPickerButton from '../components/PlaylistPickerButton';
 
 interface AssignmentDetailProps {
   assignment: Assignment;
@@ -39,9 +40,12 @@ interface AssignmentDetailProps {
   onToggleFavorite?: (submissionId: string) => void;
   collaborations: Collaboration[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators, playlists, onAddToPlaylist, onCreatePlaylist }) => {
   const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
@@ -477,6 +481,11 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                           <button onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }} disabled={queueingTrackId === track.versionId} className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Add to queue">
                             <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                           </button>
+                          {onAddToPlaylist && playlists && (
+                            <div onClick={e => e.stopPropagation()}>
+                              <PlaylistPickerButton submissionId={s.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} />
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -526,6 +535,11 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                           <button onClick={(e) => { e.stopPropagation(); onAddToQueue(track); }} disabled={queueingTrackId === track.versionId} className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Add to queue">
                             <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-[10px]`}></i>
                           </button>
+                          {onAddToPlaylist && playlists && (
+                            <div onClick={e => e.stopPropagation()}>
+                              <PlaylistPickerButton submissionId={s.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} size="sm" />
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

@@ -37,6 +37,7 @@ interface LayoutProps {
   onToggleFavorite?: (submissionId: string) => void;
   playlists?: { id: string; title: string }[];
   onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
   isPublicMode?: boolean;
   onSignIn?: () => void;
   themePreference?: 'light' | 'dark' | 'system';
@@ -48,7 +49,7 @@ interface LayoutProps {
   onNotificationNavigate?: (view: ViewState, id: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onPlayPrevious, playHistory = [], onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackLyricsDocUrl, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, playlists, onAddToPlaylist, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isSyncing, isLoggedIn, hasInitialData, isPlayerLoading, userProfile, player, queue = [], onPlayNext, onPlayPrevious, playHistory = [], onRemoveFromQueue, onReorderQueue, onClearQueue, onNavigateToSong, onNavigateToCamper, onNavigateToAssignment, isJukeboxMode, onStopJukebox, onLogout, onStartJukebox, currentTrackLyricsDocUrl, currentTrackBocaCount, isCurrentTrackFavorited, onToggleFavorite, playlists, onAddToPlaylist, onCreatePlaylist, isPublicMode, onSignIn, themePreference, onThemeChange, notifications, unreadNotificationCount, onMarkNotificationRead, onMarkAllNotificationsRead, onNotificationNavigate }) => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -997,6 +998,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange, isS
             onToggleFavorite={onToggleFavorite}
             playlists={playlists}
             onAddToPlaylist={onAddToPlaylist}
+            onCreatePlaylist={onCreatePlaylist}
           />
         )}
 

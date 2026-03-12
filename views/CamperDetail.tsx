@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { CamperProfile, Prompt, Assignment, Submission, PlayableTrack, ViewState, Boca, Collaboration } from '../types';
 import { getTerm, getTermSortKey, isCurrentOrFutureTerm, getSeasonStyle, DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getGridStyle } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
+import PlaylistPickerButton from '../components/PlaylistPickerButton';
 
 interface CamperDetailProps {
   camper: CamperProfile;
@@ -34,6 +35,9 @@ interface CamperDetailProps {
   onUpdateCamperIntake?: (camperEmail: string, intakeSemester: string) => void;
   isOwnProfile?: boolean;
   onUpdateProfile?: (data: { location?: string; status?: string }) => void;
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
 const getTagsForSubmission = (sub: Submission, assignments: Assignment[], allPrompts: Prompt[]): string[] => {
@@ -59,7 +63,7 @@ const getFirstVersionDate = (sub: Submission): number => {
 };
 
 
-const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake, isOwnProfile, onUpdateProfile }) => {
+const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts, assignments, submissions, onNavigate, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onStartJukebox, songsView, onSongsViewChange, searchTerm, onSearchTermChange, selectedTags, onSelectedTagsChange, favoritedSubmissionIds, onToggleFavorite, bocas = [], dateFormat, gridSize, onGridSizeChange, collaborations, isAdmin, allSemesters = [], onUpdateCamperIntake, isOwnProfile, onUpdateProfile, playlists, onAddToPlaylist, onCreatePlaylist }) => {
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showFilters, setShowFilters] = useState(false);
   const [editingField, setEditingField] = useState<'location' | 'status' | null>(null);
@@ -482,6 +486,11 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                         >
                           <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-sm`}></i>
                         </button>
+                        {onAddToPlaylist && playlists && (
+                          <div onClick={e => e.stopPropagation()}>
+                            <PlaylistPickerButton submissionId={submission.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} className="w-10 h-10 rounded-full bg-white/90 text-slate-600 border border-slate-200 shadow-lg hover:bg-white hover:scale-105" />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -601,6 +610,11 @@ const CamperDetail: React.FC<CamperDetailProps> = ({ camper, prompts, allPrompts
                               >
                                 <i className={`fa-solid ${queueingTrackId === track.versionId ? 'fa-spinner fa-spin' : 'fa-list'} text-xs`}></i>
                               </button>
+                              {onAddToPlaylist && playlists && (
+                                <div onClick={e => e.stopPropagation()}>
+                                  <PlaylistPickerButton submissionId={submission.id} playlists={playlists} onAddToPlaylist={onAddToPlaylist} onCreatePlaylist={onCreatePlaylist} />
+                                </div>
+                              )}
                             </>
                           )}
                         </div>

@@ -9,6 +9,7 @@ import CommentsSection from '../components/CommentsSection';
 import MarkdownEditor from '../components/MarkdownEditor';
 import MarkdownPreview from '../components/MarkdownPreview';
 import ConfirmModal from '../components/ConfirmModal';
+import PlaylistPickerButton from '../components/PlaylistPickerButton';
 
 interface SongDetailProps {
   submission: Submission;
@@ -34,6 +35,9 @@ interface SongDetailProps {
   collaborations?: Collaboration[];
   onAddCollaborator?: (submissionId: string, camperId: string, camperName: string, role: string) => Promise<void>;
   onRemoveCollaborator?: (collaboratorId: string) => Promise<void>;
+  playlists?: { id: string; title: string }[];
+  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onCreatePlaylist?: (title: string) => void;
 }
 
 const ROLE_OPTIONS: { value: CollaboratorRole; label: string }[] = [
@@ -134,7 +138,7 @@ const CollaboratorEditor: React.FC<{
   );
 };
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, togglingFavorite = false, collaborations = [], onAddCollaborator, onRemoveCollaborator }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, togglingFavorite = false, collaborations = [], onAddCollaborator, onRemoveCollaborator, playlists, onAddToPlaylist, onCreatePlaylist }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'title' | 'details' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -1018,6 +1022,14 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                           >
                             <i className={`fa-solid ${queueingTrackId === v.id ? 'fa-spinner fa-spin' : 'fa-list'}`}></i>
                           </button>
+                        )}
+                        {onAddToPlaylist && playlists && (
+                          <PlaylistPickerButton
+                            submissionId={submission.id}
+                            playlists={playlists}
+                            onAddToPlaylist={onAddToPlaylist}
+                            onCreatePlaylist={onCreatePlaylist}
+                          />
                         )}
                       </div>
                       {canManageVersions && (
