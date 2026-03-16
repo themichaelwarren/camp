@@ -1479,14 +1479,17 @@ export const uploadArtworkToDriveInFolder = async (file: File, folderId?: string
 };
 
 export const uploadProfilePhoto = async (file: File) => {
-  return uploadFileToDriveInFolder(file, ASSIGNMENTS_PARENT_FOLDER_ID);
+  return uploadFileToDriveInFolder(file);
 };
 
-const uploadFileToDriveInFolder = async (file: File, folderId?: string, mimeTypeOverride?: string) => {
+const uploadFileToDriveInFolder = async (file: File, _folderId?: string, mimeTypeOverride?: string) => {
+  // Files are uploaded to the user's own Drive root (no parent folder).
+  // This avoids permission issues with drive.file scope when the assignment
+  // folder is owned by another user. Files are shared publicly and tracked
+  // by ID in the spreadsheet, so folder location doesn't matter.
   const metadata = {
     name: file.name,
     mimeType: mimeTypeOverride || file.type,
-    parents: folderId ? [folderId] : []
   };
 
   const form = new FormData();
@@ -1507,7 +1510,7 @@ const uploadFileToDriveInFolder = async (file: File, folderId?: string, mimeType
   return result;
 };
 
-export const createLyricsDoc = async (title: string, userLabel: string, lyrics: string, folderId?: string) => {
+export const createLyricsDoc = async (title: string, userLabel: string, lyrics: string, _folderId?: string) => {
   const safeTitle = title.trim() || 'Untitled Song';
   const safeUser = userLabel.trim() || 'Anonymous';
   const docName = `${safeTitle} - ${safeUser}`;
@@ -1517,7 +1520,6 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
     body: JSON.stringify({
       name: docName,
       mimeType: 'application/vnd.google-apps.document',
-      parents: folderId ? [folderId] : []
     })
   });
 
@@ -1541,7 +1543,7 @@ export const createLyricsDoc = async (title: string, userLabel: string, lyrics: 
   };
 };
 
-export const createAboutDoc = async (title: string, userLabel: string, folderId?: string) => {
+export const createAboutDoc = async (title: string, userLabel: string, _folderId?: string) => {
   const safeTitle = title.trim() || 'Untitled Song';
   const safeUser = userLabel.trim() || 'Anonymous';
   const docName = `About: ${safeTitle} - ${safeUser}`;
@@ -1551,7 +1553,6 @@ export const createAboutDoc = async (title: string, userLabel: string, folderId?
     body: JSON.stringify({
       name: docName,
       mimeType: 'application/vnd.google-apps.document',
-      parents: folderId ? [folderId] : []
     })
   });
 
