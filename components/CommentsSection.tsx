@@ -221,10 +221,20 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     }
   };
 
-  // Organize comments into a tree structure
+  // Organize comments into a flat thread structure
+  // Replies to replies are flattened under the top-level parent
   const topLevelComments = comments.filter((c) => !c.parentId);
   const getReplies = (parentId: string) => {
-    return comments.filter((c) => c.parentId === parentId);
+    const direct = comments.filter((c) => c.parentId === parentId);
+    const all: typeof direct = [];
+    const queue = [...direct];
+    while (queue.length > 0) {
+      const reply = queue.shift()!;
+      all.push(reply);
+      const nested = comments.filter((c) => c.parentId === reply.id);
+      queue.push(...nested);
+    }
+    return all.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   };
 
   // Sort top-level comments by timestamp (newest first)
