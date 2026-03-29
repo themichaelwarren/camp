@@ -11,6 +11,7 @@ interface Track {
   artist: string;
   camperId?: string;
   submissionId?: string;
+  versionId?: string;
   assignmentTitle?: string;
   artworkFileId?: string;
   artworkUrl?: string;
@@ -40,7 +41,7 @@ interface NowPlayingOverlayProps {
   isFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
 }
 
@@ -1094,7 +1095,7 @@ const NowPlayingOverlay: React.FC<NowPlayingOverlayProps> = ({
                     key={pl.id}
                     onClick={() => {
                       if (player.submissionId) {
-                        onAddToPlaylist(player.submissionId, pl.id);
+                        onAddToPlaylist(player.submissionId, pl.id, player.versionId);
                         setAddedToPlaylistId(pl.id);
                         setTimeout(() => setShowPlaylistPicker(false), 400);
                       }

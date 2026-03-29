@@ -24,7 +24,7 @@ export function isPlaylistVisible(
   if (playlist.status === 'shared') return !!currentUserEmail; // logged-in campers only
   if (playlist.status === 'public') {
     // Public only if all songs in the playlist are also public
-    const playlistSongs = playlist.submissionIds.map(id => submissions.find(s => s.id === id)).filter(Boolean) as Submission[];
+    const playlistSongs = playlist.submissionIds.map(entry => submissions.find(s => s.id === parsePlaylistEntry(entry).submissionId)).filter(Boolean) as Submission[];
     return playlistSongs.length > 0 && playlistSongs.every(s => s.status === 'public');
   }
   return false;
@@ -142,6 +142,12 @@ export function getPrimaryVersion(sub: Submission): SongVersion | null {
     if (found) return found;
   }
   return sub.versions[0];
+}
+
+export function parsePlaylistEntry(entry: string): { submissionId: string; versionId?: string } {
+  const idx = entry.indexOf(':');
+  if (idx === -1) return { submissionId: entry };
+  return { submissionId: entry.substring(0, idx), versionId: entry.substring(idx + 1) };
 }
 
 export function getGridStyle(gridSize: 3 | 4 | 5): { gridTemplateColumns: string } {

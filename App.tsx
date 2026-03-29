@@ -178,6 +178,7 @@ const App: React.FC = () => {
     artist: string;
     camperId?: string;
     submissionId?: string;
+    versionId?: string;
     assignmentId?: string;
     assignmentTitle?: string;
     artworkFileId?: string;
@@ -1161,6 +1162,7 @@ const App: React.FC = () => {
       artist: track.artist,
       camperId: track.camperId,
       submissionId: track.submissionId,
+      versionId: track.versionId,
       assignmentId,
       assignmentTitle,
       artworkFileId: track.artworkFileId,
@@ -1180,6 +1182,7 @@ const App: React.FC = () => {
         artist: track.artist,
         camperId: track.camperId,
         submissionId: track.submissionId,
+        versionId: track.versionId,
         assignmentId,
         assignmentTitle,
         artworkFileId: track.artworkFileId,
@@ -1492,10 +1495,13 @@ const App: React.FC = () => {
   };
 
   const userPlaylistsList = playlists.filter(p => !p.deletedAt && p.creatorEmail === userProfile?.email).map(p => ({ id: p.id, title: p.title }));
-  const handleAddToPlaylist = (submissionId: string, playlistId: string) => {
+  const handleAddToPlaylist = (submissionId: string, playlistId: string, versionId?: string) => {
     const pl = playlists.find(p => p.id === playlistId);
-    if (pl && !pl.submissionIds.includes(submissionId)) {
-      handleUpdatePlaylist({ ...pl, submissionIds: [...pl.submissionIds, submissionId], updatedAt: new Date().toISOString() });
+    if (!pl) return;
+    const entry = versionId ? `${submissionId}:${versionId}` : submissionId;
+    // Allow the same song with a different version (but not duplicate entries)
+    if (!pl.submissionIds.includes(entry)) {
+      handleUpdatePlaylist({ ...pl, submissionIds: [...pl.submissionIds, entry], updatedAt: new Date().toISOString() });
     }
   };
 

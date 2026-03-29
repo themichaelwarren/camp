@@ -3,14 +3,15 @@ import { createPortal } from 'react-dom';
 
 interface PlaylistPickerButtonProps {
   submissionId: string;
+  versionId?: string;
   playlists: { id: string; title: string }[];
-  onAddToPlaylist: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
   size?: 'sm' | 'md';
   className?: string;
 }
 
-const PlaylistPickerButton: React.FC<PlaylistPickerButtonProps> = ({ submissionId, playlists, onAddToPlaylist, onCreatePlaylist, size = 'sm', className = '' }) => {
+const PlaylistPickerButton: React.FC<PlaylistPickerButtonProps> = ({ submissionId, versionId, playlists, onAddToPlaylist, onCreatePlaylist, size = 'sm', className = '' }) => {
   const [open, setOpen] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -103,7 +104,7 @@ const PlaylistPickerButton: React.FC<PlaylistPickerButtonProps> = ({ submissionI
                   <button
                     key={pl.id}
                     onClick={() => {
-                      onAddToPlaylist(submissionId, pl.id);
+                      onAddToPlaylist(submissionId, pl.id, versionId);
                       setAddedId(pl.id);
                       setTimeout(() => setOpen(false), 400);
                     }}

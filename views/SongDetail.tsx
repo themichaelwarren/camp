@@ -36,7 +36,7 @@ interface SongDetailProps {
   onAddCollaborator?: (submissionId: string, camperId: string, camperName: string, role: string) => Promise<void>;
   onRemoveCollaborator?: (collaboratorId: string) => Promise<void>;
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
 }
 
@@ -1026,6 +1026,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                         {onAddToPlaylist && playlists && (
                           <PlaylistPickerButton
                             submissionId={submission.id}
+                            versionId={v.id}
                             playlists={playlists}
                             onAddToPlaylist={onAddToPlaylist}
                             onCreatePlaylist={onCreatePlaylist}

@@ -40,7 +40,7 @@ interface SubmissionsPageProps {
   campers?: CamperProfile[];
   onAddCollaborators?: (submissionId: string, collaborators: Array<{ camperId: string; camperName: string; role: string }>) => void;
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
 }
 

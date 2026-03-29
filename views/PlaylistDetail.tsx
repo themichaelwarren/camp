@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Playlist, Submission, Assignment, Collaboration, Boca, PlayableTrack, ViewState, CamperProfile } from '../types';
-import { getDisplayArtist, getPrimaryVersion } from '../utils';
+import { getDisplayArtist, getPrimaryVersion, parsePlaylistEntry } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 import SongPickerModal from '../components/SongPickerModal';
 import CommentsSection from '../components/CommentsSection';
@@ -50,10 +50,12 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
 
   const isOwner = userProfile?.email === playlist.creatorEmail;
   const currentStatus = playlist.status || 'private';
+  const parsedEntries = useMemo(() => playlist.submissionIds.map(parsePlaylistEntry), [playlist.submissionIds]);
+
   const allSongsPublic = useMemo(() => {
-    const playlistSongs = playlist.submissionIds.map(id => submissions.find(s => s.id === id)).filter(Boolean) as Submission[];
+    const playlistSongs = parsedEntries.map(e => submissions.find(s => s.id === e.submissionId)).filter(Boolean) as Submission[];
     return playlistSongs.length > 0 && playlistSongs.every(s => s.status === 'public');
-  }, [playlist.submissionIds, submissions]);
+  }, [parsedEntries, submissions]);
 
   // Click-outside handler for status dropdown
   useEffect(() => {
@@ -74,16 +76,19 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
   };
 
   const tracks = useMemo(() => {
-    return playlist.submissionIds
-      .map(id => {
-        const s = submissions.find(sub => sub.id === id);
+    return parsedEntries
+      .map(({ submissionId, versionId }) => {
+        const s = submissions.find(sub => sub.id === submissionId);
         if (!s || s.deletedAt) return null;
-        const primary = getPrimaryVersion(s);
-        if (!primary?.id) return null;
-        return { submission: s, track: { versionId: primary.id, title: s.title, artist: getDisplayArtist(s, collaborations), camperId: s.camperId, submissionId: s.id, artworkFileId: s.artworkFileId, artworkUrl: s.artworkUrl } as PlayableTrack };
+        const version = versionId ? s.versions?.find(v => v.id === versionId) : getPrimaryVersion(s);
+        if (!version?.id) return null;
+        const versionLabel = versionId && s.versions && s.versions.length > 1
+          ? (version.notes || `v${s.versions.length - s.versions.indexOf(version)}`)
+          : undefined;
+        return { submission: s, versionLabel, track: { versionId: version.id, title: s.title, artist: getDisplayArtist(s, collaborations), camperId: s.camperId, submissionId: s.id, artworkFileId: s.artworkFileId, artworkUrl: s.artworkUrl } as PlayableTrack };
       })
-      .filter((t): t is { submission: Submission; track: PlayableTrack } => t !== null);
-  }, [playlist.submissionIds, submissions, collaborations]);
+      .filter((t): t is { submission: Submission; versionLabel?: string; track: PlayableTrack } => t !== null);
+  }, [parsedEntries, submissions, collaborations]);
 
   const handleReorder = (fromIndex: number, toIndex: number) => {
     const newIds = [...playlist.submissionIds];
@@ -92,8 +97,9 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
     onUpdate?.({ ...playlist, submissionIds: newIds, updatedAt: new Date().toISOString() });
   };
 
-  const handleRemoveSong = (submissionId: string) => {
-    onUpdate?.({ ...playlist, submissionIds: playlist.submissionIds.filter(id => id !== submissionId), updatedAt: new Date().toISOString() });
+  const handleRemoveSong = (index: number) => {
+    const newIds = playlist.submissionIds.filter((_, i) => i !== index);
+    onUpdate?.({ ...playlist, submissionIds: newIds, updatedAt: new Date().toISOString() });
   };
 
   const handleAddSongs = (ids: string[]) => {
@@ -383,7 +389,7 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="divide-y divide-slate-100">
-            {tracks.map(({ submission: s, track }, i) => {
+            {tracks.map(({ submission: s, versionLabel, track }, i) => {
               const isPlaying = playingTrackId === track.versionId;
               const bocaCount = bocas.filter(b => b.submissionId === s.id).length;
 
@@ -437,7 +443,10 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-semibold truncate ${isPlaying ? 'text-indigo-600' : 'text-slate-800'}`}>{s.title}</p>
+                    <p className={`text-sm font-semibold truncate ${isPlaying ? 'text-indigo-600' : 'text-slate-800'}`}>
+                      {s.title}
+                      {versionLabel && <span className="ml-1.5 text-[10px] font-bold text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded-full">{versionLabel}</span>}
+                    </p>
                     <p className="text-xs text-slate-400 truncate">
                       {getDisplayArtist(s, collaborations)}
                       {bocaCount > 0 && <span className="ml-1.5 text-amber-500"><i className="fa-solid fa-star text-[8px]"></i> {bocaCount}</span>}
@@ -466,7 +475,7 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
                     </button>
                     {onUpdate && (
                       <button
-                        onClick={() => handleRemoveSong(s.id)}
+                        onClick={() => handleRemoveSong(i)}
                         className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors"
                       >
                         <i className="fa-solid fa-xmark text-xs"></i>
@@ -514,7 +523,7 @@ const PlaylistDetail: React.FC<PlaylistDetailProps> = ({ playlist, submissions, 
           submissions={submissions}
           assignments={assignments}
           collaborations={collaborations}
-          excludeIds={playlist.submissionIds}
+          excludeIds={parsedEntries.map(e => e.submissionId)}
           onSelect={handleAddSongs}
           onClose={() => setShowSongPicker(false)}
         />

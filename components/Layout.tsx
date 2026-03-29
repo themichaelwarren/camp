@@ -16,7 +16,7 @@ interface LayoutProps {
   hasInitialData?: boolean;
   isPlayerLoading?: boolean;
   userProfile?: { name?: string; email?: string; picture?: string; pictureOverrideUrl?: string; role?: string } | null;
-  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
+  player?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; versionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string } | null;
   queue?: { src: string; title: string; artist: string; camperId?: string; submissionId?: string; assignmentId?: string; assignmentTitle?: string; artworkFileId?: string; artworkUrl?: string }[];
   onPlayNext?: () => void;
   onPlayPrevious?: () => void;
@@ -36,7 +36,7 @@ interface LayoutProps {
   isCurrentTrackFavorited?: boolean;
   onToggleFavorite?: (submissionId: string) => void;
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
   isPublicMode?: boolean;
   onSignIn?: () => void;

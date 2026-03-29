@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Playlist, Submission, Collaboration, Boca, PlayableTrack } from '../types';
-import { getDisplayArtist, getPrimaryVersion } from '../utils';
+import { getDisplayArtist, getPrimaryVersion, parsePlaylistEntry } from '../utils';
 import ArtworkImage from '../components/ArtworkImage';
 
 interface PlaylistsPageProps {
@@ -30,17 +30,20 @@ const PlaylistsPage: React.FC<PlaylistsPageProps> = ({ playlists, submissions, c
 
   const getPlaylistTracks = (playlist: Playlist): PlayableTrack[] => {
     return playlist.submissionIds
-      .map(id => submissions.find(s => s.id === id))
-      .filter((s): s is Submission => !!s && !s.deletedAt && !!getPrimaryVersion(s)?.id)
-      .map(s => {
-        const primary = getPrimaryVersion(s)!;
-        return { versionId: primary.id, title: s.title, artist: getDisplayArtist(s, collaborations), camperId: s.camperId, submissionId: s.id, artworkFileId: s.artworkFileId, artworkUrl: s.artworkUrl } as PlayableTrack;
-      });
+      .map(entry => {
+        const { submissionId, versionId } = parsePlaylistEntry(entry);
+        const s = submissions.find(sub => sub.id === submissionId);
+        if (!s || s.deletedAt) return null;
+        const version = versionId ? s.versions?.find(v => v.id === versionId) : getPrimaryVersion(s);
+        if (!version?.id) return null;
+        return { versionId: version.id, title: s.title, artist: getDisplayArtist(s, collaborations), camperId: s.camperId, submissionId: s.id, artworkFileId: s.artworkFileId, artworkUrl: s.artworkUrl } as PlayableTrack;
+      })
+      .filter((t): t is PlayableTrack => t !== null);
   };
 
   const getCoverSubmission = (playlist: Playlist): Submission | undefined => {
     return playlist.submissionIds
-      .map(id => submissions.find(s => s.id === id))
+      .map(entry => submissions.find(s => s.id === parsePlaylistEntry(entry).submissionId))
       .find((s): s is Submission => !!s && !s.deletedAt);
   };
 

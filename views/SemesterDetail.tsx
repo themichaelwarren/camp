@@ -26,7 +26,7 @@ interface SemesterDetailProps {
   onGridSizeChange: (value: 3 | 4 | 5) => void;
   collaborations: Collaboration[];
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
 }
 

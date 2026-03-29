@@ -36,7 +36,7 @@ interface CamperDetailProps {
   isOwnProfile?: boolean;
   onUpdateProfile?: (data: { location?: string; status?: string }) => void;
   playlists?: { id: string; title: string }[];
-  onAddToPlaylist?: (submissionId: string, playlistId: string) => void;
+  onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
 }
 
