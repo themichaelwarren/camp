@@ -122,7 +122,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
         id: Math.random().toString(36).substr(2, 9),
         assignmentId: form.assignmentId,
         camperId: userProfile?.email || userProfile?.name || 'anonymous',
-        camperName: userProfile?.email || userProfile?.name || 'Anonymous',
+        camperName: userProfile?.name || userProfile?.email || 'Anonymous',
         title: form.title,
         lyrics: form.lyrics,
         versions: [newVersion],
