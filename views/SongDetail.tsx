@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion } from '../utils';
+import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion, Playlist } from '../types';
+import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion, parsePlaylistEntry } from '../utils';
 import { buildPath } from '../router';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
@@ -38,6 +38,7 @@ interface SongDetailProps {
   playlists?: { id: string; title: string }[];
   onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
+  allPlaylists?: Playlist[];
 }
 
 const ROLE_OPTIONS: { value: CollaboratorRole; label: string }[] = [
@@ -138,7 +139,7 @@ const CollaboratorEditor: React.FC<{
   );
 };
 
-const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, togglingFavorite = false, collaborations = [], onAddCollaborator, onRemoveCollaborator, playlists, onAddToPlaylist, onCreatePlaylist }) => {
+const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt, onNavigate, onUpdate, onPlayTrack, onAddToQueue, playingTrackId, queueingTrackId, currentUser, spreadsheetId, bocas = [], currentUserEmail = '', onGiveBoca, onUpdateBocaReason, campers = [], dateFormat, isFavorited = false, onToggleFavorite, togglingFavorite = false, collaborations = [], onAddCollaborator, onRemoveCollaborator, playlists, onAddToPlaylist, onCreatePlaylist, allPlaylists = [] }) => {
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'title' | 'details' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -1074,6 +1075,42 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
           )}
         </div>
       </div>
+
+      {/* Featured on playlists */}
+      {(() => {
+        const featuredPlaylists = allPlaylists.filter(p =>
+          !p.deletedAt && p.submissionIds.some(entry => parsePlaylistEntry(entry).submissionId === submission.id)
+        );
+        if (featuredPlaylists.length === 0) return null;
+        return (
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">
+              <i className="fa-solid fa-rectangle-list text-indigo-400 mr-2"></i>
+              Featured on
+            </h3>
+            <div className="space-y-2">
+              {featuredPlaylists.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onNavigate('playlist-detail', p.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-rectangle-list text-white text-sm"></i>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{p.title}</p>
+                    <p className="text-xs text-slate-400 truncate">
+                      by {p.creatorName} · {p.submissionIds.length} track{p.submissionIds.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {currentUser && (
         <CommentsSection

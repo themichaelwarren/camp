@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, getTermSortKey, isCurrentOrFutureTerm } from '../utils';
+import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration, Playlist } from '../types';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, getTermSortKey, isCurrentOrFutureTerm, parsePlaylistEntry } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -43,15 +43,16 @@ interface AssignmentDetailProps {
   playlists?: { id: string; title: string }[];
   onAddToPlaylist?: (submissionId: string, playlistId: string, versionId?: string) => void;
   onCreatePlaylist?: (title: string) => void;
+  allPlaylists?: Playlist[];
 }
 
-const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators, playlists, onAddToPlaylist, onCreatePlaylist }) => {
+const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators, playlists, onAddToPlaylist, onCreatePlaylist, allPlaylists = [] }) => {
   const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('cards');
+  const [submissionsViewMode, setSubmissionsViewMode] = useState<'cards' | 'list'>('list');
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -623,6 +624,46 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
           })()}
         </div>
       </div>
+
+      {/* Playlists featuring songs from this assignment */}
+      {(() => {
+        const submissionIds = new Set(submissions.map(s => s.id));
+        const relatedPlaylists = allPlaylists.filter(p =>
+          !p.deletedAt && p.submissionIds.some(entry => submissionIds.has(parsePlaylistEntry(entry).submissionId))
+        );
+        if (relatedPlaylists.length === 0) return null;
+        return (
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">
+              <i className="fa-solid fa-rectangle-list text-indigo-400 mr-2"></i>
+              Playlists
+            </h3>
+            <div className="space-y-2">
+              {relatedPlaylists.map(p => {
+                const matchCount = p.submissionIds.filter(entry => submissionIds.has(parsePlaylistEntry(entry).submissionId)).length;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onNavigate('playlist-detail', p.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-rectangle-list text-white text-sm"></i>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{p.title}</p>
+                      <p className="text-xs text-slate-400 truncate">
+                        by {p.creatorName} · {matchCount} song{matchCount !== 1 ? 's' : ''} from this assignment
+                      </p>
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {currentUser && (
         <CommentsSection

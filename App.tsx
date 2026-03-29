@@ -1790,6 +1790,7 @@ const App: React.FC = () => {
             playlists={isLoggedIn ? userPlaylistsList : undefined}
             onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
             onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
+            allPlaylists={playlists.filter(p => !p.deletedAt)}
           />
         ) : null;
       case 'song-detail':
@@ -1822,6 +1823,7 @@ const App: React.FC = () => {
             playlists={isLoggedIn ? userPlaylistsList : undefined}
             onAddToPlaylist={isLoggedIn ? handleAddToPlaylist : undefined}
             onCreatePlaylist={canWrite ? handleCreatePlaylist : undefined}
+            allPlaylists={playlists.filter(p => !p.deletedAt)}
           />
         ) : null;
       case 'bocas':
