@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     return {
       base: mode === 'production' ? '/camp/' : '/',
       server: {
-        port: 3000,
+        port: 4444,
         host: '0.0.0.0',
       },
       plugins: [react()],

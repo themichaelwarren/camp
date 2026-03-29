@@ -1501,9 +1501,24 @@ const App: React.FC = () => {
 
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
+  const visibleNotifications = useMemo(() => {
+    const email = userProfile?.email || '';
+    return notifications.filter(n => {
+      if (n.entityType === 'song') {
+        const sub = submissions.find(s => s.id === n.entityId);
+        if (sub && !isSubmissionVisible(sub, email, collaborations)) return false;
+      }
+      if (n.entityType === 'playlist') {
+        const pl = playlists.find(p => p.id === n.entityId);
+        if (pl && !isPlaylistVisible(pl, email, submissions)) return false;
+      }
+      return true;
+    });
+  }, [notifications, submissions, playlists, collaborations, userProfile?.email]);
+
   const unreadNotificationCount = useMemo(
-    () => notifications.filter(n => !n.read).length,
-    [notifications]
+    () => visibleNotifications.filter(n => !n.read).length,
+    [visibleNotifications]
   );
 
   const handleMarkNotificationRead = async (notificationId: string) => {
@@ -1551,7 +1566,17 @@ const App: React.FC = () => {
             playingTrackId={playingTrackId}
             bocas={bocas}
             statusUpdates={statusUpdates}
-            comments={comments}
+            comments={comments.filter(c => {
+              if (c.entityType === 'song') {
+                const sub = submissions.find(s => s.id === c.entityId);
+                if (sub && !isSubmissionVisible(sub, userProfile?.email || '', collaborations)) return false;
+              }
+              if (c.entityType === 'playlist') {
+                const pl = playlists.find(p => p.id === c.entityId);
+                if (pl && !isPlaylistVisible(pl, userProfile?.email || '', submissions)) return false;
+              }
+              return true;
+            })}
             dateFormat={dateFormat}
             collaborations={collaborations}
           />
@@ -1563,7 +1588,17 @@ const App: React.FC = () => {
             assignments={assignments.filter(a => !a.deletedAt)}
             submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
             campers={campers}
-            comments={comments}
+            comments={comments.filter(c => {
+              if (c.entityType === 'song') {
+                const sub = submissions.find(s => s.id === c.entityId);
+                if (sub && !isSubmissionVisible(sub, userProfile?.email || '', collaborations)) return false;
+              }
+              if (c.entityType === 'playlist') {
+                const pl = playlists.find(p => p.id === c.entityId);
+                if (pl && !isPlaylistVisible(pl, userProfile?.email || '', submissions)) return false;
+              }
+              return true;
+            })}
             onNavigate={navigateTo}
             onPlayTrack={handlePlayTrack}
             onAddToQueue={handleAddToQueue}
@@ -2139,7 +2174,7 @@ const App: React.FC = () => {
       }}
       themePreference={themePreference}
       onThemeChange={setThemePreference}
-      notifications={notifications}
+      notifications={visibleNotifications}
       unreadNotificationCount={unreadNotificationCount}
       onMarkNotificationRead={handleMarkNotificationRead}
       onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
