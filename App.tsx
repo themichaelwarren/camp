@@ -1502,19 +1502,18 @@ const App: React.FC = () => {
   const [heroQuote] = useState(() => CAMP_QUOTES[Math.floor(Math.random() * CAMP_QUOTES.length)]);
 
   const visibleNotifications = useMemo(() => {
-    const email = userProfile?.email || '';
     return notifications.filter(n => {
       if (n.entityType === 'song') {
         const sub = submissions.find(s => s.id === n.entityId);
-        if (sub && !isSubmissionVisible(sub, email, collaborations)) return false;
+        if (!sub || sub.deletedAt || sub.status === 'private') return false;
       }
       if (n.entityType === 'playlist') {
         const pl = playlists.find(p => p.id === n.entityId);
-        if (pl && !isPlaylistVisible(pl, email, submissions)) return false;
+        if (!pl || pl.deletedAt || !pl.status || pl.status === 'private') return false;
       }
       return true;
     });
-  }, [notifications, submissions, playlists, collaborations, userProfile?.email]);
+  }, [notifications, submissions, playlists]);
 
   const unreadNotificationCount = useMemo(
     () => visibleNotifications.filter(n => !n.read).length,
@@ -1569,11 +1568,11 @@ const App: React.FC = () => {
             comments={comments.filter(c => {
               if (c.entityType === 'song') {
                 const sub = submissions.find(s => s.id === c.entityId);
-                if (sub && !isSubmissionVisible(sub, userProfile?.email || '', collaborations)) return false;
+                if (!sub || sub.deletedAt || sub.status === 'private') return false;
               }
               if (c.entityType === 'playlist') {
                 const pl = playlists.find(p => p.id === c.entityId);
-                if (pl && !isPlaylistVisible(pl, userProfile?.email || '', submissions)) return false;
+                if (!pl || pl.deletedAt || !pl.status || pl.status === 'private') return false;
               }
               return true;
             })}
@@ -1586,16 +1585,16 @@ const App: React.FC = () => {
           <InboxPage
             prompts={prompts.filter(p => !p.deletedAt)}
             assignments={assignments.filter(a => !a.deletedAt)}
-            submissions={submissions.filter(s => isSubmissionVisible(s, userProfile?.email || '', collaborations))}
+            submissions={submissions.filter(s => !s.deletedAt && s.status !== 'private')}
             campers={campers}
             comments={comments.filter(c => {
               if (c.entityType === 'song') {
                 const sub = submissions.find(s => s.id === c.entityId);
-                if (sub && !isSubmissionVisible(sub, userProfile?.email || '', collaborations)) return false;
+                if (!sub || sub.deletedAt || sub.status === 'private') return false;
               }
               if (c.entityType === 'playlist') {
                 const pl = playlists.find(p => p.id === c.entityId);
-                if (pl && !isPlaylistVisible(pl, userProfile?.email || '', submissions)) return false;
+                if (!pl || pl.deletedAt || !pl.status || pl.status === 'private') return false;
               }
               return true;
             })}
