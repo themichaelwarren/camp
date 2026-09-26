@@ -1056,6 +1056,13 @@
         :root[data-theme="dark"] .markdown-preview a:hover {
             color: #a5b4fc;
         }
+        /* Google Drive Picker: default z-index (~1000) renders beneath our modals (z-[9999]/z-[10001]) */
+        .picker-dialog-bg {
+            z-index: 20000 !important;
+        }
+        .picker-dialog {
+            z-index: 20001 !important;
+        }
     </style>
 <script type="importmap">
 {

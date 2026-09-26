@@ -45,14 +45,19 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   };
 
   const handlePickAudioFromDrive = async () => {
-    const files = await googleService.openDrivePicker({
-      mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
-      multiSelect: false,
-      title: 'Select your audio file',
-    });
-    if (files.length > 0) {
-      setDriveAudioFile({ id: files[0].id, name: files[0].name, url: files[0].url });
-      setSelectedFile(null);
+    try {
+      const files = await googleService.openDrivePicker({
+        mimeTypes: googleService.AUDIO_PICKER_MIME_TYPES,
+        multiSelect: false,
+        title: 'Select your audio file',
+      });
+      if (files.length > 0) {
+        setDriveAudioFile({ id: files[0].id, name: files[0].name, url: files[0].url });
+        setSelectedFile(null);
+      }
+    } catch (err) {
+      console.error('Drive picker failed', err);
+      alert(`Couldn't open Google Drive: ${err instanceof Error ? err.message : 'unknown error'}`);
     }
   };
 
@@ -69,14 +74,19 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
   };
 
   const handlePickArtworkFromDrive = async () => {
-    const files = await googleService.openDrivePicker({
-      mimeTypes: 'image/jpeg,image/png,image/gif,image/webp',
-      multiSelect: false,
-      title: 'Select artwork image',
-    });
-    if (files.length > 0) {
-      setDriveArtworkFile({ id: files[0].id, name: files[0].name, url: files[0].url });
-      setArtworkFile(null);
+    try {
+      const files = await googleService.openDrivePicker({
+        mimeTypes: 'image/jpeg,image/png,image/gif,image/webp',
+        multiSelect: false,
+        title: 'Select artwork image',
+      });
+      if (files.length > 0) {
+        setDriveArtworkFile({ id: files[0].id, name: files[0].name, url: files[0].url });
+        setArtworkFile(null);
+      }
+    } catch (err) {
+      console.error('Drive picker failed', err);
+      alert(`Couldn't open Google Drive: ${err instanceof Error ? err.message : 'unknown error'}`);
     }
   };
 
@@ -143,7 +153,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
       onClose();
     } catch (e) {
       console.error(e);
-      alert('Upload failed. Check console for details.');
+      alert(`Upload failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     } finally {
       setIsUploading(false);
     }
@@ -189,7 +199,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 </div>
               )}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Audio File (.mp3/.wav/.m4a)</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Audio File (.mp3/.wav/.m4a/.aac/.flac)</label>
                 {driveAudioFile ? (
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-xl">
                     <i className="fa-brands fa-google-drive text-green-600"></i>
@@ -201,7 +211,7 @@ const SubmitSongModal: React.FC<SubmitSongModalProps> = ({ assignments, defaultA
                 ) : (
                   <input
                     type="file"
-                    accept=".mp3,.wav,.m4a"
+                    accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg"
                     className="w-full text-base text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                     onChange={handleFileChange}
                   />

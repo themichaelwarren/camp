@@ -1467,6 +1467,9 @@ const getAudioMimeType = (file: File) => {
   if (lower.endsWith('.m4a')) return 'audio/mp4';
   if (lower.endsWith('.mp3')) return 'audio/mpeg';
   if (lower.endsWith('.wav')) return 'audio/wav';
+  if (lower.endsWith('.aac')) return 'audio/aac';
+  if (lower.endsWith('.flac')) return 'audio/flac';
+  if (lower.endsWith('.ogg')) return 'audio/ogg';
   return 'application/octet-stream';
 };
 
@@ -1487,23 +1490,41 @@ const uploadFileToDriveInFolder = async (file: File, _folderId?: string, mimeTyp
   // This avoids permission issues with drive.file scope when the assignment
   // folder is owned by another user. Files are shared publicly and tracked
   // by ID in the spreadsheet, so folder location doesn't matter.
-  const metadata = {
-    name: file.name,
-    mimeType: mimeTypeOverride || file.type,
-  };
+  const mimeType = mimeTypeOverride || file.type || 'application/octet-stream';
+  const metadata = { name: file.name, mimeType };
 
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', file);
+  // Re-wrap with an explicit type — an empty file.type (common on iOS/Windows for .m4a/.wav)
+  // otherwise produces a multipart part Drive can reject
+  form.append('file', new Blob([file], { type: mimeType }), file.name);
+
+  // Token may have expired while the user was filling out the form
+  if (!accessToken) {
+    try { await refreshAccessToken(); } catch { throw new Error('Session expired — please sign in again.'); }
+  }
 
   const url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink';
-  const response = await fetch(url, {
+  const doUpload = () => fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}` },
     body: form
   });
 
-  if (!response.ok) throw new Error('Upload to Drive failed');
+  let response = await doUpload();
+  if (response.status === 401) {
+    accessToken = null;
+    clearCachedToken();
+    try { await refreshAccessToken(); } catch { throw new Error('Session expired — please sign in again.'); }
+    response = await doUpload();
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    const msg = error?.error?.message || response.statusText || 'Unknown error';
+    console.error(`Drive upload failed (${response.status}) for ${file.name} [${mimeType}, ${file.size} bytes]:`, msg);
+    throw new Error(`Upload to Drive failed (${response.status}): ${msg}`);
+  }
   const result = await response.json();
   // Share uploaded file so all camp members can access it
   shareFilePublicly(result.id).catch(() => {});
@@ -2546,6 +2567,16 @@ export interface PickedFile {
   url: string;
 }
 
+// Drive reports WAV/M4A under several aliases; missing ones make files invisible in the picker
+export const AUDIO_PICKER_MIME_TYPES = [
+  'audio/mpeg', 'audio/mp3',
+  'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave',
+  'audio/mp4', 'audio/x-m4a', 'audio/m4a',
+  'audio/aac', 'audio/x-aac',
+  'audio/flac', 'audio/x-flac',
+  'audio/ogg',
+].join(',');
+
 let pickerApiLoaded = false;
 
 const ensurePickerLoaded = (): Promise<void> => {
@@ -2564,7 +2595,9 @@ export const openDrivePicker = async (options?: {
   multiSelect?: boolean;
   title?: string;
 }): Promise<PickedFile[]> => {
-  if (!accessToken) throw new Error('Not authenticated');
+  if (!accessToken) {
+    try { await refreshAccessToken(); } catch { throw new Error('Session expired — please sign in again.'); }
+  }
   await ensurePickerLoaded();
 
   return new Promise((resolve) => {

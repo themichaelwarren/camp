@@ -268,8 +268,8 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
     if (!newVersionFile) return;
     setIsUploadingVersion(true);
     try {
+      // uploadAudioToDriveInFolder already shares the file (non-blocking)
       const uploaded = await googleService.uploadAudioToDriveInFolder(newVersionFile, assignment?.driveFolderId);
-      await googleService.shareFilePublicly(uploaded.id);
       const newVersion: SongVersion = {
         id: uploaded.id,
         timestamp: new Date().toISOString(),
@@ -288,7 +288,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
       setShowUploadForm(false);
     } catch (error) {
       console.error('Failed to upload new version', error);
-      alert('Failed to upload new version. Please try again.');
+      alert(`Failed to upload new version: ${error instanceof Error ? error.message : 'please try again.'}`);
     } finally {
       setIsUploadingVersion(false);
     }
@@ -935,7 +935,7 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
             <div className="p-4 rounded-2xl border border-indigo-200 bg-indigo-50/30 mb-4 space-y-3">
               <input
                 type="file"
-                accept=".mp3,.wav,.m4a,.aac,.ogg,.flac"
+                accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                 onChange={(e) => { if (e.target.files?.[0]) setNewVersionFile(e.target.files[0]); }}
                 className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-slate-200 file:text-xs file:font-bold file:bg-white file:text-slate-700 hover:file:bg-slate-50"
               />

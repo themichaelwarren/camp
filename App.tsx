@@ -1198,7 +1198,7 @@ const App: React.FC = () => {
         if (confirmed) {
           try {
             const files = await googleService.openDrivePicker({
-              mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
+              mimeTypes: googleService.AUDIO_PICKER_MIME_TYPES,
               multiSelect: false,
               title: 'Select the audio file to re-authorize',
             });
@@ -1259,7 +1259,7 @@ const App: React.FC = () => {
         if (confirmed) {
           try {
             const files = await googleService.openDrivePicker({
-              mimeTypes: 'audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac,audio/flac',
+              mimeTypes: googleService.AUDIO_PICKER_MIME_TYPES,
               multiSelect: false,
               title: 'Select the audio file to re-authorize',
             });
