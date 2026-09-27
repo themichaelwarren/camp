@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Assignment, Prompt, Submission, PlayableTrack, ViewState, Event, Boca, CamperProfile, Collaboration, Playlist } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, getTermSortKey, isCurrentOrFutureTerm, parsePlaylistEntry } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, trackFromSubmission, getTerm, getTermSortKey, parsePlaylistEntry, isAcceptingSubmissions, isLateSubmission } from '../utils';
 import MultiPromptSelector from '../components/MultiPromptSelector';
 import MarkdownPreview from '../components/MarkdownPreview';
 import MarkdownEditor from '../components/MarkdownEditor';
@@ -47,7 +47,7 @@ interface AssignmentDetailProps {
 }
 
 const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt, prompts, assignments, submissions, events, campersCount, onNavigate, onUpdate, onAddPrompt, onPlayTrack, onAddToQueue, onShufflePlay, playingTrackId, queueingTrackId, onAddSubmission, onCreateEvent, currentUser, spreadsheetId, availableTags = [], bocas = [], campers = [], dateFormat, favoritedSubmissionIds = [], onToggleFavorite, collaborations = [], onAddCollaborators, playlists, onAddToPlaylist, onCreatePlaylist, allPlaylists = [] }) => {
-  const isPastSemester = !isCurrentOrFutureTerm(getTerm(assignment.dueDate));
+  const canSubmit = isAcceptingSubmissions(assignment);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventEditModal, setShowEventEditModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -247,7 +247,7 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
         </div>
         {(onAddSubmission || onUpdate) && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            {onAddSubmission && !isPastSemester && (
+            {onAddSubmission && canSubmit && (
               <button
                 onClick={() => setShowSubmitModal(true)}
                 className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-colors"
@@ -467,6 +467,12 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                             {bocaCount}
                           </span>
                         )}
+                        {isLateSubmission(s, assignment) && (
+                          <span className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 flex-shrink-0" title="Submitted more than a week after the due date">
+                            <i className="fa-solid fa-clock text-[8px]"></i>
+                            Fashionably Late
+                          </span>
+                        )}
                       </div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase">{getDisplayArtist(s, collaborations)}</p>
                     </div>
@@ -519,6 +525,11 @@ const AssignmentDetail: React.FC<AssignmentDetailProps> = ({ assignment, prompt,
                           )}
                           {isEC && (
                             <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold flex-shrink-0">EC</span>
+                          )}
+                          {isLateSubmission(s, assignment) && (
+                            <span className="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-0.5 flex-shrink-0" title="Fashionably late — submitted more than a week after the due date">
+                              <i className="fa-solid fa-clock text-[7px]"></i>LATE
+                            </span>
                           )}
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">{getDisplayArtist(s, collaborations)}</p>

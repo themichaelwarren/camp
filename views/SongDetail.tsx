@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Submission, Assignment, Prompt, ViewState, Boca, CamperProfile, Collaboration, CollaboratorRole, DocTextSegment, SongVersion, Playlist } from '../types';
-import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion, parsePlaylistEntry } from '../utils';
+import { DateFormat, formatDate, getDisplayArtist, getArtistSegments, ArtistSegment, getPrimaryVersion, parsePlaylistEntry, isLateSubmission } from '../utils';
 import { buildPath } from '../router';
 import * as googleService from '../services/googleService';
 import ArtworkImage from '../components/ArtworkImage';
@@ -560,6 +560,12 @@ const SongDetail: React.FC<SongDetailProps> = ({ submission, assignment, prompt,
                 <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
                   <i className="fa-solid fa-star text-[9px]"></i>
                   Extra Credit
+                </span>
+              )}
+              {isLateSubmission(submission, assignment) && (
+                <span className="bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0" title="Submitted more than a week after the due date">
+                  <i className="fa-solid fa-clock text-[9px]"></i>
+                  Fashionably Late
                 </span>
               )}
               {onToggleFavorite && (

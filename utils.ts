@@ -49,6 +49,23 @@ export function isCurrentOrFutureTerm(term: string): boolean {
   return getTermSortKey(term) >= getTermSortKey(getTerm(new Date().toISOString()));
 }
 
+/** Open assignments always accept songs; closed ones only while their semester is current. */
+export function isAcceptingSubmissions(assignment: Assignment): boolean {
+  return assignment.status === 'Open' || isCurrentOrFutureTerm(getTerm(assignment.dueDate));
+}
+
+const LATE_GRACE_DAYS = 7;
+
+/** True when the song's first upload came more than a week after the end of the due date (viewer's local time). */
+export function isLateSubmission(sub: Submission, assignment?: Assignment): boolean {
+  if (!assignment?.dueDate) return false;
+  const uploadTimes = sub.versions.map(v => new Date(v.timestamp).getTime()).filter(t => !isNaN(t));
+  if (uploadTimes.length === 0) return false;
+  const due = new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T23:59:59'));
+  due.setDate(due.getDate() + LATE_GRACE_DAYS);
+  return Math.min(...uploadTimes) > due.getTime();
+}
+
 export function getSeasonStyle(term: string): { bg: string; text: string; icon: string } {
   const season = term.split(' ')[0];
   switch (season) {
